@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/UpcycleCity/Scenes/UpcycleCity.unity
-    guid: 1f7215d6e0ba94126951fde7ad103489
+    path: Assets/UpcycleCity/Scenes/CharacterCreator.unity
+    guid: 13694c84c1df34083a809c580ecfb7a3
   - enabled: 1
     path: Assets/UpcycleCity/Scenes/PlayerGym.unity
     guid: 7bd2970d2cbe04b0781e192afaae2529

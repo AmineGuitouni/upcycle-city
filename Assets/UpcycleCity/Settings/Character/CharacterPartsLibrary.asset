@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adb83a037cf67408e885044aa87b39ae, type: 3}
+  m_Name: CharacterPartsLibrary
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Character.CharacterPartsLibrary
+  maleBody: {fileID: 919132149155446097, guid: ebe35c1c2db724a3fbe1679fd0119f5c, type: 3}
+  femaleBody: {fileID: 919132149155446097, guid: 45902f08872d14714a8158e4ab453aa6, type: 3}
+  faceStyles:
+  - displayName: Tired
+    prefab: {fileID: 919132149155446097, guid: 2c2244a1c08784400b003c62d41e40c5, type: 3}
+  - displayName: Wide
+    prefab: {fileID: 919132149155446097, guid: d4d0bb206aefa45999abfdbcdde797ba, type: 3}
+  - displayName: Dot
+    prefab: {fileID: 919132149155446097, guid: 70711a43f86d14cc3869727355505c8b, type: 3}
+  - displayName: Happy
+    prefab: {fileID: 919132149155446097, guid: 190517465e03f406e928af50c7fc6175, type: 3}
+  - displayName: Squint
+    prefab: {fileID: 919132149155446097, guid: 819846a0074964a019056947403905d3, type: 3}
+  hairStyles:
+  - displayName: None
+    prefab: {fileID: 0}
+  - displayName: Buzz Cut
+    prefab: {fileID: 919132149155446097, guid: 3e313841128a34ed09b78361902a862c, type: 3}
+  - displayName: Messy
+    prefab: {fileID: 919132149155446097, guid: e6cbccb7a499a45f1893fd8b6bc88600, type: 3}
+  - displayName: Long
+    prefab: {fileID: 919132149155446097, guid: 0147bcff20bb94736abeb5a73987cd25, type: 3}
+  - displayName: Bun
+    prefab: {fileID: 919132149155446097, guid: 116cfbf9350104de78c168dba4404c8a, type: 3}
+  - displayName: Ponytail
+    prefab: {fileID: 919132149155446097, guid: e55d2dcb018354ba9a757fbbb058e0fd, type: 3}
+  - displayName: Curly
+    prefab: {fileID: 919132149155446097, guid: 7df20045645f24e03abd5ed79720e2d5, type: 3}
+  - displayName: Afro
+    prefab: {fileID: 919132149155446097, guid: c0c75df622bdd41fa8c687f55dffcaa9, type: 3}
+  - displayName: Beanie
+    prefab: {fileID: 919132149155446097, guid: 2923ebbdaa44f4795a70389b70d642df, type: 3}
+  facialHairStyles:
+  - displayName: None
+    prefab: {fileID: 0}
+  - displayName: Stubble
+    prefab: {fileID: 919132149155446097, guid: db0978cfae89c4a3e994dedb0837a04f, type: 3}
+  - displayName: Scruffy Beard
+    prefab: {fileID: 919132149155446097, guid: e42b9ee2bfb634f8d908c8d35394d5a3, type: 3}
+  - displayName: Moustache
+    prefab: {fileID: 919132149155446097, guid: 230a9c021af524b518f0817ee2f06834, type: 3}
+  rightArmOpen: {fileID: 919132149155446097, guid: 61b10dcb519aa4a99b78ba9ef5a02a4a, type: 3}
+  rightArmGrip: {fileID: 919132149155446097, guid: 500597f32486c4e309be853caded0516, type: 3}
+  leftArmOpen: {fileID: 919132149155446097, guid: 81dcbec40b87c41bf834788863a5e9dd, type: 3}
+  leftArmGrip: {fileID: 919132149155446097, guid: 8bf9fda018f684df8bbd7d69dfbcfdc7, type: 3}
+  skinTones:
+  - {r: 0.9647059, g: 0.84313726, b: 0.7647059, a: 1}
+  - {r: 0.92941177, g: 0.75686276, b: 0.6431373, a: 1}
+  - {r: 0.8784314, g: 0.6745098, b: 0.53333336, a: 1}
+  - {r: 0.7882353, g: 0.54509807, b: 0.38431373, a: 1}
+  - {r: 0.7137255, g: 0.47843137, b: 0.32156864, a: 1}
+  - {r: 0.6039216, g: 0.39215687, b: 0.2509804, a: 1}
+  - {r: 0.49411765, g: 0.30588236, b: 0.19215687, a: 1}
+  - {r: 0.39215687, g: 0.23529412, b: 0.14509805, a: 1}
+  - {r: 0.30588236, g: 0.18039216, b: 0.10980392, a: 1}
+  - {r: 0.22745098, g: 0.13333334, b: 0.08235294, a: 1}
+  outfitColors:
+  - {r: 0.41960785, g: 0.3529412, b: 0.24313726, a: 1}
+  - {r: 0.3529412, g: 0.4, b: 0.3137255, a: 1}
+  - {r: 0.2901961, g: 0.33333334, b: 0.3764706, a: 1}
+  - {r: 0.47843137, g: 0.2901961, b: 0.22745098, a: 1}
+  - {r: 0.24313726, g: 0.24313726, b: 0.26666668, a: 1}
+  - {r: 0.5411765, g: 0.47843137, b: 0.3529412, a: 1}
+  - {r: 0.35686275, g: 0.2901961, b: 0.4, a: 1}
+  - {r: 0.18431373, g: 0.33333334, b: 0.3764706, a: 1}
+  eyeColors:
+  - {r: 0.35686275, g: 0.47843137, b: 0.22745098, a: 1}
+  - {r: 0.41960785, g: 0.2901961, b: 0.18039216, a: 1}
+  - {r: 0.22745098, g: 0.43137255, b: 0.64705884, a: 1}
+  - {r: 0.43137255, g: 0.4509804, b: 0.47058824, a: 1}
+  - {r: 0.5411765, g: 0.41568628, b: 0.16470589, a: 1}
+  - {r: 0.18039216, g: 0.14117648, b: 0.1254902, a: 1}
+  hairColors:
+  - {r: 0.078431375, g: 0.06666667, b: 0.0627451, a: 1}
+  - {r: 0.16470589, g: 0.12941177, b: 0.10980392, a: 1}
+  - {r: 0.2901961, g: 0.20392157, b: 0.14901961, a: 1}
+  - {r: 0.41960785, g: 0.2901961, b: 0.18039216, a: 1}
+  - {r: 0.5568628, g: 0.23137255, b: 0.12156863, a: 1}
+  - {r: 0.7529412, g: 0.56078434, b: 0.23529412, a: 1}
+  - {r: 0.8509804, g: 0.7647059, b: 0.5568628, a: 1}
+  - {r: 0.6039216, g: 0.5882353, b: 0.5647059, a: 1}
+  - {r: 0.84705883, g: 0.8392157, b: 0.8156863, a: 1}
+  - {r: 0.24313726, g: 0.43529412, b: 0.6901961, a: 1}
+  - {r: 0.41568628, g: 0.24313726, b: 0.6039216, a: 1}
+  - {r: 0.24313726, g: 0.5411765, b: 0.30588236, a: 1}

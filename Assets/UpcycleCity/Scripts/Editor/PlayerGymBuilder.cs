@@ -301,6 +301,7 @@ namespace UpcycleCity.Editor
             controller.SetConfig(config);
             controller.SetCameraReferences(pivotGo.transform, cam, toolAnchor.transform);
             playerGo.AddComponent<PlayerGymHUD>();
+            PlayerCharacterSetup.Apply(playerGo, CharacterCreatorBuilder.CreateOrFillLibrary());
 
             // Wire camera controller serialized fields too
             using (var so = new SerializedObject(camCtrl))

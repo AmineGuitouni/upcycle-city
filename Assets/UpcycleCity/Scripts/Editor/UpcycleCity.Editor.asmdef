@@ -4,7 +4,8 @@
     "references": [
         "UpcycleCity.Runtime",
         "Unity.InputSystem",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.RenderPipelines.Core.Runtime",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

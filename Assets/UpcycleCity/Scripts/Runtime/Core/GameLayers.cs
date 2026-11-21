@@ -15,7 +15,7 @@ namespace UpcycleCity.Core
         public const int Water = 4;
         public const int UI = 5;
 
-        // Upcycle City custom layers (6..14)
+        // Upcycle City custom layers (6..15)
         public const int Player = 6;
         public const int Environment = 7;
         public const int Interactable = 8;
@@ -25,6 +25,8 @@ namespace UpcycleCity.Core
         public const int Citizen = 12;
         public const int Vehicle = 13;
         public const int TriggerZone = 14;
+        /// <summary>First-person arms and held tool, drawn by the overlay view-model camera only.</summary>
+        public const int FirstPersonView = 15;
 
         public const string PlayerName = "Player";
         public const string EnvironmentName = "Environment";
@@ -35,6 +37,7 @@ namespace UpcycleCity.Core
         public const string CitizenName = "Citizen";
         public const string VehicleName = "Vehicle";
         public const string TriggerZoneName = "TriggerZone";
+        public const string FirstPersonViewName = "FirstPersonView";
 
         public static int MaskOf(int layer) => 1 << layer;
 

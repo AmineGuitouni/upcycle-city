@@ -1,4 +1,5 @@
 using UnityEngine;
+using UpcycleCity.Core;
 using UpcycleCity.Interaction;
 using UpcycleCity.Inventory;
 
@@ -32,6 +33,7 @@ namespace UpcycleCity.Player
         PlayerFeedbackHub feedback;
         PlayerModifiers modifiers;
         PlayerStateMachine stateMachine;
+        FirstPersonArms arms;
 
         GameObject activeToolVisual;
         float toolSwingTimer;
@@ -46,6 +48,8 @@ namespace UpcycleCity.Player
         public PlayerFeedbackHub Feedback => feedback;
         public PlayerModifiers Modifiers => modifiers;
         public PlayerStateMachine StateMachine => stateMachine;
+        /// <summary>Parent of the equipped tool's view model (moved into the right fist by <see cref="FirstPersonArms"/>).</summary>
+        public Transform EquippedToolAnchor => equippedToolAnchor;
 
         public void SetConfig(PlayerConfig playerConfig) => config = playerConfig;
 
@@ -86,6 +90,7 @@ namespace UpcycleCity.Player
             grabber = GetComponent<PhysicsGrabController>();
             interactor = GetComponent<PlayerInteractor>();
             feedback = GetComponent<PlayerFeedbackHub>();
+            arms = GetComponent<FirstPersonArms>();
             modifiers = new PlayerModifiers();
 
             EnsureCameraRig();
@@ -161,7 +166,8 @@ namespace UpcycleCity.Player
             Vector2 look = input.InputMode == PlayerInputMode.UI ? Vector2.zero : input.LookDelta;
             cameraController.TickLook(look, isSprinting, dt);
             interactor.Tick(dt);
-            AnimateToolAnchor(dt);
+            if (arms == null || !arms.isActiveAndEnabled)
+                AnimateToolAnchor(dt);   // with arms, the tool rides in the right hand instead
         }
 
         void FixedUpdate()
@@ -282,8 +288,11 @@ namespace UpcycleCity.Player
             }
             else
             {
-                activeToolVisual = BuildProceduralToolView(equipped, equippedToolAnchor);
+                activeToolVisual = BuildProceduralToolView(equipped, equippedToolAnchor, heldInHand: arms != null && arms.isActiveAndEnabled);
             }
+
+            // Same layer as the anchor, so the view-model camera draws it with the arms
+            GameLayers.SetLayerRecursively(activeToolVisual, equippedToolAnchor.gameObject.layer);
         }
 
         void AnimateToolAnchor(float dt)
@@ -314,7 +323,9 @@ namespace UpcycleCity.Player
                 Destroy(rb);
         }
 
-        static GameObject BuildProceduralToolView(IInventoryItem item, Transform parent)
+        /// <param name="heldInHand">The anchor is in a fist (<see cref="FirstPersonArms"/>): the handle sits at the
+        /// origin and runs along +Z, already lined up with the hand.</param>
+        static GameObject BuildProceduralToolView(IInventoryItem item, Transform parent, bool heldInHand)
         {
             var root = new GameObject($"ToolView_{item.ItemId}");
             root.transform.SetParent(parent, false);
@@ -324,7 +335,16 @@ namespace UpcycleCity.Player
             var metalMat = new Material(shader) { color = new Color(0.28f, 0.31f, 0.34f) };
 
             bool isLongPicker = item.GrabReachBonus > 0.1f;
-            if (isLongPicker)
+            if (isLongPicker && heldInHand)
+            {
+                // a foam grip inside the fist, the shaft through it, a trigger under the fingers, jaws at the tip
+                CreateToolPart(root.transform, "Grip", new Vector3(0f, 0f, 0.0f), new Vector3(0.03f, 0.03f, 0.12f), accentMat);
+                CreateToolPart(root.transform, "Shaft", new Vector3(0f, 0f, 0.36f), new Vector3(0.016f, 0.016f, 0.66f), metalMat);
+                CreateToolPart(root.transform, "Trigger", new Vector3(0f, -0.03f, 0.03f), new Vector3(0.012f, 0.04f, 0.018f), metalMat, new Vector3(-20f, 0f, 0f));
+                CreateToolPart(root.transform, "JawL", new Vector3(-0.02f, 0f, 0.71f), new Vector3(0.012f, 0.02f, 0.08f), accentMat, new Vector3(0f, 12f, 0f));
+                CreateToolPart(root.transform, "JawR", new Vector3(0.02f, 0f, 0.71f), new Vector3(0.012f, 0.02f, 0.08f), accentMat, new Vector3(0f, -12f, 0f));
+            }
+            else if (isLongPicker)
             {
                 root.transform.localRotation = Quaternion.Euler(4f, -10f, 0f);
                 CreateToolPart(root.transform, "Grip", new Vector3(0f, -0.02f, -0.06f), new Vector3(0.036f, 0.09f, 0.045f), accentMat);

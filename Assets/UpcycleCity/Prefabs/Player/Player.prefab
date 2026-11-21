@@ -114,6 +114,7 @@ GameObject:
   - component: {fileID: 6582395900285110379}
   - component: {fileID: 3941182161356440129}
   - component: {fileID: 8320586015595400945}
+  - component: {fileID: 8633285934839461116}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -135,6 +136,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8482838497186665195}
+  - {fileID: 6658565660461677012}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2099049917999717621
@@ -352,6 +354,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Player.PlayerGymHUD
   player: {fileID: 0}
+  stageTitle: "PHASE 1 \xB7 PLAYER GYM"
+  showControlsLegend: 1
+--- !u!114 &8633285934839461116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2439003544240404128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3aa6b72342a044519b62aa8096b1fcba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Player.FirstPersonArms
+  library: {fileID: 11400000, guid: 9fa61ca9084e9404fbc799d1579817c5, type: 2}
+  viewModelFov: 68
+  viewModelNearClip: 0.01
+  restOffset: {x: 0, y: 0, z: 0}
+  idleHandOffset: {x: 0, y: -0.075, z: -0.04}
+  carryOffset: {x: 0, y: 0.045, z: 0.07}
+  sprintOffset: {x: 0, y: -0.05, z: -0.03}
+  sprintPitch: 12
+  chargePullBack: 0.1
+  throwPunch: 0.14
+  grabReach: 0.06
+  toolSwingDegrees: 32
+  swayPerLook: 0.0016
+  maxSway: 0.035
+  swayDegreesPerLook: 0.09
+  bobAmount: 0.012
+  followSharpness: 14
 --- !u!1 &3036266236251152096
 GameObject:
   m_ObjectHideFlags: 0
@@ -383,6 +416,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7374767110588710711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3279743773665234445
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6658565660461677012}
+  - component: {fileID: 4301942842586406564}
+  - component: {fileID: 7183332538955130713}
+  m_Layer: 6
+  m_Name: BodyShadow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6658565660461677012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3279743773665234445}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4905564375159885808}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4301942842586406564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3279743773665234445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68373107a8fe1488e9068a255b772156, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Character.CharacterAvatar
+  library: {fileID: 11400000, guid: 9fa61ca9084e9404fbc799d1579817c5, type: 2}
+  loadSavedOnAwake: 1
+  shadows: 3
+  stubbleStrength: 0.55
+--- !u!114 &7183332538955130713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3279743773665234445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68e26ee26d88c465dbafb0a7b72fa0e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Player.PlayerBodyShadow
+  crouchSharpness: 12
 --- !u!1 &3427155557104005032
 GameObject:
   m_ObjectHideFlags: 0

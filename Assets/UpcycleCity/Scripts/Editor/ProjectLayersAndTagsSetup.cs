@@ -22,6 +22,7 @@ namespace UpcycleCity.Editor
             (GameLayers.Citizen, GameLayers.CitizenName),
             (GameLayers.Vehicle, GameLayers.VehicleName),
             (GameLayers.TriggerZone, GameLayers.TriggerZoneName),
+            (GameLayers.FirstPersonView, GameLayers.FirstPersonViewName),
         };
 
         static ProjectLayersAndTagsSetup()
@@ -47,7 +48,7 @@ namespace UpcycleCity.Editor
                 SerializedProperty layersProp = tagManager.FindProperty("layers");
                 SerializedProperty tagsProp = tagManager.FindProperty("tags");
 
-                // 1. Register layers in fixed slots 6..14
+                // 1. Register layers in fixed slots 6..15
                 for (int i = 0; i < CustomLayers.Length; i++)
                 {
                     (int index, string name) = CustomLayers[i];
