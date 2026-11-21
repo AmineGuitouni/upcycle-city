@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using UpcycleCity.Core;
+using UpcycleCity.Ecosystem;
 using UpcycleCity.Interaction;
 using UpcycleCity.Inventory;
 using UpcycleCity.Player;
@@ -12,7 +14,7 @@ namespace UpcycleCity.Waste
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Waste/Sorting Crate")]
-    public sealed class SortingCrate : MonoBehaviour, IInteractable
+    public sealed class SortingCrate : MonoBehaviour, IInteractable, ITriggerReceiver
     {
         [SerializeField] WasteStream acceptedStream = WasteStream.Plastic;
         [SerializeField] bool payDirectlyOnSort = true;
@@ -55,10 +57,15 @@ namespace UpcycleCity.Waste
                 AcceptItem(item, interactor.Inventory, interactor);
         }
 
+        // The catch zone is a child trigger: relay its events here
+        void Awake() => TriggerRelay.AttachToChildTriggers(this);
+
+        public void OnRelayedTriggerEnter(Collider other) => OnTriggerEnter(other);
+
         void OnTriggerEnter(Collider other)
         {
             TrashItem item = other.GetComponentInParent<TrashItem>();
-            if (item == null || item.IsDisposed || item.IsHeld)
+            if (item == null || item.IsDisposed || item.IsHeld || item.IsContained)
                 return;
 
             AcceptItem(item, PlayerContext.ActiveInventory, PlayerContext.ActiveInteractor);
@@ -78,7 +85,8 @@ namespace UpcycleCity.Waste
             int payout = 0;
             if (payDirectlyOnSort && match)
             {
-                payout = Mathf.Max(1, Mathf.RoundToInt(item.BaseCoinValue * Purity));
+                float multiplier = EcosystemBalance.Active != null ? EcosystemBalance.Active.sortingPayout : 1f;
+                payout = Mathf.Max(1, Mathf.RoundToInt(item.BaseCoinValue * Purity * multiplier));
                 if (inventory != null)
                     inventory.AddCoins(payout);
             }

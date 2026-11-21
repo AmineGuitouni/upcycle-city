@@ -45,6 +45,12 @@ namespace UpcycleCity.Interaction
         public IToolTarget HoveredToolTarget => hoveredToolTarget;
         public string ActivePrompt { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// While true, Interact (E) presses are ignored here because something else owns the key,
+        /// e.g. a pushed <c>ShoppingCart</c> reading tap-to-release / hold-to-throw.
+        /// </summary>
+        public bool InteractSuppressed { get; set; }
+
         public event Action<string, Color> FeedbackRequested;
 
         void Reset()
@@ -167,6 +173,13 @@ namespace UpcycleCity.Interaction
                 }
             }
 
+            // Aiming at something stowed inside an interactable (trash in the cart's basket): that piece wins,
+            // so [E] picks it up instead of grabbing the cart's handle
+            if (nextInteractable != null && nextGrabbable != null && nextGrabbable.Transform != null
+                && nextGrabbable.Transform != nextInteractable.Transform
+                && nextGrabbable.Transform.IsChildOf(nextInteractable.Transform))
+                nextInteractable = null;
+
             UpdateFocus(ref hoveredInteractable, nextInteractable,
                 (x, i) => x.OnFocusEnter(i), (x, i) => x.OnFocusExit(i));
             UpdateFocus(ref hoveredPickup, nextPickup,
@@ -238,6 +251,10 @@ namespace UpcycleCity.Interaction
             if (grabber == null)
                 return;
 
+            // Mid-pickup (bending down / jaws closing) the hands are busy until the motion finishes
+            if (grabber.IsPickingUp)
+                return;
+
             if (grabber.IsHolding)
             {
                 grabber.TickCharge(dt);
@@ -255,13 +272,13 @@ namespace UpcycleCity.Interaction
             }
             else if (input.PrimaryPressedThisFrame && hoveredGrabbable != null)
             {
-                grabber.TryGrab(hoveredGrabbable);
+                grabber.BeginPickup(hoveredGrabbable);
             }
         }
 
         void HandleInteractAndPickupInput()
         {
-            if (!input.InteractPressedThisFrame)
+            if (!input.InteractPressedThisFrame || InteractSuppressed)
                 return;
 
             if (hoveredPickup != null && hoveredPickup.CanCollect(this))
@@ -278,9 +295,9 @@ namespace UpcycleCity.Interaction
                 return;
             }
 
-            // Pressing Interact on a physical grabbable grabs it via physics (never inventory!)
-            if (grabber != null && !grabber.IsHolding && hoveredGrabbable != null)
-                grabber.TryGrab(hoveredGrabbable);
+            // Pressing Interact on a physical grabbable picks it up via physics (never inventory!)
+            if (grabber != null && !grabber.IsHolding && !grabber.IsPickingUp && hoveredGrabbable != null)
+                grabber.BeginPickup(hoveredGrabbable);
         }
 
         void HandleUseItemInput()
@@ -317,6 +334,14 @@ namespace UpcycleCity.Interaction
 
         void BuildPrompt()
         {
+            if (grabber != null && grabber.IsPickingUp)
+            {
+                ActivePrompt = grabber.CurrentPickup == PickupStyle.Hand
+                    ? "Picking up by hand…  (a Litter Picker grabs on the move)"
+                    : "Snap!";
+                return;
+            }
+
             if (grabber != null && grabber.IsHolding)
             {
                 string extra = hoveredInteractable != null ? $"  |  {hoveredInteractable.InteractionPrompt}" : string.Empty;

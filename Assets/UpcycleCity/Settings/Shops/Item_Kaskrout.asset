@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0c730e74aed42858ae5f508607a38a, type: 3}
+  m_Name: Item_Kaskrout
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.ItemDefinition
+  itemId: food_kaskrout
+  displayName: Kaskrout
+  description: A baguette of tuna, harissa and olives. Energy to run and jump.
+  category: 1
+  accentColor: {r: 0.86, g: 0.52, b: 0.18, a: 1}
+  maxStack: 5
+  consumeOnUse: 1
+  useCooldown: 0.6
+  grabReachBonus: 0
+  throwForceBonus: 0
+  moveSpeedMultiplier: 1
+  grantsSmogImmunity: 0
+  useBehavior:
+    rid: 1445968227851829351
+  heldVisualPrefab: {fileID: 919132149155446097, guid: d7f2b4a6a78064d22a4a34cb588bd610, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 1445968227851829351
+      type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
+      data:
+        boostId: kaskrout
+        duration: 90
+        effect:
+          moveSpeed: 1.1
+          jump: 1.3
+          grabReach: 0
+          throwForce: 0
+          smogImmune: 0
+        message: Kaskrout! Full of energy

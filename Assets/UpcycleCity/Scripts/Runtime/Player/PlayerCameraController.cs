@@ -21,11 +21,23 @@ namespace UpcycleCity.Player
         float bobPhase;
         float landDipOffset;
         float landDipVelocity;
+        float poseEyeOffset;
+        float posePitch;
 
         public Transform CameraPivot => cameraPivot;
         public Camera Camera => playerCamera;
         public float Yaw => yaw;
         public float Pitch => pitch;
+
+        /// <summary>
+        /// An extra body pose on top of look and crouch, e.g. bending down to pick litter up by hand:
+        /// lowers the eyes by <paramref name="eyeDrop"/> metres and tilts the head down by <paramref name="extraPitch"/> degrees.
+        /// </summary>
+        public void SetBodyPose(float eyeDrop, float extraPitch)
+        {
+            poseEyeOffset = -Mathf.Max(0f, eyeDrop);
+            posePitch = extraPitch;
+        }
 
         public void Initialize(PlayerConfig playerConfig, PlayerMotor playerMotor, Transform pivot, Camera cam)
         {
@@ -85,8 +97,8 @@ namespace UpcycleCity.Player
             }
 
             float eyeY = motor != null ? motor.CurrentEyeHeight : config.standEyeHeight;
-            cameraPivot.localPosition = new Vector3(bobX, eyeY + bobY + landDipOffset, 0f);
-            cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            cameraPivot.localPosition = new Vector3(bobX, Mathf.Max(0.35f, eyeY + bobY + landDipOffset + poseEyeOffset), 0f);
+            cameraPivot.localRotation = Quaternion.Euler(Mathf.Min(pitch + posePitch, 89f), 0f, 0f);
 
             if (playerCamera != null)
             {

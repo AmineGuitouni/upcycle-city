@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3aa216047105645aebcef42747e4cd07, type: 3}
+  m_Name: SFX_FootstepCrouch
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: d053cc0adeab446108b6a3e4e009a98b, type: 3}
+  - {fileID: 8300000, guid: 5339dfc45ffbc458fa130cb174db21be, type: 3}
+  - {fileID: 8300000, guid: 715d0aca668de4e30a65a14f25a5a0c8, type: 3}
+  - {fileID: 8300000, guid: 1406ccb0404144ede9662a07f3ad7ae2, type: 3}
+  - {fileID: 8300000, guid: e6e839d1bfb4849e7bd5a18998be51dc, type: 3}
+  - {fileID: 8300000, guid: 50809a9749ca64350a6784c930b46817, type: 3}
+  - {fileID: 8300000, guid: d8e7ce69b46034ccd9c3cd05b48ad86c, type: 3}
+  - {fileID: 8300000, guid: 211d7bcaa85884596bdf9091c21ea3be, type: 3}
+  selectionMode: 0
+  category: 1
+  volumeRange: {x: 0.16, y: 0.23}
+  pitchRange: {x: 0.84, y: 0.98}
+  avoidSimilarPitch: 1
+  loop: 0
+  minInterval: 0.18
+  maxConcurrent: 2
+  maxDuration: 0
+  priority: 160
+  spatialize: 0
+  spatialBlend: 0.85
+  minDistance: 2
+  maxDistance: 26
+  rolloffMode: 0
+  dopplerLevel: 0

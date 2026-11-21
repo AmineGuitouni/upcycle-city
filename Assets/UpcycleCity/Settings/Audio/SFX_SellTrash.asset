@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3aa216047105645aebcef42747e4cd07, type: 3}
+  m_Name: SFX_SellTrash
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: c20bba616205345cba2f71a593a124a7, type: 3}
+  selectionMode: 0
+  category: 1
+  volumeRange: {x: 0.68, y: 0.8}
+  pitchRange: {x: 0.95, y: 1.08}
+  avoidSimilarPitch: 1
+  loop: 0
+  minInterval: 0.1
+  maxConcurrent: 3
+  maxDuration: 0
+  priority: 50
+  spatialize: 1
+  spatialBlend: 0.2
+  minDistance: 2
+  maxDistance: 26
+  rolloffMode: 0
+  dopplerLevel: 0

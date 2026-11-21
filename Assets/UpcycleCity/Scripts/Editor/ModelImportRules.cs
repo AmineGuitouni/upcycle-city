@@ -54,8 +54,13 @@ namespace UpcycleCity.Editor
             new ModelImportRule("VocationsCharacters/Rigged/", 1f,    RigType.Humanoid, 0.8f,        0.3f,  0f),
             new ModelImportRule("VocationsCharacters/",        1f,    RigType.None,     0.8f,        0.3f,  0f),
             new ModelImportRule("UpcycleProps/Litter/",        1f,    RigType.None,     0.5f,        0.4f,  0f),
+            new ModelImportRule("UpcycleProps/Bourguiba/Litter/", 1f, RigType.None,     0.5f,        0.4f,  0f),
+            // Street furniture keeps its colours readable in a dirty street (the bins' green, the lamps)
+            new ModelImportRule("UpcycleProps/Bourguiba/Street/", 1f, RigType.None,     0.3f,        0.35f, 0f),
             // The player's own character stays clean in any pollution (and in the creator scene)
             new ModelImportRule("UpcycleProps/Character/",     1f,    RigType.None,     0f,          0f,    0f),
+            // The player's gear (litter picker in the fist, shopping cart) stays readable: only a light film of dirt
+            new ModelImportRule("UpcycleProps/Tools/",         1f,    RigType.None,     0.2f,        0.15f, 0f),
             new ModelImportRule("UpcycleProps/",               1f,    RigType.None,     1f,          0.8f,  0f),
         };
 

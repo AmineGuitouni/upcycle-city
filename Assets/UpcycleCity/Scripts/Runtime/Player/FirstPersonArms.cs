@@ -44,6 +44,12 @@ namespace UpcycleCity.Player
         [SerializeField, Range(0f, 0.3f)] float throwPunch = 0.14f;
         [SerializeField, Range(0f, 0.2f)] float grabReach = 0.06f;
         [SerializeField, Range(0f, 60f)] float toolSwingDegrees = 32f;
+        [Tooltip("Where the hands reach while bending down to pick litter up by hand (at full bend).")]
+        [SerializeField] Vector3 handPickupReach = new Vector3(0f, -0.07f, 0.15f);
+        [Tooltip("How far the litter picker jabs forward on a grab.")]
+        [SerializeField, Range(0f, 0.2f)] float pickerJabReach = 0.09f;
+        [Tooltip("How far the litter picker dips its claw on a grab (degrees).")]
+        [SerializeField, Range(0f, 40f)] float pickerJabDegrees = 16f;
 
         [Header("Motion")]
         [SerializeField, Range(0f, 0.01f)] float swayPerLook = 0.0016f;
@@ -237,8 +243,16 @@ namespace UpcycleCity.Player
                 return;
             if (player.Inventory != null)
             {
-                if (on) player.Inventory.ItemUsed += OnItemUsed;
-                else player.Inventory.ItemUsed -= OnItemUsed;
+                if (on)
+                {
+                    player.Inventory.ItemUsed += OnItemUsed;
+                    player.Inventory.ItemAdded += OnItemAdded;
+                }
+                else
+                {
+                    player.Inventory.ItemUsed -= OnItemUsed;
+                    player.Inventory.ItemAdded -= OnItemAdded;
+                }
             }
             if (player.Grabber != null)
             {
@@ -257,6 +271,12 @@ namespace UpcycleCity.Player
 
         void OnItemUsed(IInventoryItem item) => swingTimer = ToolSwingDuration;
         void OnGrabbed(IGrabbable item) => grabKick = 1f;
+
+        // A quick hand "stow" motion whenever an item lands in the inventory (pickups, shop buys).
+        void OnItemAdded(IInventoryItem item, int amount) => grabKick = 1f;
+
+        /// <summary>Plays the stow hand-motion on demand (e.g. the Storage Bag capacity purchase).</summary>
+        public void PlayStow() => grabKick = 1f;
 
         void OnReleased(IGrabbable item, bool thrown)
         {
@@ -306,10 +326,15 @@ namespace UpcycleCity.Player
             if (sprinting) shared += sprintOffset;
             if (!grounded) shared += new Vector3(0f, 0.02f, 0f);
 
-            // Left hand: carries, charges and throws
-            Vector3 leftTarget = shared + (holding ? carryOffset : idleHandOffset);
-            leftTarget.z += grabKick * grabReach + Ease(throwKick) * throwPunch - charge * chargePullBack;
-            leftTarget.y += charge * 0.03f;
+            // Left hand: carries, charges and throws. When a tool (the litter picker) is doing the
+            // gripping, the off hand rests naturally instead of reaching into empty air for the trash.
+            bool leftCarries = holding && !toolShown;
+            Vector3 leftTarget = shared + (leftCarries ? carryOffset : idleHandOffset);
+            if (leftCarries)
+            {
+                leftTarget.z += grabKick * grabReach + Ease(throwKick) * throwPunch - charge * chargePullBack;
+                leftTarget.y += charge * 0.03f;
+            }
 
             // Right hand: holds the tool, or helps carry when the tool is put away
             bool rightCarries = holding && !toolShown;
@@ -317,12 +342,27 @@ namespace UpcycleCity.Player
             if (rightCarries)
                 rightTarget.z += grabKick * grabReach + Ease(throwKick) * throwPunch - charge * chargePullBack;
 
+            // Bending down for a hand pickup: the free hands reach for the litter
+            float bend = grabber != null ? grabber.HandPickupBend : 0f;
+            if (bend > 0f)
+            {
+                leftTarget += handPickupReach * bend;
+                if (!toolShown)
+                    rightTarget += handPickupReach * bend;
+            }
+
+            // Litter picker grab: a quick forward jab with the claw dipping to the litter
+            float jab = grabber != null && grabber.CurrentPickup == PickupStyle.Picker
+                ? Mathf.Sin(grabber.PickupProgress * Mathf.PI)
+                : 0f;
+            rightTarget.z += jab * pickerJabReach;
+
             float swing = swingTimer > 0f ? Mathf.Sin((1f - swingTimer / ToolSwingDuration) * Mathf.PI) : 0f;
             float pitch = (sprinting ? sprintPitch : 0f) + swayAngles.x;
             float yaw = swayAngles.y;
 
             Move(ref left, leftTarget, Quaternion.Euler(pitch, yaw, 0f), false);
-            Move(ref right, rightTarget, Quaternion.Euler(pitch - swing * toolSwingDegrees, yaw, 0f), toolShown);
+            Move(ref right, rightTarget, Quaternion.Euler(pitch - swing * toolSwingDegrees + jab * pickerJabDegrees, yaw, 0f), toolShown);
         }
 
         void Move(ref ArmState arm, Vector3 target, Quaternion rotation, bool grip)

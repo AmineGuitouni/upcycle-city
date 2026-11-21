@@ -30,7 +30,11 @@ namespace UpcycleCity.Ecosystem
 
         public override WasteSourceKind SourceKind => WasteSourceKind.UrbanDecay;
 
-        public bool IsDecaying => district == null || district.CurrentPollution >= decayThreshold;
+        public bool IsDecaying => district == null || district.CurrentPollution >= DecayThreshold;
+
+        // Live values: the city's EcosystemBalance when one is active, else this source's own settings
+        float DecayThreshold => EcosystemBalance.Active != null ? EcosystemBalance.Active.decayThreshold : decayThreshold;
+        float DumpInterval => EcosystemBalance.Active != null ? EcosystemBalance.Active.decayDumpInterval : dumpInterval;
         public override bool IsMitigated => !IsDecaying;
         public override float AirPollutionLoad => IsDecaying ? neglectPollutionLoad : 0f;
 
@@ -57,7 +61,7 @@ namespace UpcycleCity.Ecosystem
         protected override void Awake()
         {
             base.Awake();
-            dumpTimer = Random.Range(6f, dumpInterval * 0.7f);
+            dumpTimer = Random.Range(6f, DumpInterval * 0.7f);
         }
 
         void Update()
@@ -69,7 +73,7 @@ namespace UpcycleCity.Ecosystem
             if (dumpTimer > 0f)
                 return;
 
-            dumpTimer = dumpInterval * Random.Range(0.85f, 1.25f);
+            dumpTimer = DumpInterval * Random.Range(0.85f, 1.25f);
             DumpBulkyWaste();
         }
 

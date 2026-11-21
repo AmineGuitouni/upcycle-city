@@ -150,4 +150,46 @@ namespace UpcycleCity.Inventory
             return false; // Don't consume consumables if no valid target was hit
         }
     }
+
+    /// <summary>
+    /// A consumable that gives the player a timed boost through <see cref="PlayerBoosts"/>
+    /// (e.g. an espresso for speed, a bottle of water against smog). Consumed on use.
+    /// </summary>
+    [Serializable]
+    public sealed class TimedBoostItemBehavior : IItemUseBehavior
+    {
+        [SerializeField] string boostId = "boost";
+        [SerializeField, Min(1f)] float duration = 45f;
+        [SerializeField] PlayerBoosts.Effect effect = PlayerBoosts.Effect.Neutral;
+        [SerializeField] string message = "Boost!";
+
+        public TimedBoostItemBehavior() { }
+
+        public TimedBoostItemBehavior(string id, float seconds, PlayerBoosts.Effect boostEffect, string useMessage)
+        {
+            boostId = id;
+            duration = Mathf.Max(1f, seconds);
+            effect = boostEffect;
+            message = useMessage;
+        }
+
+        public float Duration => duration;
+        public PlayerBoosts.Effect Effect => effect;
+
+        public bool CanExecute(in ItemUseContext context) => context.Interactor != null;
+
+        public bool Execute(in ItemUseContext context)
+        {
+            PlayerController player = context.Interactor != null ? context.Interactor.GetComponentInParent<PlayerController>() : null;
+            PlayerBoosts boosts = PlayerBoosts.For(player);
+            if (boosts == null)
+                return false;
+
+            boosts.Apply(boostId, context.Item.DisplayName, context.Item.AccentColor, duration, effect);
+            string text = $"{message} ({Mathf.RoundToInt(duration)}s)";
+            context.Interactor.NotifyFeedback(text, context.Item.AccentColor);
+            context.Feedback?.Emit(PlayerFeedbackEvent.ToolUse, context.Interactor.transform.position, 0.6f, text, context.Item.AccentColor);
+            return true;
+        }
+    }
 }

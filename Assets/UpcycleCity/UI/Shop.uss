@@ -1,0 +1,295 @@
+/* Shop window: a dark card over a dimmed game view, in the Upcycle City brand colours.
+   Company Green #2E8B57, Teal #2F8F8A, Safety Yellow #F2C21B, Hi-Vis Orange #FF7A1A. */
+
+.shop-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    -unity-font-style: bold;
+}
+
+.shop-backdrop {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(6, 9, 11, 0.62);
+}
+
+.shop-window {
+    width: 960px;
+    max-width: 94%;
+    max-height: 90%;
+    background-color: rgb(30, 33, 36);
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgb(62, 67, 71);
+    overflow: hidden;
+}
+
+.shop-header {
+    flex-direction: row;
+    align-items: center;
+    height: 84px;
+    padding-right: 22px;
+    background-color: rgb(20, 22, 24);
+}
+
+.shop-accent {
+    width: 10px;
+    height: 100%;
+    margin-right: 22px;
+}
+
+.shop-titles {
+    flex-grow: 1;
+}
+
+.shop-title {
+    font-size: 30px;
+    color: rgb(240, 240, 236);
+    letter-spacing: 2px;
+}
+
+.shop-keeper {
+    font-size: 17px;
+    -unity-font-style: normal;
+    color: rgb(150, 162, 166);
+}
+
+.shop-coins {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: rgb(40, 44, 48);
+}
+
+.shop-coin-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background-color: rgb(242, 194, 27);
+    border-width: 2px;
+    border-color: rgb(196, 146, 18);
+}
+
+.shop-coins-label {
+    margin-left: 8px;
+    font-size: 22px;
+    color: rgb(242, 194, 27);
+}
+
+.shop-greeting {
+    margin: 16px 24px 8px 24px;
+    font-size: 19px;
+    -unity-font-style: italic;
+    color: rgb(206, 212, 210);
+    white-space: normal;
+}
+
+.shop-scroll {
+    flex-grow: 0;
+    flex-shrink: 1;
+    margin: 6px 14px 14px 14px;
+}
+
+.shop-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.shop-card {
+    flex-direction: row;
+    align-items: center;
+    width: 48%;
+    min-height: 128px;
+    margin: 1%;
+    padding: 12px;
+    border-radius: 8px;
+    background-color: rgb(42, 46, 50);
+    border-width: 1px;
+    border-color: rgb(54, 59, 63);
+}
+
+.shop-card:hover {
+    background-color: rgb(48, 53, 57);
+    border-color: rgb(74, 80, 86);
+}
+
+.shop-swatch {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    margin-right: 12px;
+    -unity-text-align: middle-center;
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.shop-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+}
+
+.shop-item-name {
+    font-size: 20px;
+    color: rgb(240, 240, 236);
+}
+
+.shop-item-desc {
+    margin-top: 3px;
+    font-size: 14px;
+    -unity-font-style: normal;
+    color: rgb(160, 170, 172);
+    white-space: normal;
+}
+
+.shop-item-effect {
+    margin-top: 6px;
+    font-size: 14px;
+    color: rgb(98, 196, 150);
+    white-space: normal;
+}
+
+.shop-buy {
+    align-items: flex-end;
+    margin-left: 8px;
+}
+
+.shop-state {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: rgb(150, 162, 166);
+}
+
+.shop-buy-button {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    height: 44px;
+    padding: 0 12px;
+    margin: 0;
+    border-radius: 6px;
+    border-width: 0;
+    background-color: rgb(46, 139, 87);
+}
+
+.shop-buy-button:hover {
+    background-color: rgb(58, 160, 102);
+}
+
+.shop-buy-button:active {
+    background-color: rgb(36, 112, 70);
+}
+
+.shop-buy-button:focus {
+    border-width: 2px;
+    border-color: rgb(242, 194, 27);
+}
+
+.shop-buy-button:disabled {
+    background-color: rgb(56, 60, 64);
+    opacity: 0.75;
+}
+
+.shop-buy-button--short .shop-price {
+    color: rgb(220, 120, 100);
+}
+
+.shop-price {
+    margin-left: 6px;
+    font-size: 21px;
+    color: rgb(255, 255, 255);
+}
+
+.shop-sell {
+    margin: 10px 1% 4px 1%;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background-color: rgb(36, 40, 44);
+}
+
+.shop-sell-heading {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: rgb(240, 240, 236);
+}
+
+.shop-sell-row {
+    flex-direction: row;
+    align-items: center;
+    height: 34px;
+}
+
+.shop-sell-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    margin-right: 12px;
+}
+
+.shop-sell-name {
+    width: 210px;
+    font-size: 15px;
+    color: rgb(230, 232, 230);
+}
+
+.shop-sell-value {
+    font-size: 15px;
+    -unity-font-style: normal;
+    color: rgb(242, 194, 27);
+}
+
+.shop-sell-total {
+    margin-top: 8px;
+    font-size: 13px;
+    -unity-font-style: normal;
+    color: rgb(150, 162, 166);
+}
+
+.shop-footer {
+    flex-direction: row;
+    align-items: center;
+    height: 64px;
+    padding: 0 18px 0 24px;
+    background-color: rgb(20, 22, 24);
+}
+
+.shop-status {
+    flex-grow: 1;
+    font-size: 17px;
+    color: rgb(206, 212, 210);
+    white-space: normal;
+}
+
+.shop-status--good {
+    color: rgb(98, 196, 150);
+}
+
+.shop-status--bad {
+    color: rgb(230, 112, 92);
+}
+
+.shop-leave {
+    height: 40px;
+    padding: 0 20px;
+    margin: 0;
+    border-radius: 6px;
+    border-width: 0;
+    font-size: 15px;
+    color: rgb(240, 240, 236);
+    background-color: rgb(70, 74, 78);
+}
+
+.shop-leave:hover {
+    background-color: rgb(88, 93, 98);
+}
+
+.shop-leave:focus {
+    border-width: 2px;
+    border-color: rgb(242, 194, 27);
+}

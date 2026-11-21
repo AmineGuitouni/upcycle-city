@@ -43,13 +43,17 @@ namespace UpcycleCity.Editor
             litterPicker.Configure(
                 "tool_litter_picker",
                 "Litter Picker",
-                "Extends physics trash grab reach (+1.6m) and throw power.",
+                "Snaps litter up in a blink without stopping (+1.6 m reach, harder throws). By hand you have to bend down and stand still.",
                 ItemCategory.Tool,
-                new Color(0.95f, 0.76f, 0.11f),
+                new Color(1f, 0.48f, 0.1f),
                 stackLimit: 1,
                 consume: false,
                 reachBonus: 1.6f,
                 throwBonus: 1.5f);
+            // angled across the view towards the ground, so it reads as a long reacher rather than a stub
+            litterPicker.SetGrabTool(true,
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UpcycleCity/Art/UpcycleProps/Tools/litter_picker.fbx"),
+                new Vector3(-4f, -22f, 0f));
             EditorUtility.SetDirty(litterPicker);
 
             ItemDefinition wrench = CreateOrLoadAsset<ItemDefinition>($"{SettingsRoot}/Item_Wrench.asset");

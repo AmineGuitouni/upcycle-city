@@ -17,6 +17,8 @@ namespace UpcycleCity.Player
         BlockSprint = 0,
         BlockJump = 1,
         SmogImmune = 2,
+        /// <summary>Roots the player in place (e.g. bending down to pick litter up by hand).</summary>
+        BlockMove = 3,
     }
 
     /// <summary>

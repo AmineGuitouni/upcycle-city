@@ -54,7 +54,14 @@ namespace UpcycleCity.Ecosystem
         public override WasteSourceKind SourceKind => WasteSourceKind.FactoryScrap;
         public bool IsScrubberActive => scrubberActive;
         public override bool IsMitigated => scrubberActive;
-        public override float AirPollutionLoad => scrubberActive ? filteredAirLoad : unfilteredAirLoad;
+        public override float AirPollutionLoad => scrubberActive ? FilteredAirLoad : UnfilteredAirLoad;
+
+        // Live values: the city's EcosystemBalance when one is active, else this factory's own settings
+        static EcosystemBalance Balance => EcosystemBalance.Active;
+        float UnfilteredAirLoad => Balance != null ? Balance.factoryUnfilteredLoad : unfilteredAirLoad;
+        float FilteredAirLoad => Balance != null ? Balance.factoryFilteredLoad : filteredAirLoad;
+        float ScrapInterval => Balance != null ? Balance.factoryScrapInterval : scrapInterval;
+        int RepairCoinReward => Balance != null ? Balance.factoryRepairReward : repairCoinReward;
 
         public Transform Transform => transform;
 
@@ -64,7 +71,7 @@ namespace UpcycleCity.Ecosystem
             {
                 if (scrubberActive)
                     return $"{DisplayName} Scrubber ACTIVE (-88% Emissions)";
-                return $"[F with Wrench] Repair {DisplayName} Scrubber (+{repairCoinReward} Coins)";
+                return $"[F with Wrench] Repair {DisplayName} Scrubber (+{RepairCoinReward} Coins)";
             }
         }
 
@@ -101,7 +108,7 @@ namespace UpcycleCity.Ecosystem
             if (smokeParticles != null)
                 baseSmokeRate = Mathf.Max(4f, smokeParticles.emission.rateOverTimeMultiplier);
 
-            scrapTimer = Random.Range(3f, scrapInterval * 0.7f);
+            scrapTimer = Random.Range(3f, ScrapInterval * 0.7f);
             RefreshVisuals();
         }
 
@@ -128,7 +135,7 @@ namespace UpcycleCity.Ecosystem
             scrapTimer -= Time.deltaTime;
             if (scrapTimer <= 0f)
             {
-                scrapTimer = scrapInterval * Random.Range(0.85f, 1.25f);
+                scrapTimer = ScrapInterval * Random.Range(0.85f, 1.25f);
                 EjectIndustrialScrap();
             }
 
@@ -205,10 +212,10 @@ namespace UpcycleCity.Ecosystem
             filterRemaining = filterDurationSeconds;
             RefreshVisuals();
 
-            interactor?.Inventory?.AddCoins(repairCoinReward);
+            interactor?.Inventory?.AddCoins(RepairCoinReward);
             district?.AddSatisfactionBoost(0.18f);
 
-            string msg = $"Scrubber Repaired! {DisplayName} emissions slashed · +{repairCoinReward} Coins";
+            string msg = $"Scrubber Repaired! {DisplayName} emissions slashed · +{RepairCoinReward} Coins";
             interactor?.NotifyFeedback(msg, new Color(0.18f, 0.78f, 0.45f));
         }
 

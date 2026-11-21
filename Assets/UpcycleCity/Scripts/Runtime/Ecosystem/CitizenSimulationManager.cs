@@ -52,6 +52,15 @@ namespace UpcycleCity.Ecosystem
         [SerializeField, Range(0.005f, 0.08f)] float backgroundBinDepositAmount = 0.022f;
         [SerializeField, Range(0.5f, 0.98f)] float civicPrideThreshold = 0.80f;
 
+        // Live values: the city's EcosystemBalance when one is active, else these Inspector settings
+        static EcosystemBalance Balance => EcosystemBalance.Active;
+        float VisibleBinDeposit => Balance != null ? Balance.visibleBinDeposit : visibleBinDepositAmount;
+        float BackgroundBinDeposit => Balance != null ? Balance.backgroundBinDeposit : backgroundBinDepositAmount;
+        float CivicPrideThreshold => Balance != null ? Balance.civicPrideThreshold : civicPrideThreshold;
+        static float LitterChance => Balance != null ? Balance.litterChance : 1f;
+        /// <summary>Scales action cooldowns: more activity, shorter waits between actions.</summary>
+        static float Cooldown(float seconds) => Balance != null ? seconds / Mathf.Max(0.1f, Balance.citizenActivity) : seconds;
+
         sealed class VisibleCitizen
         {
             public CrowdAgent Agent;
@@ -95,7 +104,7 @@ namespace UpcycleCity.Ecosystem
         public static CitizenSimulationManager Active { get; private set; }
 
         public override WasteSourceKind SourceKind => WasteSourceKind.Citizen;
-        public override bool IsMitigated => CityEcosystemManager.Active != null && CityEcosystemManager.Active.CitySatisfaction >= civicPrideThreshold;
+        public override bool IsMitigated => CityEcosystemManager.Active != null && CityEcosystemManager.Active.CitySatisfaction >= CivicPrideThreshold;
 
         public int ActiveTier1Count => activeTier1Count;
         public int TotalVisibleAgents => visibleCitizens.Count;
@@ -202,7 +211,7 @@ namespace UpcycleCity.Ecosystem
 
         void InitializeBackgroundPopulation()
         {
-            int count = Mathf.Clamp(backgroundPopulationCount, 0, 2000);
+            int count = Mathf.Clamp(Balance != null ? Balance.backgroundPopulation : backgroundPopulationCount, 0, 2000);
             backgroundPopulation = new BackgroundCitizenRecord[count];
 
             int districtCount = CityEcosystemManager.Active != null
@@ -257,7 +266,7 @@ namespace UpcycleCity.Ecosystem
                     Personality = personality,
                     State = CitizenActionState.Walking,
                     StateTimer = 0f,
-                    ActionCooldown = Random.Range(2.5f, 8.5f),
+                    ActionCooldown = Cooldown(Random.Range(2.5f, 8.5f)),
                     IsNearPlayer = true,
                 };
                 visibleCitizens.Add(vc);
@@ -314,7 +323,7 @@ namespace UpcycleCity.Ecosystem
                     vc.ActionCooldown -= dt * 0.5f;
                     if (vc.ActionCooldown <= 0f)
                     {
-                        vc.ActionCooldown = Random.Range(10f, 18f);
+                        vc.ActionCooldown = Cooldown(Random.Range(10f, 18f));
                         CityDistrict d = CityEcosystemManager.FindDistrictForPosition(pos);
                         ExecuteBackgroundEffectForDistrict(d, vc.Personality, isDemotedAgent: true);
                     }
@@ -348,7 +357,7 @@ namespace UpcycleCity.Ecosystem
                     vc.TargetBin = null;
                     vc.TargetPoi = null;
                     vc.ActionExecuted = false;
-                    vc.ActionCooldown = Random.Range(5.5f, 12.0f);
+                    vc.ActionCooldown = Cooldown(Random.Range(5.5f, 12.0f));
 
                     float localPol = PollutionController.Active != null ? PollutionController.Active.SampleAt(pos) : 0f;
                     float smogSlow = localPol > 0.65f ? Mathf.Lerp(1f, 0.82f, profile.SmogSensitivity) : 1f;
@@ -395,8 +404,8 @@ namespace UpcycleCity.Ecosystem
                 }
 
                 // Decide whether to litter based on personality + satisfaction
-                float litterProb = profile.BaseLitterChance * Mathf.Lerp(1.35f, 0.12f, satisfaction);
-                if (satisfaction >= civicPrideThreshold)
+                float litterProb = profile.BaseLitterChance * Mathf.Lerp(1.35f, 0.12f, satisfaction) * LitterChance;
+                if (satisfaction >= CivicPrideThreshold)
                     litterProb *= 0.2f;
 
                 if (Random.value < litterProb && CanEmitTrash())
@@ -434,7 +443,7 @@ namespace UpcycleCity.Ecosystem
             }
 
             // Keep walking smoothly
-            vc.ActionCooldown = Random.Range(3.5f, 7.5f);
+            vc.ActionCooldown = Cooldown(Random.Range(3.5f, 7.5f));
         }
 
         void BeginVisibleAction(VisibleCitizen vc, CitizenActionState state, CrowdActivity anim, float duration, Vector3? lookAt)
@@ -451,7 +460,7 @@ namespace UpcycleCity.Ecosystem
             {
                 if (vc.TargetBin != null && vc.TargetBin.isActiveAndEnabled)
                 {
-                    vc.TargetBin.AddCitizenDeposit(visibleBinDepositAmount);
+                    vc.TargetBin.AddCitizenDeposit(VisibleBinDeposit);
                     visibleBinDeposits++;
                     TryPushCue(vc.Agent.transform, "Used Bin!", new Color(0.18f, 0.74f, 0.45f), sqrDistToPlayer);
                 }
@@ -530,14 +539,14 @@ namespace UpcycleCity.Ecosystem
 
             if (cleanBin != null && Random.value <= useBinChance)
             {
-                cleanBin.AddCitizenDeposit(isDemotedAgent ? visibleBinDepositAmount * 0.6f : backgroundBinDepositAmount);
+                cleanBin.AddCitizenDeposit(isDemotedAgent ? VisibleBinDeposit * 0.6f : BackgroundBinDeposit);
                 backgroundBinDeposits++;
                 return;
             }
 
             // Off-screen littering still genuinely raises district pollution!
-            float litterProb = profile.BaseLitterChance * Mathf.Lerp(1.25f, 0.10f, satisfaction) * 0.18f;
-            if (satisfaction >= civicPrideThreshold)
+            float litterProb = profile.BaseLitterChance * Mathf.Lerp(1.25f, 0.10f, satisfaction) * 0.18f * LitterChance;
+            if (satisfaction >= CivicPrideThreshold)
                 litterProb *= 0.2f;
 
             if (Random.value < litterProb)

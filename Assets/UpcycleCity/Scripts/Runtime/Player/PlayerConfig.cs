@@ -86,6 +86,20 @@ namespace UpcycleCity.Player
         [Range(1f, 24f)] public float heldRotationStiffness = 8f;
         [Range(1f, 6f)] public float interactionReach = 3.2f;
 
+        [Header("Picking Up (by hand vs. litter picker)")]
+        [Tooltip("Seconds to bend down, pick a piece of litter up by hand and straighten up. The player is rooted meanwhile.")]
+        [Range(0.2f, 2f)] public float handPickupDuration = 0.85f;
+        [Tooltip("Fraction of the hand pickup at which the hand closes on the item.")]
+        [Range(0.2f, 0.9f)] public float handPickupGrabPoint = 0.55f;
+        [Tooltip("How far the eyes drop while bending down (m).")]
+        [Range(0f, 1f)] public float handPickupDip = 0.55f;
+        [Tooltip("Extra downward head tilt while bending down (degrees).")]
+        [Range(0f, 30f)] public float handPickupPitch = 14f;
+        [Tooltip("Seconds for a litter picker grab (jaws snap shut). The player keeps moving.")]
+        [Range(0.05f, 0.6f)] public float pickerPickupDuration = 0.16f;
+        [Tooltip("How much tighter held trash follows the picker's claw than it follows the hands.")]
+        [Range(1f, 4f)] public float pickerHoldStiffness = 2.2f;
+
         /// <summary>Overwrites all values with a starting-point feel preset.</summary>
         public void ApplyPreset(PlayerTuningPreset preset)
         {

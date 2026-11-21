@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0884aaa4596408ca11d598536e8fc6, type: 3}
+  m_Name: Shop_Tools
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Shops.ShopCatalog
+  shopName: Quincaillerie
+  keeperName: Si Mounir
+  greeting: Marhba! Good tools make a clean city. What are you fixing today?
+  accent: {r: 0.95, g: 0.76, b: 0.11, a: 1}
+  showsSellPrices: 0
+  offers:
+  - item: {fileID: 11400000, guid: 0447f8ae9f36d489e94e605e7138eb81, type: 2}
+    price: 30
+    quantity: 1
+  - item: {fileID: 11400000, guid: 860f1ec756a234621950d3d3a9a032b6, type: 2}
+    price: 45
+    quantity: 1
+  - item: {fileID: 11400000, guid: d70a286a757224439bf2ebe3c0776892, type: 2}
+    price: 60
+    quantity: 1
+  - item: {fileID: 11400000, guid: 8fcb24f12db934f06ba162843fe09ec4, type: 2}
+    price: 20
+    quantity: 1

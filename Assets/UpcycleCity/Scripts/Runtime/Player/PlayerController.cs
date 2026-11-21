@@ -36,6 +36,7 @@ namespace UpcycleCity.Player
         FirstPersonArms arms;
 
         GameObject activeToolVisual;
+        IInventoryItem activeToolItem;
         float toolSwingTimer;
 
         public PlayerConfig Config => config;
@@ -162,6 +163,10 @@ namespace UpcycleCity.Player
             motor.TickTimers(dt);
             stateMachine.Tick(dt);
 
+            // Bending down to pick litter up by hand lowers and tilts the view
+            float bend = grabber.HandPickupBend;
+            cameraController.SetBodyPose(bend * config.handPickupDip, bend * config.handPickupPitch);
+
             bool isSprinting = stateMachine.Current == stateMachine.Sprint;
             Vector2 look = input.InputMode == PlayerInputMode.UI ? Vector2.zero : input.LookDelta;
             cameraController.TickLook(look, isSprinting, dt);
@@ -223,6 +228,7 @@ namespace UpcycleCity.Player
 
         void OnSelectedSlotChanged(int index, InventorySlot slot)
         {
+            grabber?.SyncGripWithEquipped();
             SyncEquippedToolModifiers();
             RefreshToolVisual();
         }
@@ -265,26 +271,46 @@ namespace UpcycleCity.Player
 
         void RefreshToolVisual()
         {
+            // Hide the tool while both hands carry trash; the litter picker stays out (it may be the one holding it)
+            IInventoryItem equipped = inventory != null ? inventory.EquippedItem : null;
+            if (equipped != null && grabber != null && grabber.IsHolding && !equipped.IsGrabTool)
+                equipped = null;
+
+            // Same tool still shown: keep it (re-spawning would snap the picker's jaws and arms back to rest)
+            if (activeToolVisual != null && equipped != null && ReferenceEquals(equipped, activeToolItem))
+                return;
+
             if (activeToolVisual != null)
             {
                 Destroy(activeToolVisual);
                 activeToolVisual = null;
             }
+            activeToolItem = null;
+            grabber?.SetClawProvider(null);
 
-            if (equippedToolAnchor == null || inventory == null)
+            if (equippedToolAnchor == null || equipped == null)
                 return;
-
-            // Hide tool viewmodel while physically carrying trash (unless it's a reach-extending litter picker)
-            IInventoryItem equipped = inventory.EquippedItem;
-            if (equipped == null)
-                return;
-            if (grabber != null && grabber.IsHolding && equipped.GrabReachBonus <= 0f)
-                return;
+            activeToolItem = equipped;
 
             if (equipped.HeldVisualPrefab != null)
             {
                 activeToolVisual = Instantiate(equipped.HeldVisualPrefab, equippedToolAnchor);
+                // Per-item grip correction, layered on top of the model's authored transform (which can
+                // carry an FBX axis conversion) so the defaults (zero offset, scale 1) change nothing.
+                // Designers nudge HeldLocalPosition/Euler/Scale on the item asset until the grip sits in the fist.
+                Transform t = activeToolVisual.transform;
+                t.localPosition += equipped.HeldLocalPosition;
+                t.localRotation = Quaternion.Euler(equipped.HeldLocalEuler) * t.localRotation;
+                t.localScale *= equipped.HeldUniformScale;
                 StripPhysicsFromViewModel(activeToolVisual);
+
+                // A claw tool animates its jaws and tells the grabber where its claw is
+                if (equipped.IsGrabTool)
+                {
+                    var view = activeToolVisual.AddComponent<LitterPickerView>();
+                    view.Bind(this, arms != null && arms.isActiveAndEnabled ? arms.ViewModelCamera : null);
+                    grabber?.SetClawProvider(view);
+                }
             }
             else
             {
@@ -334,7 +360,7 @@ namespace UpcycleCity.Player
             var accentMat = new Material(shader) { color = item.AccentColor };
             var metalMat = new Material(shader) { color = new Color(0.28f, 0.31f, 0.34f) };
 
-            bool isLongPicker = item.GrabReachBonus > 0.1f;
+            bool isLongPicker = item.IsGrabTool || item.GrabReachBonus > 0.1f;
             if (isLongPicker && heldInHand)
             {
                 // a foam grip inside the fist, the shaft through it, a trigger under the fingers, jaws at the tip

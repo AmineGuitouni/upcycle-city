@@ -39,8 +39,22 @@ namespace UpcycleCity.Inventory
         [SerializeReference] IItemUseBehavior useBehavior;
 
         [Header("Visuals")]
+        [Tooltip("A claw tool like the litter picker: trash is picked up fast without stopping and held at its jaws " +
+                 "(hands are slow: the player bends down and stands still).")]
+        [SerializeField] bool grabTool;
+
         [Tooltip("Optional first-person prefab shown in hand when selected.")]
         [SerializeField] GameObject heldVisualPrefab;
+
+        [Tooltip("Local position offset applied to the held visual inside the fist/tool anchor. " +
+                 "Nudge this until the grip sits in the hand instead of floating.")]
+        [SerializeField] Vector3 heldLocalPosition = Vector3.zero;
+
+        [Tooltip("Local rotation (euler degrees) applied to the held visual so the handle points the right way.")]
+        [SerializeField] Vector3 heldLocalEuler = Vector3.zero;
+
+        [Tooltip("Uniform scale applied to the held visual (1 = prefab's authored size).")]
+        [SerializeField, Min(0.01f)] float heldUniformScale = 1f;
 
         public string ItemId => itemId;
         public string DisplayName => displayName;
@@ -55,6 +69,10 @@ namespace UpcycleCity.Inventory
         public float MoveSpeedMultiplier => moveSpeedMultiplier > 0.01f ? moveSpeedMultiplier : 1f;
         public bool GrantsSmogImmunity => grantsSmogImmunity;
         public GameObject HeldVisualPrefab => heldVisualPrefab;
+        public bool IsGrabTool => grabTool;
+        public Vector3 HeldLocalPosition => heldLocalPosition;
+        public Vector3 HeldLocalEuler => heldLocalEuler;
+        public float HeldUniformScale => heldUniformScale > 0.01f ? heldUniformScale : 1f;
         public IItemUseBehavior UseBehavior => useBehavior;
 
         public void Configure(
@@ -87,5 +105,14 @@ namespace UpcycleCity.Inventory
         }
 
         public void SetUseBehavior(IItemUseBehavior behavior) => useBehavior = behavior;
+
+        /// <summary>Marks this item as a claw tool and sets the model held in the fist (editor builders).</summary>
+        public void SetGrabTool(bool isGrabTool, GameObject heldVisual, Vector3 heldEuler = default)
+        {
+            grabTool = isGrabTool;
+            if (heldVisual != null)
+                heldVisualPrefab = heldVisual;
+            heldLocalEuler = heldEuler;
+        }
     }
 }

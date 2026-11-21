@@ -27,6 +27,10 @@ namespace UpcycleCity.Ecosystem
         [Tooltip("Hard cap on active physical TrashItems across the whole scene for mobile performance.")]
         [SerializeField, Range(15, 200)] int maxGlobalTrash = 65;
 
+        [Tooltip("Difficulty and pacing for the whole city (bins, citizens, smog, factory, rewards). " +
+                 "When set, it overrides the matching values on every pollution system; edits apply live in Play Mode.")]
+        [SerializeField] EcosystemBalance balance;
+
         [Tooltip("Catalog of physical litter/bulky trash archetypes shared by all pollution sources.")]
         [SerializeField] WasteCatalog defaultCatalog;
 
@@ -53,9 +57,12 @@ namespace UpcycleCity.Ecosystem
         public event Action<CityEcosystemManager> Updated;
 
         public WasteCatalog DefaultCatalog => defaultCatalog;
-        public int MaxGlobalTrash => maxGlobalTrash;
+        public int MaxGlobalTrash => balance != null ? balance.maxGlobalTrash : maxGlobalTrash;
+        public EcosystemBalance Balance => balance;
+        float SmogSlowThreshold => balance != null ? balance.smogSlowThreshold : smogSlowThreshold;
+        float MaxSmogSpeedMultiplier => balance != null ? balance.smogMaxSlowdown : maxSmogSpeedMultiplier;
         public int TotalActiveTrash => liveTrash.Count;
-        public bool CanSpawnMoreTrash => liveTrash.Count < maxGlobalTrash;
+        public bool CanSpawnMoreTrash => liveTrash.Count < MaxGlobalTrash;
         public float CityPollution { get; private set; }
         public float CitySatisfaction { get; private set; } = 0.5f;
         public float PlayerSmogExposure { get; private set; }
@@ -76,11 +83,14 @@ namespace UpcycleCity.Ecosystem
             StreetBins.Clear();
         }
 
-        public void Configure(WasteCatalog catalog, int globalTrashCap = 65)
+        public void Configure(WasteCatalog catalog, int globalTrashCap = 65, EcosystemBalance cityBalance = null)
         {
             defaultCatalog = catalog;
             maxGlobalTrash = Mathf.Clamp(globalTrashCap, 15, 200);
+            balance = cityBalance;
         }
+
+        void Awake() => EcosystemBalance.SetActive(balance);
 
         public int GetActiveTrashCount(WasteSourceKind kind)
         {
@@ -205,6 +215,7 @@ namespace UpcycleCity.Ecosystem
         void OnEnable()
         {
             Active = this;
+            EcosystemBalance.SetActive(balance);
             TrashItem.Spawned += OnTrashSpawned;
             TrashItem.Removed += OnTrashRemoved;
 
@@ -226,6 +237,8 @@ namespace UpcycleCity.Ecosystem
             TrashItem.Removed -= OnTrashRemoved;
             PlayerContext.ActiveModifiers?.RemoveAllFromSource(SmogModifierSourceId);
 
+            if (Active == this && EcosystemBalance.Active == balance)
+                EcosystemBalance.SetActive(null);
             if (Active == this)
                 Active = null;
         }
@@ -281,6 +294,9 @@ namespace UpcycleCity.Ecosystem
                     liveTrash.Remove(item);
                     continue;
                 }
+
+                if (item.IsContained)
+                    continue;   // collected into the cart: off the street
 
                 int srcIdx = (int)item.Source;
                 if (srcIdx >= 0 && srcIdx < countsBySource.Length)
@@ -348,10 +364,10 @@ namespace UpcycleCity.Ecosystem
                 return;
 
             IsPlayerSmogProtected = mods.HasFlag(PlayerModifierFlag.SmogImmune);
-            if (!IsPlayerSmogProtected && PlayerSmogExposure >= smogSlowThreshold)
+            if (!IsPlayerSmogProtected && PlayerSmogExposure >= SmogSlowThreshold)
             {
-                float t = Mathf.InverseLerp(smogSlowThreshold, 1f, PlayerSmogExposure);
-                float speedMult = Mathf.Lerp(0.94f, maxSmogSpeedMultiplier, t);
+                float t = Mathf.InverseLerp(SmogSlowThreshold, 1f, PlayerSmogExposure);
+                float speedMult = Mathf.Lerp(0.94f, MaxSmogSpeedMultiplier, t);
                 mods.SetMultiplier(SmogModifierSourceId, PlayerStat.MoveSpeedMultiplier, speedMult);
                 IsPlayerSlowedBySmog = true;
             }

@@ -57,6 +57,11 @@ namespace UpcycleCity.Waste
         public Rigidbody Body => body;
         public bool IsHeld { get; private set; }
         public bool IsDisposed { get; private set; }
+        /// <summary>
+        /// Collected into a container (the shopping cart's basket): it no longer lies in the street, so it doesn't
+        /// pollute its district and isn't taken by sorting crates or the RÉCUP scale it rolls past.
+        /// </summary>
+        public bool IsContained { get; private set; }
         public float SpawnTime { get; private set; }
 
         public void Configure(
@@ -108,12 +113,13 @@ namespace UpcycleCity.Waste
 
         public bool CanGrab(PhysicsGrabController grabber)
         {
-            return !IsDisposed && !IsHeld && body != null;
+            return !IsDisposed && !IsHeld && body != null;   // contained items can be taken back out of the cart
         }
 
         public void OnGrabbed(PhysicsGrabController grabber)
         {
             IsHeld = true;
+            IsContained = false;
             restLayer = gameObject.layer == GameLayers.HeldObject ? GameLayers.Grabbable : gameObject.layer;
             GameLayers.SetLayerRecursively(gameObject, GameLayers.HeldObject);
 
@@ -133,6 +139,9 @@ namespace UpcycleCity.Waste
             body.linearVelocity = releaseVelocity;
         }
 
+        /// <summary>Marks the item as stowed in (or taken out of) a container such as the shopping cart.</summary>
+        public void SetContained(bool contained) => IsContained = contained;
+
         public void SetIgnoreCollision(Collider other, bool ignore)
         {
             if (other == null || colliders == null)
@@ -151,6 +160,7 @@ namespace UpcycleCity.Waste
                 return;
             IsDisposed = true;
             IsHeld = false;
+            IsContained = false;
             Destroy(gameObject);
         }
     }

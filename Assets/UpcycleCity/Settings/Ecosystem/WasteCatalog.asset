@@ -13,58 +13,91 @@ MonoBehaviour:
   m_Name: WasteCatalog
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Ecosystem.WasteCatalog
   entries:
-  - displayName: Paper Cup
-    stream: 0
+  - displayName: Water Bottle
+    stream: 1
     allowedSources: 3
-    visualPrefab: {fileID: 919132149155446097, guid: 644e3406a38814353be395ac8b10c0a6, type: 3}
+    visualPrefab: {fileID: 919132149155446097, guid: a9922f9dbde77456cb870bdd3e1cab27, type: 3}
     visualScale: 1.15
-    pollutionWeight: 0.9
-    baseCoinValue: 5
-    mass: 0.25
-    isBulky: 0
-    carrySpeedMultiplier: 1
-    holdDistanceOffset: 0
-  - displayName: Red Coffee Cup
-    stream: 0
-    allowedSources: 1
-    visualPrefab: {fileID: 919132149155446097, guid: 279d15a37f4c44c31a6a278a615b1155, type: 3}
-    visualScale: 1.15
-    pollutionWeight: 0.9
-    baseCoinValue: 5
-    mass: 0.25
-    isBulky: 0
-    carrySpeedMultiplier: 1
-    holdDistanceOffset: 0
-  - displayName: Newspaper
-    stream: 0
-    allowedSources: 3
-    visualPrefab: {fileID: 919132149155446097, guid: 01ca8b20d546d48adbda7400d58a9916, type: 3}
-    visualScale: 1.05
-    pollutionWeight: 1
+    pollutionWeight: 1.1
     baseCoinValue: 6
-    mass: 0.35
+    mass: 0.3
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Snack Wrapper
+  - displayName: Crushed Bottle
     stream: 1
     allowedSources: 1
-    visualPrefab: {fileID: 919132149155446097, guid: 7d6f3b2148d814357b845db762fa63fb, type: 3}
-    visualScale: 1.25
-    pollutionWeight: 0.85
+    visualPrefab: {fileID: 919132149155446097, guid: 4e4e7a649aff343ae9cd9ee089276d4b, type: 3}
+    visualScale: 1.15
+    pollutionWeight: 1
     baseCoinValue: 5
-    mass: 0.2
+    mass: 0.25
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Candy Wrapper
+  - displayName: Espresso Cup
     stream: 1
-    allowedSources: 1
-    visualPrefab: {fileID: 919132149155446097, guid: 5bc840a9c5135495ab00e8419c303633, type: 3}
-    visualScale: 1.25
-    pollutionWeight: 0.85
+    allowedSources: 3
+    visualPrefab: {fileID: 919132149155446097, guid: 7e2a449e351844462a5febc3b16e9830, type: 3}
+    visualScale: 1.5
+    pollutionWeight: 0.9
     baseCoinValue: 5
-    mass: 0.2
+    mass: 0.12
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Paper Coffee Cup
+    stream: 0
+    allowedSources: 1
+    visualPrefab: {fileID: 919132149155446097, guid: 07954621c3afb4517a961ae2e7c24d34, type: 3}
+    visualScale: 1.5
+    pollutionWeight: 0.9
+    baseCoinValue: 5
+    mass: 0.12
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Kaskrout Wrap
+    stream: 0
+    allowedSources: 1
+    visualPrefab: {fileID: 919132149155446097, guid: d7f2b4a6a78064d22a4a34cb588bd610, type: 3}
+    visualScale: 1.4
+    pollutionWeight: 0.9
+    baseCoinValue: 5
+    mass: 0.15
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Glibettes Cone
+    stream: 0
+    allowedSources: 1
+    visualPrefab: {fileID: 919132149155446097, guid: aa015f04ef15848c489fe193be24375a, type: 3}
+    visualScale: 1.4
+    pollutionWeight: 0.8
+    baseCoinValue: 4
+    mass: 0.12
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Tuna Tin
+    stream: 3
+    allowedSources: 3
+    visualPrefab: {fileID: 919132149155446097, guid: b893fd28368f54fac8da6a5deb66d47e, type: 3}
+    visualScale: 1.5
+    pollutionWeight: 1
+    baseCoinValue: 7
+    mass: 0.25
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Harissa Tin
+    stream: 3
+    allowedSources: 2
+    visualPrefab: {fileID: 919132149155446097, guid: e3f47cfb49c4e4c66b71ea37c9ac373f, type: 3}
+    visualScale: 1.5
+    pollutionWeight: 1
+    baseCoinValue: 7
+    mass: 0.25
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
@@ -79,36 +112,36 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Plastic Bottle
-    stream: 1
+  - displayName: Newspaper
+    stream: 0
     allowedSources: 3
-    visualPrefab: {fileID: 919132149155446097, guid: 9c4aa484bec1e471b8db6db33d6c7045, type: 3}
-    visualScale: 1.15
-    pollutionWeight: 1.1
+    visualPrefab: {fileID: 919132149155446097, guid: 01ca8b20d546d48adbda7400d58a9916, type: 3}
+    visualScale: 1.05
+    pollutionWeight: 1
     baseCoinValue: 6
     mass: 0.35
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: 2L Plastic Jug
+  - displayName: Rubbish Bag
     stream: 1
     allowedSources: 2
-    visualPrefab: {fileID: 919132149155446097, guid: beed89a2e73ee4ab3a0fefc43ac7bb52, type: 3}
-    visualScale: 1.05
-    pollutionWeight: 1.3
-    baseCoinValue: 8
-    mass: 0.55
-    isBulky: 0
-    carrySpeedMultiplier: 1
-    holdDistanceOffset: 0
-  - displayName: Trash Bag
-    stream: 1
-    allowedSources: 2
-    visualPrefab: {fileID: 919132149155446097, guid: 8295f48b38a6a4db2a6bf9d0b81d6937, type: 3}
+    visualPrefab: {fileID: 919132149155446097, guid: 445297c1567264ef3b2f2932452b7107, type: 3}
     visualScale: 1
     pollutionWeight: 1.6
     baseCoinValue: 9
     mass: 1.2
+    isBulky: 0
+    carrySpeedMultiplier: 1
+    holdDistanceOffset: 0
+  - displayName: Blue Bag
+    stream: 1
+    allowedSources: 2
+    visualPrefab: {fileID: 919132149155446097, guid: dd451a9f461324c598fce7d04292c155, type: 3}
+    visualScale: 1
+    pollutionWeight: 1.5
+    baseCoinValue: 9
+    mass: 1.1
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
@@ -120,17 +153,6 @@ MonoBehaviour:
     pollutionWeight: 1.2
     baseCoinValue: 7
     mass: 0.45
-    isBulky: 0
-    carrySpeedMultiplier: 1
-    holdDistanceOffset: 0
-  - displayName: Takeaway Box
-    stream: 0
-    allowedSources: 2
-    visualPrefab: {fileID: 919132149155446097, guid: c54b40a54cbde4c71b61a1426cc29719, type: 3}
-    visualScale: 1.1
-    pollutionWeight: 1
-    baseCoinValue: 6
-    mass: 0.35
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
@@ -200,6 +222,17 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
+  - displayName: "Broken Caf\xE9 Chair"
+    stream: 4
+    allowedSources: 8
+    visualPrefab: {fileID: 919132149155446097, guid: 8f85fa0990b574895834cebfc3205701, type: 3}
+    visualScale: 1
+    pollutionWeight: 2.2
+    baseCoinValue: 16
+    mass: 3
+    isBulky: 1
+    carrySpeedMultiplier: 0.78
+    holdDistanceOffset: 0.45
   - displayName: Old Tyre
     stream: 4
     allowedSources: 8
@@ -222,14 +255,3 @@ MonoBehaviour:
     isBulky: 1
     carrySpeedMultiplier: 0.68
     holdDistanceOffset: 0.48
-  - displayName: Old Washer
-    stream: 4
-    allowedSources: 8
-    visualPrefab: {fileID: 919132149155446097, guid: 16b7cb8a5f2014cb0937312b3252cf09, type: 3}
-    visualScale: 0.85
-    pollutionWeight: 3
-    baseCoinValue: 25
-    mass: 9.5
-    isBulky: 1
-    carrySpeedMultiplier: 0.65
-    holdDistanceOffset: 0.55

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.ItemDefinition
   itemId: tool_litter_picker
   displayName: Litter Picker
-  description: Extends physics trash grab reach (+1.6m) and throw power.
+  description: Snaps litter up in a blink without stopping (+1.6 m reach, harder throws). By hand you have to bend down and stand still.
   category: 0
-  accentColor: {r: 0.95, g: 0.76, b: 0.11, a: 1}
+  accentColor: {r: 1, g: 0.48, b: 0.1, a: 1}
   maxStack: 1
   consumeOnUse: 0
   useCooldown: 0.35
@@ -26,7 +26,11 @@ MonoBehaviour:
   grantsSmogImmunity: 0
   useBehavior:
     rid: -2
-  heldVisualPrefab: {fileID: 0}
+  grabTool: 1
+  heldVisualPrefab: {fileID: 919132149155446097, guid: 9abbe462fa74e4859b9fba1d58f0651b, type: 3}
+  heldLocalPosition: {x: 0, y: 0, z: 0}
+  heldLocalEuler: {x: -4, y: -22, z: 0}
+  heldUniformScale: 1
   references:
     version: 2
     RefIds:

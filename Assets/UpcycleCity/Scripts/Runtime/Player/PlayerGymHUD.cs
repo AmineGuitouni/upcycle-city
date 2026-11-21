@@ -33,6 +33,9 @@ namespace UpcycleCity.Player
         }
 
         readonly List<Toast> toasts = new List<Toast>(8);
+        float coinPulse;
+        int coinDelta;
+        PlayerBoosts boosts;
 
         Texture2D whiteTex;
         GUIStyle pillStyle;
@@ -82,12 +85,22 @@ namespace UpcycleCity.Player
             player = target;
             if (player.Interactor != null)
                 player.Interactor.FeedbackRequested += AddToast;
+            if (player.Inventory != null)
+                player.Inventory.CoinsChanged += OnCoinsChanged;
+        }
+
+        void OnCoinsChanged(int total, int delta)
+        {
+            coinDelta = delta;
+            coinPulse = 1f;
         }
 
         void UnbindPlayer()
         {
             if (player != null && player.Interactor != null)
                 player.Interactor.FeedbackRequested -= AddToast;
+            if (player != null && player.Inventory != null)
+                player.Inventory.CoinsChanged -= OnCoinsChanged;
         }
 
         void OnDestroy()
@@ -99,6 +112,7 @@ namespace UpcycleCity.Player
         void Update()
         {
             float dt = Time.deltaTime;
+            coinPulse = Mathf.MoveTowards(coinPulse, 0f, dt * 0.8f);
             for (int i = toasts.Count - 1; i >= 0; i--)
             {
                 Toast t = toasts[i];
@@ -184,10 +198,18 @@ namespace UpcycleCity.Player
 
             EnsureStyles();
 
+            // A full-screen window (the shop) is open: keep only the toasts, it shows coins itself
+            if (player.Input != null && player.Input.InputMode == PlayerInputMode.UI)
+            {
+                DrawToasts();
+                return;
+            }
+
             DrawTopLeftStatePanel();
             DrawTopRightCoinsAndControls();
             DrawCrosshairAndPrompt();
             DrawToasts();
+            DrawBoosts();
             DrawHotbar();
         }
 
@@ -208,7 +230,7 @@ namespace UpcycleCity.Player
 
             GUI.Label(new Rect(32, 66, 255, 22), $"FSM STATE:  {stateName}", labelStyle);
             GUI.Label(new Rect(32, 90, 255, 20), $"Speed: {player.Motor.HorizontalSpeed:0.0} m/s   Vy: {player.Motor.VerticalSpeed:+0.0;-0.0;0.0}", smallStyle);
-            GUI.Label(new Rect(32, 112, 255, 20), $"{grounded}   |   Grab Reach: {reach:0.1} m", smallStyle);
+            GUI.Label(new Rect(32, 112, 255, 20), $"{grounded}   |   Grab Reach: {reach:0.0} m", smallStyle);
             GUI.Label(new Rect(32, 134, 255, 20), $"Input Scheme: {scheme}", smallStyle);
         }
 
@@ -217,9 +239,16 @@ namespace UpcycleCity.Player
             float w = Screen.width;
             int coins = player.Inventory != null ? player.Inventory.Coins : 0;
 
-            DrawBox(new Rect(w - 165, 20, 145, 36), PanelDark);
+            DrawBox(new Rect(w - 165, 20, 145, 36), Color.Lerp(PanelDark, coinDelta >= 0 ? BrandGreen : BrandRust, coinPulse * 0.8f));
             DrawBox(new Rect(w - 157, 29, 18, 18), CoinYellow);
             GUI.Label(new Rect(w - 132, 20, 105, 36), $"{coins} COINS", labelStyle);
+            if (coinPulse > 0.01f && coinDelta != 0)
+            {
+                Color prev = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, coinPulse);
+                GUI.Label(new Rect(w - 132, 58 - (1f - coinPulse) * 10f, 105, 22), coinDelta > 0 ? $"+{coinDelta}" : coinDelta.ToString(), labelStyle);
+                GUI.color = prev;
+            }
 
             if (!showControlsLegend)
                 return;
@@ -289,6 +318,27 @@ namespace UpcycleCity.Player
                 GUI.Label(rect, toast.Text, pillStyle);
                 GUI.color = prev;
                 y += 36f;
+            }
+        }
+
+        void DrawBoosts()
+        {
+            if (boosts == null)
+                boosts = player.GetComponent<PlayerBoosts>();
+            if (boosts == null || boosts.ActiveBoosts.Count == 0)
+                return;
+
+            const float chipW = 150f, chipH = 26f, gap = 8f;
+            int n = boosts.ActiveBoosts.Count;
+            float x = (Screen.width - (n * chipW + (n - 1) * gap)) * 0.5f;
+            float y = Screen.height - 78f - 20f - 28f - chipH - 10f;
+            for (int i = 0; i < n; i++)
+            {
+                PlayerBoosts.Active boost = boosts.ActiveBoosts[i];
+                Rect r = new Rect(x + i * (chipW + gap), y, chipW, chipH);
+                DrawBox(r, PanelDark);
+                DrawBox(new Rect(r.x, r.yMax - 4f, r.width * boost.Normalized, 4f), boost.Color);
+                GUI.Label(new Rect(r.x + 8f, r.y, r.width - 12f, r.height - 3f), $"{boost.Label}  {Mathf.CeilToInt(boost.Remaining)}s", smallStyle);
             }
         }
 

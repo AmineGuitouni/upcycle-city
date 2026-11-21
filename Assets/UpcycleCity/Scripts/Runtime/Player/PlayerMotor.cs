@@ -40,7 +40,9 @@ namespace UpcycleCity.Player
         public float CurrentEyeHeight => currentEyeHeight;
 
         /// <summary>Aggregated horizontal speed multiplier from PlayerModifiers (held objects, tools, smog, buffs).</summary>
-        public float SpeedMultiplier => modifiers != null ? modifiers.GetMultiplier(PlayerStat.MoveSpeedMultiplier) : 1f;
+        public float SpeedMultiplier => modifiers == null ? 1f
+            : modifiers.HasFlag(PlayerModifierFlag.BlockMove) ? 0f
+            : modifiers.GetMultiplier(PlayerStat.MoveSpeedMultiplier);
 
         /// <summary>Aggregated jump velocity multiplier from PlayerModifiers.</summary>
         public float JumpMultiplier => modifiers != null ? modifiers.GetMultiplier(PlayerStat.JumpMultiplier) : 1f;

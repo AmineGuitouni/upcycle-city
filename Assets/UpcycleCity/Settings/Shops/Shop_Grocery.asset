@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0884aaa4596408ca11d598536e8fc6, type: 3}
+  m_Name: Shop_Grocery
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Shops.ShopCatalog
+  shopName: "\xC9picerie"
+  keeperName: Khalti Fatma
+  greeting: Ahla ya wildi! Water, kaskrout, everything fresh this morning.
+  accent: {r: 0.1, g: 0.45, b: 0.25, a: 1}
+  showsSellPrices: 0
+  offers:
+  - item: {fileID: 11400000, guid: ea60961cf41ed433ea3ac126ac3395bc, type: 2}
+    price: 7
+    quantity: 1
+  - item: {fileID: 11400000, guid: 75d7833e3029b4da4bde319fee9accfe, type: 2}
+    price: 10
+    quantity: 1
+  - item: {fileID: 11400000, guid: 3ee1132bf5bb84309a75f4a852e6c9c1, type: 2}
+    price: 7
+    quantity: 1

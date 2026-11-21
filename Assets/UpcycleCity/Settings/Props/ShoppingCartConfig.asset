@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0f11672e47f2c3948bbf0d1ed2040ef, type: 3}
+  m_Name: ShoppingCartConfig
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Props.ShoppingCartConfig
+  visualPrefab: {fileID: 919132149155446097, guid: 8e00306c8113848daa5e67ef107aed45, type: 3}
+  mass: 12
+  centerOfMassHeight: -0.15
+  pushDistance: 1.05
+  handleHeight: 0.95
+  maxPushSpeed: 9
+  followStiffness: 18
+  turnSharpness: 12
+  pushMoveSpeedMultiplier: 0.82
+  lateralGrip: 0.85
+  rollDamping: 0.6
+  wheelRadius: 0.065
+  basketCapacity: 12
+  heapAboveRim: 0.1
+  minSquash: 0.6
+  throwHoldThreshold: 0.28
+  throwSpeed: 8
+  throwChargeTime: 0.7

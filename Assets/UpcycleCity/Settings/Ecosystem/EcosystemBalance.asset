@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8f56e57a6aa5442f937ad2d3abf3c64, type: 3}
+  m_Name: EcosystemBalance
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Ecosystem.EcosystemBalance
+  maxGlobalTrash: 60
+  districtCapacityScale: 1
+  smogSlowThreshold: 0.62
+  smogMaxSlowdown: 0.82
+  binPassiveFillPerSecond: 0.0015
+  binDepositScale: 0.35
+  binSpillInterval: 18
+  binOverflowAirLoad: 3.2
+  binServiceReward: 14
+  citizenActivity: 1
+  litterChance: 0.7
+  visibleBinDeposit: 0.04
+  backgroundBinDeposit: 0.005
+  backgroundPopulation: 80
+  civicPrideThreshold: 0.8
+  decayThreshold: 0.42
+  decayDumpInterval: 16
+  factoryUnfilteredLoad: 16.5
+  factoryFilteredLoad: 1.8
+  factoryScrapInterval: 9.5
+  factoryRepairReward: 35
+  sortingPayout: 1
+  recyclingPayout: 1

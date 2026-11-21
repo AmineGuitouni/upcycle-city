@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3aa216047105645aebcef42747e4cd07, type: 3}
+  m_Name: SFX_ToolWrenchRepair
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Audio.SoundCue
+  clips:
+  - {fileID: 8300000, guid: c1bbd4f9391014e2d8fadb1c4e351098, type: 3}
+  - {fileID: 8300000, guid: 29ae10fe22faf41619386da574b0e241, type: 3}
+  - {fileID: 8300000, guid: 98cdfff8dfd0d4467a8a0741a6dadba2, type: 3}
+  selectionMode: 0
+  category: 1
+  volumeRange: {x: 0.62, y: 0.76}
+  pitchRange: {x: 0.92, y: 1.1}
+  avoidSimilarPitch: 1
+  loop: 0
+  minInterval: 0.12
+  maxConcurrent: 2
+  maxDuration: 0.85
+  priority: 65
+  spatialize: 1
+  spatialBlend: 0.35
+  minDistance: 2
+  maxDistance: 26
+  rolloffMode: 0
+  dopplerLevel: 0

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UpcycleCity.Player;
 using UpcycleCity.Waste;
 
 namespace UpcycleCity.Ecosystem
@@ -90,6 +91,10 @@ namespace UpcycleCity.Ecosystem
         {
             CityEcosystemManager eco = CityEcosystemManager.Active;
             if (eco == null)
+                return;
+            // Hidden while a full-screen window (the shop) has the player in UI mode
+            if (PlayerContext.Active != null && PlayerContext.Active.Input != null
+                && PlayerContext.Active.Input.InputMode == PlayerInputMode.UI)
                 return;
 
             EnsureStyles();

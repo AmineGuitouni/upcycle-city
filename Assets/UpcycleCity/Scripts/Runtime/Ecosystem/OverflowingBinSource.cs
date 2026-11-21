@@ -23,6 +23,10 @@ namespace UpcycleCity.Ecosystem
         [Tooltip("Passive fill per second from nearby shop/pedestrian foot traffic.")]
         [SerializeField, Min(0f)] float passiveFillPerSecond = 0.012f;
 
+        [Tooltip("Bin capacity: citizen deposits are scaled by this (lower = a bigger bin that fills more slowly). " +
+                 "Lets a street with many bins and walkers keep a demo-friendly pace.")]
+        [SerializeField, Range(0.1f, 2f)] float depositScale = 1f;
+
         [Tooltip("Seconds between physical trash spills while the bin is overflowing.")]
         [SerializeField, Min(1.5f)] float spillInterval = 7.5f;
 
@@ -47,7 +51,15 @@ namespace UpcycleCity.Ecosystem
         public float FillLevel => fillLevel;
         public bool IsOverflowing => fillLevel >= 0.99f;
         public override bool IsMitigated => !IsOverflowing;
-        public override float AirPollutionLoad => IsOverflowing ? overflowAirLoad : 0f;
+        public override float AirPollutionLoad => IsOverflowing ? OverflowAirLoad : 0f;
+
+        // Live values: the city's EcosystemBalance when one is active, else this bin's own settings
+        static EcosystemBalance Balance => EcosystemBalance.Active;
+        float PassiveFillPerSecond => Balance != null ? Balance.binPassiveFillPerSecond : passiveFillPerSecond;
+        float DepositScale => Balance != null ? Balance.binDepositScale : depositScale;
+        float SpillInterval => Balance != null ? Balance.binSpillInterval : spillInterval;
+        float OverflowAirLoad => Balance != null ? Balance.binOverflowAirLoad : overflowAirLoad;
+        int ServiceCoinReward => Balance != null ? Balance.binServiceReward : serviceCoinReward;
 
         public Transform Transform => transform;
 
@@ -57,7 +69,7 @@ namespace UpcycleCity.Ecosystem
             {
                 int pct = Mathf.RoundToInt(fillLevel * 100f);
                 if (IsOverflowing)
-                    return $"[E] Empty OVERFLOWING {DisplayName} (+{serviceCoinReward} Coins)";
+                    return $"[E] Empty OVERFLOWING {DisplayName} (+{ServiceCoinReward} Coins)";
                 if (fillLevel >= 0.15f)
                     return $"[E] Service {DisplayName} ({pct}% Full)";
                 return $"{DisplayName} is Clean ({pct}% Full)";
@@ -71,7 +83,7 @@ namespace UpcycleCity.Ecosystem
             WasteCatalog catalog,
             float startingFill,
             Transform spillAnchor,
-            Renderer indicator,
+            Renderer indicator = null,
             Transform meterBar = null)
         {
             sourceId = id;
@@ -91,15 +103,16 @@ namespace UpcycleCity.Ecosystem
             indicatorBlock = new MaterialPropertyBlock();
             if (gameObject.layer == GameLayers.Default)
                 GameLayers.SetLayerRecursively(gameObject, GameLayers.Interactable);
-            spillTimer = Random.Range(2f, spillInterval * 0.65f);
+            spillTimer = Random.Range(2f, SpillInterval * 0.65f);
             RefreshIndicator();
         }
 
         void Update()
         {
-            if (passiveFillPerSecond > 0f && fillLevel < 1f)
+            float passiveFill = PassiveFillPerSecond;
+            if (passiveFill > 0f && fillLevel < 1f)
             {
-                fillLevel = Mathf.Min(1f, fillLevel + passiveFillPerSecond * Time.deltaTime);
+                fillLevel = Mathf.Min(1f, fillLevel + passiveFill * Time.deltaTime);
                 RefreshIndicator();
             }
 
@@ -108,7 +121,7 @@ namespace UpcycleCity.Ecosystem
                 spillTimer -= Time.deltaTime;
                 if (spillTimer <= 0f)
                 {
-                    spillTimer = spillInterval * Random.Range(0.85f, 1.25f);
+                    spillTimer = SpillInterval * Random.Range(0.85f, 1.25f);
                     SpillTrash();
                 }
                 RefreshIndicator();
@@ -118,7 +131,7 @@ namespace UpcycleCity.Ecosystem
         /// <summary>Called by walking citizens when they responsibly use this street bin.</summary>
         public void AddCitizenDeposit(float amount)
         {
-            fillLevel = Mathf.Clamp01(fillLevel + Mathf.Max(0.01f, amount));
+            fillLevel = Mathf.Clamp01(fillLevel + Mathf.Max(0.01f, amount) * DepositScale);
             RefreshIndicator();
         }
 
@@ -148,11 +161,11 @@ namespace UpcycleCity.Ecosystem
             if (!CanInteract(interactor))
                 return;
 
-            int payout = Mathf.Max(2, Mathf.RoundToInt(serviceCoinReward * fillLevel));
+            int payout = Mathf.Max(2, Mathf.RoundToInt(ServiceCoinReward * fillLevel));
             bool wasOverflow = IsOverflowing;
 
             fillLevel = 0f;
-            spillTimer = spillInterval;
+            spillTimer = SpillInterval;
             RefreshIndicator();
 
             interactor?.Inventory?.AddCoins(payout);

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0c730e74aed42858ae5f508607a38a, type: 3}
+  m_Name: Item_MintTea
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.ItemDefinition
+  itemId: food_mint_tea
+  displayName: "Th\xE9 \xE0 la Menthe"
+  description: 'Sweet mint tea with pine nuts. Steady hands: reach further, throw harder.'
+  category: 1
+  accentColor: {r: 0.2, g: 0.55, b: 0.3, a: 1}
+  maxStack: 5
+  consumeOnUse: 1
+  useCooldown: 0.6
+  grabReachBonus: 0
+  throwForceBonus: 0
+  moveSpeedMultiplier: 1
+  grantsSmogImmunity: 0
+  useBehavior:
+    rid: 1445968227851829349
+  heldVisualPrefab: {fileID: 919132149155446097, guid: 07954621c3afb4517a961ae2e7c24d34, type: 3}
+  references:
+    version: 2
+    RefIds:
+    - rid: 1445968227851829349
+      type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
+      data:
+        boostId: mint_tea
+        duration: 60
+        effect:
+          moveSpeed: 1
+          jump: 1
+          grabReach: 1
+          throwForce: 2.5
+          smogImmune: 0
+        message: "Th\xE9 \xE0 la menthe! Steady hands"

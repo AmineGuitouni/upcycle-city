@@ -58,6 +58,8 @@ namespace UpcycleCity.Ecosystem
 
         public string DistrictName => string.IsNullOrWhiteSpace(districtName) ? gameObject.name : districtName;
         public float CityWeight => cityWeight;
+        /// <summary>Pollution capacity, scaled by the city's EcosystemBalance when one is active.</summary>
+        float Capacity => pollutionCapacity * (EcosystemBalance.Active != null ? EcosystemBalance.Active.districtCapacityScale : 1f);
         public PollutionZone Zone => zone;
         public float Radius => zone != null ? zone.Radius : 25f;
         public float CurrentPollution => currentPollution;
@@ -161,7 +163,7 @@ namespace UpcycleCity.Ecosystem
             if (pendingBackgroundTrash >= maxPending)
                 return;
             pendingBackgroundTrash++;
-            backgroundLitterLoad = Mathf.Min(backgroundLitterLoad + Mathf.Max(0.2f, weight), pollutionCapacity * 0.55f);
+            backgroundLitterLoad = Mathf.Min(backgroundLitterLoad + Mathf.Max(0.2f, weight), Capacity * 0.55f);
         }
 
         /// <summary>
@@ -223,12 +225,12 @@ namespace UpcycleCity.Ecosystem
             }
 
             float totalLoad = trashPollutionLoad + backgroundLitterLoad + airPollutionLoad;
-            targetPollution = Mathf.Clamp01(totalLoad / Mathf.Max(1f, pollutionCapacity));
+            targetPollution = Mathf.Clamp01(totalLoad / Mathf.Max(1f, Capacity));
 
             // Resident satisfaction reflects cleanliness (65%), clean bin availability (20%), and air quality (15%)
             float cleanlinessScore = 1f - currentPollution;
             float binScore = totalBins > 0 ? (float)cleanBins / totalBins : 1f;
-            float airScore = 1f - Mathf.Clamp01(airPollutionLoad / Mathf.Max(1f, pollutionCapacity * 0.65f));
+            float airScore = 1f - Mathf.Clamp01(airPollutionLoad / Mathf.Max(1f, Capacity * 0.65f));
             targetSatisfaction = Mathf.Clamp01(
                 cleanlinessScore * 0.65f +
                 binScore * 0.20f +

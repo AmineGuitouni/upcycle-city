@@ -24,6 +24,16 @@ namespace UpcycleCity.Inventory
         bool GrantsSmogImmunity { get; }
 
         GameObject HeldVisualPrefab { get; }
+
+        /// <summary>A claw tool (litter picker): quick pickups on the move, trash held at its jaws.</summary>
+        bool IsGrabTool { get; }
+
+        // Local pose correction applied to the held visual once parented to the tool anchor/fist,
+        // so a tool lines up with the grip no matter where its mesh pivot sits.
+        Vector3 HeldLocalPosition { get; }
+        Vector3 HeldLocalEuler { get; }
+        float HeldUniformScale { get; }
+
         IItemUseBehavior UseBehavior { get; }
     }
 }

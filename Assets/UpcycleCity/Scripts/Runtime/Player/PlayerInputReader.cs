@@ -75,6 +75,8 @@ namespace UpcycleCity.Player
         public bool PrimaryReleasedThisFrame { get; private set; }
         public bool SecondaryPressedThisFrame { get; private set; }
         public bool InteractPressedThisFrame { get; private set; }
+        public bool InteractHeld { get; private set; }
+        public bool InteractReleasedThisFrame { get; private set; }
         public bool UseItemPressedThisFrame { get; private set; }
         public int HotbarScrollDelta { get; private set; }
         public int HotbarDirectSlot { get; private set; } = -1;
@@ -289,6 +291,8 @@ namespace UpcycleCity.Player
 
             SecondaryPressedThisFrame = dropAction != null && dropAction.WasPressedThisFrame();
             InteractPressedThisFrame = interactAction != null && interactAction.WasPressedThisFrame();
+            InteractHeld = interactAction != null && interactAction.IsPressed();
+            InteractReleasedThisFrame = interactAction != null && interactAction.WasReleasedThisFrame();
             UseItemPressedThisFrame = useItemAction != null && useItemAction.WasPressedThisFrame();
 
             // Hotbar cycling (Mouse wheel + Previous/Next buttons)
@@ -345,6 +349,7 @@ namespace UpcycleCity.Player
             CrouchHeld = false;
             JumpHeld = false;
             PrimaryHeld = false;
+            InteractHeld = false;
             ClearFrameTriggers();
         }
 
@@ -357,6 +362,7 @@ namespace UpcycleCity.Player
             PrimaryReleasedThisFrame = false;
             SecondaryPressedThisFrame = false;
             InteractPressedThisFrame = false;
+            InteractReleasedThisFrame = false;
             UseItemPressedThisFrame = false;
             HotbarScrollDelta = 0;
             HotbarDirectSlot = -1;
