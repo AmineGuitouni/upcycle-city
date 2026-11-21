@@ -129,8 +129,8 @@ namespace UpcycleCity.Player
             float speed = Mathf.Lerp(config.minThrowSpeed, config.maxThrowSpeed, t) + throwBonus;
 
             // Slight upward arc makes tossing bottles and cans into crates feel great
-            Vector3 direction = (cameraTransform.forward + Vector3.up * 0.16f).normalized;
-            Vector3 playerCarryVel = motor != null && motor.Body != null ? motor.Body.linearVelocity * 0.35f : Vector3.zero;
+            Vector3 direction = (cameraTransform.forward + Vector3.up * config.throwUpwardArc).normalized;
+            Vector3 playerCarryVel = motor != null && motor.Body != null ? motor.Body.linearVelocity * config.throwVelocityInheritance : Vector3.zero;
             ReleaseInternal(direction * speed + playerCarryVel, thrown: true);
         }
 
@@ -139,8 +139,10 @@ namespace UpcycleCity.Player
             if (!IsHolding)
                 return;
 
-            Vector3 inherit = motor != null && motor.Body != null ? motor.Body.linearVelocity * 0.4f : Vector3.zero;
-            ReleaseInternal(inherit + cameraTransform.forward * 1.1f, thrown: false);
+            float inheritFactor = config != null ? config.throwVelocityInheritance : 0.35f;
+            float forwardPush = config != null ? config.dropForwardImpulse : 1.1f;
+            Vector3 inherit = motor != null && motor.Body != null ? motor.Body.linearVelocity * inheritFactor : Vector3.zero;
+            ReleaseInternal(inherit + cameraTransform.forward * forwardPush, thrown: false);
         }
 
         /// <summary>Releases ownership cleanly so a SortingCrate/station can consume or accept the held object immediately.</summary>
@@ -196,7 +198,7 @@ namespace UpcycleCity.Player
             deltaRot.ToAngleAxis(out float angleDeg, out Vector3 axis);
             if (angleDeg > 180f) angleDeg -= 360f;
             if (Mathf.Abs(angleDeg) > 0.5f && axis.sqrMagnitude > 1e-4f)
-                rb.angularVelocity = axis.normalized * (angleDeg * Mathf.Deg2Rad * 8f);
+                rb.angularVelocity = axis.normalized * (angleDeg * Mathf.Deg2Rad * config.heldRotationStiffness);
             else
                 rb.angularVelocity *= 0.6f;
         }

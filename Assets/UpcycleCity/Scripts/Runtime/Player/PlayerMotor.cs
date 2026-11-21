@@ -277,6 +277,13 @@ namespace UpcycleCity.Player
                 return;
 
             body.AddForce(Vector3.down * (config.gravity * multiplier), ForceMode.Acceleration);
+
+            if (config.maxFallSpeed > 0f && body.linearVelocity.y < -config.maxFallSpeed)
+            {
+                Vector3 v = body.linearVelocity;
+                v.y = -config.maxFallSpeed;
+                body.linearVelocity = v;
+            }
         }
 
         public void SetYaw(float yawDegrees)

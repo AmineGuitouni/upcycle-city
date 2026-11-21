@@ -834,15 +834,6 @@ namespace UpcycleCity.Editor
             return instance;
         }
 
-        static void SetPollutionVisibility(GameObject go, PollutionVisibilityMode mode, float threshold)
-        {
-            if (go == null)
-                return;
-            PollutionVisibility vis = go.AddComponent<PollutionVisibility>();
-            vis.Mode = mode;
-            vis.Threshold = threshold;
-        }
-
         static GameObject CreateEnvironmentBox(string name, Transform parent, Vector3 pos, Vector3 scale, Material mat, bool withCollider = true)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
