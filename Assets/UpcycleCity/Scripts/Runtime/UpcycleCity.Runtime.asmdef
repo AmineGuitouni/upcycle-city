@@ -1,0 +1,18 @@
+{
+    "name": "UpcycleCity.Runtime",
+    "rootNamespace": "UpcycleCity",
+    "references": [
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.InputSystem",
+        "Unity.Burst"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

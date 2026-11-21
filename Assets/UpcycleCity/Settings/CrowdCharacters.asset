@@ -1,0 +1,231 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f9c586daf5da47999480623dbfa7525, type: 3}
+  m_Name: CrowdCharacters
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crowd.CrowdCharacterLibrary
+  characters:
+  - name: Child_A
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 76e81771e7f1e463bbdea81b109e06ac, type: 3}
+    stand: {fileID: 919132149155446097, guid: 491b99923ed324b0aacee9644f4da225, type: 3}
+    walk: {fileID: 919132149155446097, guid: 91808bf5e0fa04051a9e9d2c3895e8c3, type: 3}
+    sit: {fileID: 919132149155446097, guid: 795dcb47ee272497ba6eb29aad375d27, type: 3}
+  - name: Child_B
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: da9a5fa04248e40cf9f5678f1cfcfdc2, type: 3}
+    stand: {fileID: 919132149155446097, guid: 600135290e1a04808aae15c3b5f4e07e, type: 3}
+    walk: {fileID: 919132149155446097, guid: 69c7ae3fc8c424235bd68de5b489095e, type: 3}
+    sit: {fileID: 919132149155446097, guid: 7162158f5bb2a4644be13a0ff1a1fa65, type: 3}
+  - name: Doctor
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 665b4f47b2872407a8c42314ed0241ef, type: 3}
+    stand: {fileID: 919132149155446097, guid: 9bc268bd8187542c99e7dfd404c0bced, type: 3}
+    walk: {fileID: 919132149155446097, guid: 43403372fe5bd4bf88190b59e966cf65, type: 3}
+    sit: {fileID: 919132149155446097, guid: 03115064416e14879a4eb3101af518c5, type: 3}
+  - name: Doctor_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: a652dbe43d25a47cdb0b95084407853f, type: 3}
+    stand: {fileID: 919132149155446097, guid: 79356fff868d0403ab37db8b01c4b07c, type: 3}
+    walk: {fileID: 919132149155446097, guid: ba8efe310770d4090ae42225e4017848, type: 3}
+    sit: {fileID: 919132149155446097, guid: c54ff7d5bf79445bead6c4f0d3a110a7, type: 3}
+  - name: Nurse
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: a3239e02c82e945048ee0a06573d8efc, type: 3}
+    stand: {fileID: 919132149155446097, guid: dc60a5da605634b378e5ff4c8a146856, type: 3}
+    walk: {fileID: 919132149155446097, guid: 338544d95607d435fa2ccdaf56f5f2ad, type: 3}
+    sit: {fileID: 919132149155446097, guid: 20d31eff29e4c4453a7ad4c5f91c95af, type: 3}
+  - name: Nurse_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 4de6f602eee3946fa8a7d3b469f6ecce, type: 3}
+    stand: {fileID: 919132149155446097, guid: e0d4e13cd412a4c87845ed7ec342bfd4, type: 3}
+    walk: {fileID: 919132149155446097, guid: 8cff6c58ab5fa4c31a384fdd431b0cda, type: 3}
+    sit: {fileID: 919132149155446097, guid: 7d86f05f8e74a4ed7ac1ca5a3e7569f9, type: 3}
+  - name: Engineer
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: a4d0a458193c1401ea03e254605f2490, type: 3}
+    stand: {fileID: 919132149155446097, guid: 48a1c3c4149e74245bfdbfee5ac08914, type: 3}
+    walk: {fileID: 919132149155446097, guid: 2f82c07d58fdb42b28128a5c3fd1fa69, type: 3}
+    sit: {fileID: 919132149155446097, guid: 3cedf01c209d142f4bac0c8c0d087769, type: 3}
+  - name: Engineer_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: c2b5ad0c5a4e9447db9f806b13a8836c, type: 3}
+    stand: {fileID: 919132149155446097, guid: f6ba72d1f7f904f6c95a411f80e75a66, type: 3}
+    walk: {fileID: 919132149155446097, guid: 6131f912f1cd34f7085216281383fdb0, type: 3}
+    sit: {fileID: 919132149155446097, guid: 1c769374cc60c45eb98c27829c828403, type: 3}
+  - name: Firefighter
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 97776540c7d79444fb7dca9fdada4100, type: 3}
+    stand: {fileID: 919132149155446097, guid: 6ea19853d5c044f58a0e82fb1f3ad6f1, type: 3}
+    walk: {fileID: 919132149155446097, guid: 0be1ae410ad59455a850a6097297f618, type: 3}
+    sit: {fileID: 919132149155446097, guid: fdb6b6509d451471fae89c00a56886b2, type: 3}
+  - name: Firefighter_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: fb97b058801ef41948d0ee83462490ad, type: 3}
+    stand: {fileID: 919132149155446097, guid: 48dc469139cf34c1f87df8074f073138, type: 3}
+    walk: {fileID: 919132149155446097, guid: dfe133e0c0866408a9a128474b7c272d, type: 3}
+    sit: {fileID: 919132149155446097, guid: ce95081f88a1b472889387658681ea30, type: 3}
+  - name: Garbageman
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: c915a5ec37eeb4352be2e07deb332654, type: 3}
+    stand: {fileID: 919132149155446097, guid: 3171e1dd970ff4da4b0f0957a729290b, type: 3}
+    walk: {fileID: 919132149155446097, guid: 06775c2c5ca94462bbdcc43bcb02079f, type: 3}
+    sit: {fileID: 919132149155446097, guid: f9d59925d4b2746b5b585275c70c1935, type: 3}
+  - name: Garbageman_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: b58d4017eb63649a8afaf29f1b37ff55, type: 3}
+    stand: {fileID: 919132149155446097, guid: f2e2d1c18789c496faa61b339f689118, type: 3}
+    walk: {fileID: 919132149155446097, guid: 17cb820b3c8a847cab4c4d1a8473db73, type: 3}
+    sit: {fileID: 919132149155446097, guid: 06da54fa01aba48f6b5ad2c03deecc44, type: 3}
+  - name: Mechanic
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 5e16750bd9aad4b5b80b7bcfed50a1bb, type: 3}
+    stand: {fileID: 919132149155446097, guid: f9ab8e290d164425e981d6a10a2e944a, type: 3}
+    walk: {fileID: 919132149155446097, guid: c109babb6476e4709bb288ab5ab12f5f, type: 3}
+    sit: {fileID: 919132149155446097, guid: c130868d322184cb3aa6f091d03a0e43, type: 3}
+  - name: Mechanic_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: f99e9ada3bc174585b066f2f10d524c3, type: 3}
+    stand: {fileID: 919132149155446097, guid: 7ebc51209288d40d9856e529890d21a3, type: 3}
+    walk: {fileID: 919132149155446097, guid: 16008f62ed191441b8743ad060d5d77c, type: 3}
+    sit: {fileID: 919132149155446097, guid: 26c226f6c37b341028a8978b76ff5818, type: 3}
+  - name: Police
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: ee5a83cefb07a4a7d8578d5467d5ac2c, type: 3}
+    stand: {fileID: 919132149155446097, guid: ed6d4c5925e064fdd98b4a1b0781f239, type: 3}
+    walk: {fileID: 919132149155446097, guid: 1444f8d485abf4a438308c6edfb28ff0, type: 3}
+    sit: {fileID: 919132149155446097, guid: c6dc2ae2386a34d06ba7885208a5c280, type: 3}
+  - name: Police_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 0287b96071ecc4bd69ef1d8fdec4df72, type: 3}
+    stand: {fileID: 919132149155446097, guid: 919b6640b16934d39a4e33cc42d02965, type: 3}
+    walk: {fileID: 919132149155446097, guid: fa17743293660410da8877d092bd63bf, type: 3}
+    sit: {fileID: 919132149155446097, guid: 522a860f8e21e4d7f913f23daee05496, type: 3}
+  - name: TrafficPolice
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 398c5fa896f7746dfac4b53f6040f500, type: 3}
+    stand: {fileID: 919132149155446097, guid: 96741720aa0434ce0a3cd20d21eb5008, type: 3}
+    walk: {fileID: 919132149155446097, guid: 8c39f3b581f834f7b8182bc688d9956b, type: 3}
+    sit: {fileID: 919132149155446097, guid: 613d205ba53fa41b0b2f8418e3b4ef7e, type: 3}
+  - name: TrafficPolice_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: b141939cfc7f543d793a2136138afc90, type: 3}
+    stand: {fileID: 919132149155446097, guid: f38642632104444fb9be9bda517ea8fe, type: 3}
+    walk: {fileID: 919132149155446097, guid: e3cdad9455d024dc6805c155b4d97eeb, type: 3}
+    sit: {fileID: 919132149155446097, guid: d11cedda1202640eeaed99eb67b7291f, type: 3}
+  - name: ScientistMale
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: fa9d1674e246346e8ad3e90ea347e9f4, type: 3}
+    stand: {fileID: 919132149155446097, guid: 00967846137a141fba62464b26c8bc2d, type: 3}
+    walk: {fileID: 919132149155446097, guid: b902337b567fa42728cb534275b301bc, type: 3}
+    sit: {fileID: 919132149155446097, guid: 0a5b91c1caba742b3bc2d977f4e0694a, type: 3}
+  - name: ScientistMale_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 52d39aee9b8a74497b32ae628fe5723b, type: 3}
+    stand: {fileID: 919132149155446097, guid: d58bf102bfffa479d9d8285feb2f6202, type: 3}
+    walk: {fileID: 919132149155446097, guid: 0969653c53be14f76aea5337310b39c9, type: 3}
+    sit: {fileID: 919132149155446097, guid: d9ce0e12674a34cbf8f30b76f5797766, type: 3}
+  - name: ScientistFemale_A
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: b28aa0a35f5a343b4904590bb8d2b2e6, type: 3}
+    stand: {fileID: 919132149155446097, guid: d2ed57cf1a18b43908eb62100c5d118c, type: 3}
+    walk: {fileID: 919132149155446097, guid: 6036d2ec9335043f49207fb788eb3a5d, type: 3}
+    sit: {fileID: 919132149155446097, guid: 2d542d545c9ee4d05bd56a5ca00a3fee, type: 3}
+  - name: ScientistFemale_A_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 08ab8e097d7a74ce4898f881528b59ba, type: 3}
+    stand: {fileID: 919132149155446097, guid: e5b9e0d4aff0743fc8d7213e50be8818, type: 3}
+    walk: {fileID: 919132149155446097, guid: f3051ed0517294399a594ce32e1a5d26, type: 3}
+    sit: {fileID: 919132149155446097, guid: 356d2b6b892974f039e143e30da2b514, type: 3}
+  - name: ScientistFemale_B
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 16af5ef5fc88c471fa36e4cf5621e456, type: 3}
+    stand: {fileID: 919132149155446097, guid: d6be161cd26b1457f930011347544f6b, type: 3}
+    walk: {fileID: 919132149155446097, guid: 949007d1283094dc4bd0b709b9e1991b, type: 3}
+    sit: {fileID: 919132149155446097, guid: 1d77d01c351c64a12b583903dde205bd, type: 3}
+  - name: ScientistFemale_B_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: f9c2e8ee99d8a44fdaa76ed499546c17, type: 3}
+    stand: {fileID: 919132149155446097, guid: faed6ee282e174eabbdf32ab2303b6cf, type: 3}
+    walk: {fileID: 919132149155446097, guid: d0d634a662947409791700dd2c785d02, type: 3}
+    sit: {fileID: 919132149155446097, guid: d8370484840eb42cc91aeba8b518f85c, type: 3}
+  - name: Soldier
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: e02579cbf217e494db0310fe2a336b8e, type: 3}
+    stand: {fileID: 919132149155446097, guid: a8c68052c5e104dd98d10504053a7ab0, type: 3}
+    walk: {fileID: 919132149155446097, guid: b1f28cb94b274440ea955ad470c5851d, type: 3}
+    sit: {fileID: 919132149155446097, guid: 27484c281f37543bb9ba8d11a0b8a350, type: 3}
+  - name: Soldier_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: b879ef255b81a47e88c27ca38d2b0f0c, type: 3}
+    stand: {fileID: 919132149155446097, guid: 2ff1efc46783348798d3bdcbd4f4df76, type: 3}
+    walk: {fileID: 919132149155446097, guid: cd17b7afee902483885e80ad8a2b6262, type: 3}
+    sit: {fileID: 919132149155446097, guid: 8a9393405da0343cdbda040620e8f4fc, type: 3}
+  - name: StudentMale
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 7cb686e49ec054500afff95be0b8030b, type: 3}
+    stand: {fileID: 919132149155446097, guid: 56198eddbb5f14b8fb9c896450ebb481, type: 3}
+    walk: {fileID: 919132149155446097, guid: 192bf32e4d81545c287495d9d823ab1d, type: 3}
+    sit: {fileID: 919132149155446097, guid: 37989a9e4365e4c698189aa5764a8cb3, type: 3}
+  - name: StudentMale_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 9aec1bbafaed14f299d9a45e06e544c7, type: 3}
+    stand: {fileID: 919132149155446097, guid: e4f6186dd03c84c13ba66555d80f4ffc, type: 3}
+    walk: {fileID: 919132149155446097, guid: 338ef9cedb1db470296b5ffd87dd3ddc, type: 3}
+    sit: {fileID: 919132149155446097, guid: 5af87fde9dd1c4a51afb1305a2760cd5, type: 3}
+  - name: StudentFemale
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 4f25cd5c0d7ec4f6dae839712e44ddf3, type: 3}
+    stand: {fileID: 919132149155446097, guid: aae1f24b920f34a629bce05ca1f53ee0, type: 3}
+    walk: {fileID: 919132149155446097, guid: a43f890737b4a40e2954bab6eba49b7f, type: 3}
+    sit: {fileID: 919132149155446097, guid: 971bb2f9229db4a2fb52bc0d91bdbab1, type: 3}
+  - name: StudentFemale_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 3a20a11c290c84a93b2653b9d64bfc37, type: 3}
+    stand: {fileID: 919132149155446097, guid: 04fdbdcda5df74619823ec9ba9d575ba, type: 3}
+    walk: {fileID: 919132149155446097, guid: 3a96fb89f32ef49c6b0e73b6995bae1c, type: 3}
+    sit: {fileID: 919132149155446097, guid: 33604386ac0cf4f77994e2924d25dbdb, type: 3}
+  - name: TeacherMale_A
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 7173f0032a378469ab0c1ef73bd9552b, type: 3}
+    stand: {fileID: 919132149155446097, guid: 00ba8d5bc6b414762b0d4764597e45e3, type: 3}
+    walk: {fileID: 919132149155446097, guid: 3b579c65fffed4644b0c15f9a5ee6d62, type: 3}
+    sit: {fileID: 919132149155446097, guid: a57113d1e62e74fc3b5536d20ad900e2, type: 3}
+  - name: TeacherMale_A_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 884e90002fba14912b3e22a953fe69ba, type: 3}
+    stand: {fileID: 919132149155446097, guid: fb2ac82b61a79424f8088d3fa731515c, type: 3}
+    walk: {fileID: 919132149155446097, guid: a4bbfabb2648743e78ae884918656657, type: 3}
+    sit: {fileID: 919132149155446097, guid: 92be37d45cd3d4162a26521276a91fd9, type: 3}
+  - name: TeacherMale_B
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: c4bd2d33ad3ad477a81b2aee01efda94, type: 3}
+    stand: {fileID: 919132149155446097, guid: c4569f51c27c649c59b6175437a863a0, type: 3}
+    walk: {fileID: 919132149155446097, guid: 916dff3d4e8f24611a115ad18cbe2e38, type: 3}
+    sit: {fileID: 919132149155446097, guid: 9a7dd50e99f1b4863804268a5901eb1f, type: 3}
+  - name: TeacherMale_B_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 3a5139103afd24c9b971191e55117ea2, type: 3}
+    stand: {fileID: 919132149155446097, guid: 782f263745504487e88f76bdce9e8888, type: 3}
+    walk: {fileID: 919132149155446097, guid: 02596a4a4c0db4363986cb58a1f4fe8e, type: 3}
+    sit: {fileID: 919132149155446097, guid: 7f68cbaf5a26f42b7ba73ccb2dcd2562, type: 3}
+  - name: TeacherFemale
+    masked: 0
+    rigged: {fileID: 919132149155446097, guid: 5f89d7f33438b462aba1041116097365, type: 3}
+    stand: {fileID: 919132149155446097, guid: 86578463534794e61b28ac2a303fca81, type: 3}
+    walk: {fileID: 919132149155446097, guid: 39056992aaa4740f7a0ceb4612999b9c, type: 3}
+    sit: {fileID: 919132149155446097, guid: a340196ea3dec454abc16a509febfd6b, type: 3}
+  - name: TeacherFemale_Mask
+    masked: 1
+    rigged: {fileID: 919132149155446097, guid: 60cd7bcec2db042b4b8a2dd29505011c, type: 3}
+    stand: {fileID: 919132149155446097, guid: cdca26874c86d4ce99154bd5a1afcc5c, type: 3}
+    walk: {fileID: 919132149155446097, guid: 7396600eba5ed45b4804aa410725ef42, type: 3}
+    sit: {fileID: 919132149155446097, guid: 839c672a22da94d04a2c40e4fa7fefae, type: 3}
