@@ -62,8 +62,17 @@ namespace UpcycleCity.Player
         float pickupDuration;
         float pickupGrabTime;
 
-        public IGrabbable HeldObject => heldObject;
-        public bool IsHolding => heldObject != null && heldObject.Transform != null && heldObject.Body != null;
+        static bool IsAlive(IGrabbable grabbable)
+        {
+            if (grabbable == null)
+                return false;
+            if (grabbable is UnityEngine.Object unityObj && unityObj == null)
+                return false;
+            return grabbable.Transform != null && grabbable.Body != null;
+        }
+
+        public IGrabbable HeldObject => IsAlive(heldObject) ? heldObject : null;
+        public bool IsHolding => IsAlive(heldObject);
         public bool IsChargingThrow => chargingThrow && IsHolding;
         public float ThrowChargeNormalized => config != null && config.maxChargeDuration > 0f
             ? Mathf.Clamp01(chargeTimer / config.maxChargeDuration)
@@ -171,6 +180,9 @@ namespace UpcycleCity.Player
                 modifiers.SetFlag(PickupModifierSource, PlayerModifierFlag.BlockSprint, true);
             }
 
+            if (grabbable.Transform.TryGetComponent(out INetworkedPhysicsGrabbable netGrabbable))
+                netGrabbable.OnLocalPickupStarted();
+
             PickupStarted?.Invoke(grabbable, pickupStyle);
             return true;
         }
@@ -187,6 +199,12 @@ namespace UpcycleCity.Player
         {
             if (pickupStyle == PickupStyle.None)
                 return;
+            if (IsAlive(pickupTarget)
+                && (!IsHolding || !ReferenceEquals(heldObject, pickupTarget))
+                && pickupTarget.Transform.TryGetComponent(out INetworkedPhysicsGrabbable netGrabbable))
+            {
+                netGrabbable.OnLocalPickupCancelled();
+            }
             EndPickup();
         }
 
@@ -200,6 +218,9 @@ namespace UpcycleCity.Player
 
         void Update()
         {
+            if (heldObject != null && !IsAlive(heldObject))
+                ClearHeldReference();
+
             if (pickupStyle == PickupStyle.None)
                 return;
 
@@ -226,7 +247,7 @@ namespace UpcycleCity.Player
 
         bool PickupTargetStillValid()
         {
-            if (pickupTarget == null || pickupTarget.Transform == null || pickupTarget.Body == null || !pickupTarget.CanGrab(this))
+            if (!IsAlive(pickupTarget) || !pickupTarget.CanGrab(this))
                 return false;
             if (cameraTransform == null)
                 return true;
@@ -252,7 +273,7 @@ namespace UpcycleCity.Player
 
         bool GrabNow(IGrabbable grabbable, bool withPicker)
         {
-            if (IsHolding || grabbable == null || grabbable.Transform == null || grabbable.Body == null)
+            if (IsHolding || !IsAlive(grabbable))
                 return false;
 
             if (!grabbable.CanGrab(this))
@@ -333,8 +354,29 @@ namespace UpcycleCity.Player
             return item;
         }
 
+        /// <summary>Forcefully drops <paramref name="item"/> without applying release impulse (e.g. on despawn or if another player won a grab race).</summary>
+        public void ForceReleaseIfHolding(IGrabbable item)
+        {
+            if (item == null)
+                return;
+            if (IsPickingUp && ReferenceEquals(pickupTarget, item))
+                EndPickup();
+            if (!ReferenceEquals(heldObject, item))
+                return;
+
+            if (IsAlive(item))
+                item.SetIgnoreCollision(motor != null ? motor.Capsule : null, false);
+            ClearHeldReference();
+            Released?.Invoke(item, false);
+        }
+
         void FixedUpdate()
         {
+            if (heldObject != null && !IsAlive(heldObject))
+            {
+                ClearHeldReference();
+                return;
+            }
             if (!IsHolding || cameraTransform == null || config == null)
                 return;
 
@@ -344,6 +386,10 @@ namespace UpcycleCity.Player
                 ClearHeldReference();
                 return;
             }
+
+            // While waiting a frame for host ownership transfer in co-op, skip velocity writes on a kinematic body
+            if (rb.isKinematic)
+                return;
 
             Vector3 targetPos = ComputeSafeHoldPoint();
             Vector3 toTarget = targetPos - rb.worldCenterOfMass;

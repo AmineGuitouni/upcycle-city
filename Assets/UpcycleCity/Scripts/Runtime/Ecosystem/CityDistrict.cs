@@ -14,7 +14,7 @@ namespace UpcycleCity.Ecosystem
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PollutionZone))]
     [AddComponentMenu("Upcycle City/Ecosystem/City District")]
-    public sealed class CityDistrict : MonoBehaviour
+    public sealed class CityDistrict : MonoBehaviour, Core.ISyncedStateProvider
     {
         [Header("Identity")]
         [SerializeField] string districtName = "Neighborhood";
@@ -53,10 +53,12 @@ namespace UpcycleCity.Ecosystem
         int mitigatedSources;
 
         bool wasCleanNotified;
+        string syncKey;
 
         public event Action<CityDistrict> StateChanged;
 
         public string DistrictName => string.IsNullOrWhiteSpace(districtName) ? gameObject.name : districtName;
+        public string SyncKey => syncKey ??= Core.SyncedStateRegistry.BuildSpatialKey("district", DistrictName, transform.position);
         public float CityWeight => cityWeight;
         /// <summary>Pollution capacity, scaled by the city's EcosystemBalance when one is active.</summary>
         float Capacity => pollutionCapacity * (EcosystemBalance.Active != null ? EcosystemBalance.Active.districtCapacityScale : 1f);
@@ -110,11 +112,48 @@ namespace UpcycleCity.Ecosystem
         void OnEnable()
         {
             CityEcosystemManager.RegisterDistrict(this);
+            Core.SyncedStateRegistry.Register(this);
         }
 
         void OnDisable()
         {
+            Core.SyncedStateRegistry.Unregister(this);
             CityEcosystemManager.UnregisterDistrict(this);
+        }
+
+        public Core.SyncedStateRecord CaptureSyncState() => new Core.SyncedStateRecord
+        {
+            v0 = currentPollution,
+            v1 = currentSatisfaction,
+            v2 = airPollutionLoad,
+            v3 = trashPollutionLoad + backgroundLitterLoad,
+            i0 = activeTrashCount,
+            i1 = (totalBins << 16) | (cleanBins & 0xFFFF),
+            flags = (byte)Mathf.Clamp(mitigatedSources, 0, 255),
+        };
+
+        public void ApplySyncState(in Core.SyncedStateRecord state)
+        {
+            currentPollution = Mathf.Clamp01(state.v0);
+            targetPollution = currentPollution;
+            currentSatisfaction = Mathf.Clamp01(state.v1);
+            targetSatisfaction = currentSatisfaction;
+            airPollutionLoad = Mathf.Max(0f, state.v2);
+            trashPollutionLoad = Mathf.Max(0f, state.v3);
+            backgroundLitterLoad = 0f;
+            activeTrashCount = Mathf.Max(0, state.i0);
+            totalBins = Mathf.Max(0, state.i1 >> 16);
+            cleanBins = Mathf.Max(0, state.i1 & 0xFFFF);
+            mitigatedSources = state.flags;
+
+            if (zone != null)
+            {
+                zone.Weight = 1f;
+                if (!Mathf.Approximately(zone.Pollution, currentPollution))
+                    zone.Pollution = currentPollution;
+            }
+
+            StateChanged?.Invoke(this);
         }
 
         public bool ContainsPoint(Vector3 worldPos)

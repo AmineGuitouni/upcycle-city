@@ -47,5 +47,28 @@ namespace UpcycleCity.Shops
             if (shopOffers != null)
                 offers.AddRange(shopOffers);
         }
+
+        /// <summary>Finds a valid offer matching <paramref name="itemId"/> and <paramref name="quantity"/> for authoritative pricing.</summary>
+        public bool TryFindOffer(string itemId, int quantity, out Offer match)
+        {
+            match = null;
+            if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0 || offers == null)
+                return false;
+
+            for (int i = 0; i < offers.Count; i++)
+            {
+                Offer offer = offers[i];
+                if (offer?.item == null)
+                    continue;
+                if (offer.quantity == quantity
+                    && string.Equals(offer.item.ItemId, itemId, StringComparison.OrdinalIgnoreCase))
+                {
+                    match = offer;
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

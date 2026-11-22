@@ -58,18 +58,22 @@ namespace UpcycleCity.Character
 
         static bool loaded;
         static CharacterAppearance current;
+        static bool hasSessionOverride;
+        static CharacterAppearance sessionOverride;
 
-        /// <summary>Raised after <see cref="Save"/>.</summary>
+        /// <summary>Raised after <see cref="Save"/> or <see cref="SetSessionOverride"/>.</summary>
         public static event Action<CharacterAppearance> Changed;
 
         /// <summary>True once the player has finished the character creator at least once.</summary>
         public static bool HasSaved => PlayerPrefs.HasKey(PrefsKey);
 
-        /// <summary>The saved look, or <see cref="CharacterAppearance.Default"/> before the first save.</summary>
+        /// <summary>The active look (session override if set, otherwise saved look or <see cref="CharacterAppearance.Default"/>).</summary>
         public static CharacterAppearance Current
         {
             get
             {
+                if (hasSessionOverride)
+                    return sessionOverride;
                 if (!loaded)
                     Load();
                 return current;
@@ -78,11 +82,32 @@ namespace UpcycleCity.Character
 
         public static void Save(CharacterAppearance appearance)
         {
+            hasSessionOverride = false;
             current = appearance;
             loaded = true;
             PlayerPrefs.SetString(PrefsKey, JsonUtility.ToJson(appearance));
             PlayerPrefs.Save();
             Changed?.Invoke(appearance);
+        }
+
+        /// <summary>
+        /// Applies a temporary appearance override for the current process only without modifying PlayerPrefs
+        /// (used by CLI test flags such as <c>-coop-outfit</c>).
+        /// </summary>
+        public static void SetSessionOverride(CharacterAppearance appearance)
+        {
+            sessionOverride = appearance;
+            hasSessionOverride = true;
+            Changed?.Invoke(appearance);
+        }
+
+        /// <summary>Clears any temporary session override and restores the saved PlayerPrefs look.</summary>
+        public static void ClearSessionOverride()
+        {
+            if (!hasSessionOverride)
+                return;
+            hasSessionOverride = false;
+            Changed?.Invoke(Current);
         }
 
         static void Load()
@@ -108,6 +133,8 @@ namespace UpcycleCity.Character
         {
             loaded = false;
             current = default;
+            hasSessionOverride = false;
+            sessionOverride = default;
             Changed = null;
         }
     }

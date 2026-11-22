@@ -1,0 +1,392 @@
+/* Co-op Play / Join / Lobby overlay — matches CharacterCreator.uss & Shop.uss dark slate + brand palette.
+   Brand: Company Green #2E8B57, Teal #2F8F8A, Safety Yellow #F2C21B, Danger Red #C8463B.
+   All buttons use >= 56px touch targets for mobile phones. */
+
+.coop-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    -unity-font-style: bold;
+}
+
+.coop-overlay {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 56px;
+    padding-right: 24px;
+    padding-top: 32px;
+    padding-bottom: 32px;
+}
+
+.coop-panel {
+    width: 580px;
+    max-height: 92%;
+    background-color: rgba(34, 37, 40, 0.96);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(62, 66, 70);
+    overflow: hidden;
+}
+
+.coop-header {
+    height: 68px;
+    background-color: rgb(22, 24, 26);
+    justify-content: center;
+    padding-left: 24px;
+    padding-right: 24px;
+    border-bottom-width: 2px;
+    border-bottom-color: rgb(47, 143, 138);
+}
+
+.coop-header-title {
+    font-size: 25px;
+    color: rgb(242, 242, 238);
+    -unity-text-align: middle-left;
+}
+
+.coop-scroll {
+    flex-grow: 1;
+}
+
+.coop-section {
+    padding: 20px 24px 24px 24px;
+}
+
+.coop-label {
+    font-size: 18px;
+    color: rgb(216, 222, 224);
+    margin-bottom: 8px;
+}
+
+.coop-label--spaced {
+    margin-top: 18px;
+}
+
+.coop-input {
+    margin: 0 0 14px 0;
+    height: 54px;
+}
+
+.coop-input .unity-text-field__input {
+    background-color: rgb(22, 24, 26);
+    color: rgb(246, 246, 244);
+    border-width: 2px;
+    border-color: rgb(74, 80, 86);
+    border-radius: 5px;
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: 21px;
+    -unity-text-align: middle-left;
+}
+
+.coop-input--code .unity-text-field__input {
+    font-size: 26px;
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+}
+
+.coop-toggle-row {
+    flex-direction: row;
+    margin-bottom: 12px;
+}
+
+.coop-toggle {
+    flex-grow: 1;
+    height: 52px;
+    margin: 0 4px 0 0;
+    border-width: 2px;
+    border-color: rgb(70, 74, 78);
+    border-radius: 5px;
+    font-size: 17px;
+    color: rgb(198, 204, 208);
+    background-color: rgb(52, 56, 60);
+}
+
+.coop-toggle--active {
+    background-color: rgb(47, 143, 138);
+    border-color: rgb(110, 214, 206);
+    color: rgb(255, 255, 255);
+}
+
+.coop-btn {
+    height: 60px;
+    margin: 0 0 12px 0;
+    border-width: 0;
+    border-radius: 6px;
+    font-size: 21px;
+    color: rgb(255, 255, 255);
+}
+
+.coop-btn--small {
+    height: 46px;
+    font-size: 17px;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+.coop-btn--green { background-color: rgb(46, 139, 87); }
+.coop-btn--green:hover { background-color: rgb(58, 162, 104); }
+
+.coop-btn--teal { background-color: rgb(47, 143, 138); }
+.coop-btn--teal:hover { background-color: rgb(60, 168, 162); }
+
+.coop-btn--amber {
+    background-color: rgb(242, 194, 27);
+    color: rgb(26, 26, 24);
+}
+.coop-btn--amber:hover { background-color: rgb(255, 212, 62); }
+
+.coop-btn--muted {
+    background-color: rgb(66, 70, 74);
+    color: rgb(224, 228, 230);
+}
+.coop-btn--muted:hover { background-color: rgb(82, 88, 92); }
+
+.coop-btn--danger { background-color: rgb(200, 70, 59); }
+.coop-btn--danger:hover { background-color: rgb(224, 88, 76); }
+
+.coop-btn:disabled {
+    background-color: rgb(74, 78, 82);
+    color: rgb(138, 142, 146);
+}
+
+.coop-banner {
+    margin: 14px 24px 0 24px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border-width: 1px;
+}
+
+.coop-banner--error {
+    background-color: rgba(168, 42, 36, 0.92);
+    border-color: rgb(235, 108, 96);
+}
+
+.coop-banner--info {
+    background-color: rgba(36, 98, 108, 0.92);
+    border-color: rgb(92, 192, 186);
+}
+
+.coop-banner-text {
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(255, 255, 255);
+    white-space: normal;
+}
+
+.coop-code-row {
+    flex-direction: row;
+    align-items: stretch;
+    margin-bottom: 16px;
+}
+
+.coop-code-badge {
+    flex-grow: 1;
+    padding: 16px 14px;
+    background-color: rgb(20, 22, 24);
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(242, 194, 27);
+    font-size: 24px;
+    color: rgb(242, 194, 27);
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+}
+
+.coop-code-copy-btn {
+    min-width: 112px;
+    min-height: 56px;
+    margin: 0 0 0 10px;
+    padding: 0 16px;
+    border-width: 0;
+    border-radius: 6px;
+    background-color: rgb(47, 143, 138);
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    -unity-text-align: middle-center;
+}
+
+.coop-code-copy-btn:hover {
+    background-color: rgb(60, 168, 162);
+}
+
+.coop-code-copy-btn--copied {
+    background-color: rgb(46, 139, 87);
+}
+
+.coop-roster {
+    margin-bottom: 14px;
+}
+
+.coop-roster-row {
+    flex-direction: row;
+    align-items: center;
+    height: 52px;
+    padding-left: 14px;
+    padding-right: 14px;
+    margin-bottom: 8px;
+    background-color: rgb(48, 52, 56);
+    border-radius: 5px;
+}
+
+.coop-roster-slot {
+    width: 48px;
+    height: 32px;
+    margin-right: 12px;
+    border-radius: 4px;
+    background-color: rgb(47, 143, 138);
+    color: rgb(255, 255, 255);
+    font-size: 17px;
+    -unity-text-align: middle-center;
+}
+
+.coop-roster-name {
+    font-size: 19px;
+    color: rgb(236, 240, 242);
+}
+
+.coop-hint {
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(168, 176, 180);
+    margin-bottom: 16px;
+    white-space: normal;
+}
+
+/* Portrait phones: bottom sheet layout matching CharacterCreator.uss */
+.coop-root--portrait .coop-overlay {
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 20px;
+}
+
+.coop-root--portrait .coop-panel {
+    width: auto;
+    max-height: 62%;
+}
+
+/* ----------------------------------------------------------------
+   In-Game Co-op HUD (UI Toolkit, scaled via UpcycleCityPanelSettings)
+   ---------------------------------------------------------------- */
+
+.coop-hud-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    -unity-font-style: bold;
+}
+
+.coop-hud-bar {
+    position: absolute;
+    left: 24px;
+    top: 312px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.coop-hud-pill {
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+    padding-left: 14px;
+    padding-right: 16px;
+    background-color: rgba(20, 24, 28, 0.90);
+    border-left-width: 5px;
+    border-left-color: rgb(47, 143, 138);
+    border-radius: 5px;
+}
+
+.coop-hud-pill-text {
+    font-size: 18px;
+    color: rgb(246, 248, 248);
+    -unity-text-align: middle-left;
+}
+
+.coop-hud-copy-btn {
+    height: 44px;
+    min-width: 86px;
+    margin: 0 0 0 8px;
+    padding: 0 14px;
+    border-width: 0;
+    border-radius: 5px;
+    background-color: rgba(47, 143, 138, 0.95);
+    color: rgb(255, 255, 255);
+    font-size: 17px;
+    -unity-text-align: middle-center;
+}
+
+.coop-hud-copy-btn:hover {
+    background-color: rgb(60, 168, 162);
+}
+
+.coop-hud-copy-btn--copied {
+    background-color: rgba(46, 139, 87, 0.98);
+}
+
+.coop-hud-leave-btn {
+    height: 44px;
+    min-width: 86px;
+    margin: 0 0 0 8px;
+    padding: 0 14px;
+    border-width: 0;
+    border-radius: 5px;
+    background-color: rgba(196, 62, 52, 0.95);
+    color: rgb(255, 255, 255);
+    font-size: 17px;
+    -unity-text-align: middle-center;
+}
+
+.coop-hud-leave-btn:hover {
+    background-color: rgb(224, 82, 70);
+}
+
+.coop-hud-event {
+    position: absolute;
+    top: 102px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.coop-hud-event-pill {
+    min-width: 340px;
+    height: 42px;
+    padding-left: 20px;
+    padding-right: 20px;
+    border-radius: 6px;
+    background-color: rgba(242, 184, 36, 0.96);
+    justify-content: center;
+    align-items: center;
+}
+
+.coop-hud-event-pill--urgent {
+    background-color: rgba(218, 62, 50, 0.96);
+}
+
+.coop-hud-event-text {
+    font-size: 19px;
+    color: rgb(24, 26, 28);
+    -unity-text-align: middle-center;
+}
+
+.coop-hud-event-pill--urgent .coop-hud-event-text {
+    color: rgb(255, 255, 255);
+}
+
+.coop-hud-nameplates {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+}
+
+.coop-hud-nameplate {
+    position: absolute;
+    padding: 5px 12px 7px 12px;
+    background-color: rgba(20, 24, 28, 0.88);
+    border-bottom-width: 3px;
+    border-bottom-color: rgb(47, 143, 138);
+    border-radius: 4px;
+    font-size: 17px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    translate: -50% -100%;
+}
+

@@ -15,7 +15,7 @@ namespace UpcycleCity.Ecosystem
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Ecosystem/Overflowing Bin Source")]
-    public sealed class OverflowingBinSource : PollutionSourceBase, IInteractable
+    public sealed class OverflowingBinSource : PollutionSourceBase, IInteractable, ISyncedStateProvider
     {
         [Header("Bin Fill & Overflow")]
         [SerializeField, Range(0f, 1f)] float fillLevel = 0.72f;
@@ -46,12 +46,14 @@ namespace UpcycleCity.Ecosystem
 
         MaterialPropertyBlock indicatorBlock;
         float spillTimer;
+        string syncKey;
 
         public override WasteSourceKind SourceKind => WasteSourceKind.ShopOverflow;
         public float FillLevel => fillLevel;
         public bool IsOverflowing => fillLevel >= 0.99f;
         public override bool IsMitigated => !IsOverflowing;
         public override float AirPollutionLoad => IsOverflowing ? OverflowAirLoad : 0f;
+        public string SyncKey => syncKey ??= SyncedStateRegistry.BuildSpatialKey("bin", SourceId, transform.position);
 
         // Live values: the city's EcosystemBalance when one is active, else this bin's own settings
         static EcosystemBalance Balance => EcosystemBalance.Active;
@@ -107,8 +109,27 @@ namespace UpcycleCity.Ecosystem
             RefreshIndicator();
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            SyncedStateRegistry.Register(this);
+        }
+
+        protected override void OnDisable()
+        {
+            SyncedStateRegistry.Unregister(this);
+            base.OnDisable();
+        }
+
         void Update()
         {
+            if (!GameAuthority.IsAuthoritative)
+            {
+                if (IsOverflowing)
+                    RefreshIndicator();
+                return;
+            }
+
             float passiveFill = PassiveFillPerSecond;
             if (passiveFill > 0f && fillLevel < 1f)
             {
@@ -131,6 +152,8 @@ namespace UpcycleCity.Ecosystem
         /// <summary>Called by walking citizens when they responsibly use this street bin.</summary>
         public void AddCitizenDeposit(float amount)
         {
+            if (!GameAuthority.IsAuthoritative)
+                return;
             fillLevel = Mathf.Clamp01(fillLevel + Mathf.Max(0.01f, amount) * DepositScale);
             RefreshIndicator();
         }
@@ -160,24 +183,63 @@ namespace UpcycleCity.Ecosystem
         {
             if (!CanInteract(interactor))
                 return;
+            GameAuthority.Current.RequestServiceBin(this, interactor);
+        }
 
-            int payout = Mathf.Max(2, Mathf.RoundToInt(ServiceCoinReward * fillLevel));
+        /// <summary>Executes authoritative bin emptying (invoked directly in solo or on the host in co-op).</summary>
+        public bool ExecuteAuthoritativeService(
+            PlayerInteractor interactor,
+            out int payout,
+            out string message,
+            out Color color,
+            bool creditLocalInventory = true,
+            bool emitLocalFeedback = true)
+        {
+            payout = 0;
+            message = string.Empty;
+            color = new Color(0.18f, 0.72f, 0.42f);
+
+            if (fillLevel < 0.15f)
+                return false;
+
+            payout = Mathf.Max(2, Mathf.RoundToInt(ServiceCoinReward * fillLevel));
             bool wasOverflow = IsOverflowing;
 
             fillLevel = 0f;
             spillTimer = SpillInterval;
             RefreshIndicator();
 
-            interactor?.Inventory?.AddCoins(payout);
+            if (creditLocalInventory)
+                interactor?.Inventory?.AddCoins(payout);
             district?.AddSatisfactionBoost(wasOverflow ? 0.12f : 0.06f);
 
-            string msg = wasOverflow
+            message = wasOverflow
                 ? $"Cleared overflowing {DisplayName}! +{payout} Coins · Overflow stopped"
                 : $"Serviced {DisplayName} · +{payout} Coins";
-            Color color = new Color(0.18f, 0.72f, 0.42f);
 
-            interactor?.NotifyFeedback(msg, color);
-            PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.Interact, transform.position, 1f, msg, color);
+            if (emitLocalFeedback)
+            {
+                interactor?.NotifyFeedback(message, color);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.Interact, transform.position, 1f, message, color);
+            }
+            return true;
+        }
+
+        /// <summary>Convenience overload used by <see cref="LocalGameAuthority"/>.</summary>
+        public void ExecuteAuthoritativeService(PlayerInteractor interactor)
+        {
+            ExecuteAuthoritativeService(interactor, out _, out _, out _, creditLocalInventory: true, emitLocalFeedback: true);
+        }
+
+        public SyncedStateRecord CaptureSyncState() => new SyncedStateRecord
+        {
+            v0 = fillLevel,
+        };
+
+        public void ApplySyncState(in SyncedStateRecord state)
+        {
+            fillLevel = Mathf.Clamp01(state.v0);
+            RefreshIndicator();
         }
 
         void RefreshIndicator()

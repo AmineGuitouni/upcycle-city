@@ -16,7 +16,7 @@ namespace UpcycleCity.Ecosystem
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-40)]
     [AddComponentMenu("Upcycle City/Ecosystem/City Ecosystem Manager")]
-    public sealed class CityEcosystemManager : MonoBehaviour
+    public sealed class CityEcosystemManager : MonoBehaviour, Core.ISyncedStateProvider
     {
         public const string SmogModifierSourceId = "SmogZone";
 
@@ -218,6 +218,7 @@ namespace UpcycleCity.Ecosystem
             EcosystemBalance.SetActive(balance);
             TrashItem.Spawned += OnTrashSpawned;
             TrashItem.Removed += OnTrashRemoved;
+            Core.SyncedStateRegistry.Register(this);
 
             // Collect any pre-placed TrashItems already awake in the scene
             TrashItem[] existing = FindObjectsByType<TrashItem>();
@@ -233,6 +234,7 @@ namespace UpcycleCity.Ecosystem
 
         void OnDisable()
         {
+            Core.SyncedStateRegistry.Unregister(this);
             TrashItem.Spawned -= OnTrashSpawned;
             TrashItem.Removed -= OnTrashRemoved;
             PlayerContext.ActiveModifiers?.RemoveAllFromSource(SmogModifierSourceId);
@@ -257,8 +259,11 @@ namespace UpcycleCity.Ecosystem
 
         void Start()
         {
-            // Snap initial atmosphere to match real physical world state right away
-            StepSimulation(tickInterval, snapImmediate: true);
+            // Snap initial atmosphere to match real physical world state right away on authoritative side
+            if (Core.GameAuthority.IsAuthoritative)
+                StepSimulation(tickInterval, snapImmediate: true);
+            else
+                UpdatePlayerSmogExposure();
             initializedSnap = true;
         }
 
@@ -270,8 +275,59 @@ namespace UpcycleCity.Ecosystem
 
             float dt = tickTimer;
             tickTimer = 0f;
-            StepSimulation(dt, snapImmediate: !initializedSnap);
+            if (Core.GameAuthority.IsAuthoritative)
+            {
+                StepSimulation(dt, snapImmediate: !initializedSnap);
+            }
+            else
+            {
+                RefreshLocalTrashSourceCounts();
+                UpdatePlayerSmogExposure();
+                Updated?.Invoke(this);
+            }
             initializedSnap = true;
+        }
+
+        public string SyncKey => "city:ecosystem";
+
+        public Core.SyncedStateRecord CaptureSyncState() => new Core.SyncedStateRecord
+        {
+            v0 = CityPollution,
+            v1 = CitySatisfaction,
+            i0 = liveTrash.Count,
+        };
+
+        public void ApplySyncState(in Core.SyncedStateRecord state)
+        {
+            CityPollution = Mathf.Clamp01(state.v0);
+            CitySatisfaction = Mathf.Clamp01(state.v1);
+            if (PollutionController.Active != null)
+                PollutionController.Active.SetPollution(CityPollution, instant: false);
+            UpdatePlayerSmogExposure();
+            Updated?.Invoke(this);
+        }
+
+        void RefreshLocalTrashSourceCounts()
+        {
+            Array.Clear(countsBySource, 0, countsBySource.Length);
+            scratchTrash.Clear();
+            foreach (TrashItem item in liveTrash)
+                scratchTrash.Add(item);
+
+            for (int i = 0; i < scratchTrash.Count; i++)
+            {
+                TrashItem item = scratchTrash[i];
+                if (item == null || item.IsDisposed)
+                {
+                    liveTrash.Remove(item);
+                    continue;
+                }
+                if (item.IsContained)
+                    continue;
+                int srcIdx = (int)item.Source;
+                if (srcIdx >= 0 && srcIdx < countsBySource.Length)
+                    countsBySource[srcIdx]++;
+            }
         }
 
         void StepSimulation(float dt, bool snapImmediate)

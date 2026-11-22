@@ -40,6 +40,8 @@ namespace UpcycleCity.Waste
         Rigidbody body;
         Collider[] colliders;
         int restLayer = GameLayers.Grabbable;
+        bool heldLocally;
+        INetworkedPhysicsGrabbable networkedGrabbable;
 
         public static event Action<TrashItem> Spawned;
         public static event Action<TrashItem> Removed;
@@ -55,7 +57,8 @@ namespace UpcycleCity.Waste
         public float HoldDistanceOffset => holdDistanceOffset;
         public bool IsBulky => isBulky;
         public Rigidbody Body => body;
-        public bool IsHeld { get; private set; }
+        public bool IsHeld => heldLocally || (networkedGrabbable != null && networkedGrabbable.IsHeldByAnyone);
+        public bool IsHeldLocally => heldLocally;
         public bool IsDisposed { get; private set; }
         /// <summary>
         /// Collected into a container (the shopping cart's basket): it no longer lies in the street, so it doesn't
@@ -88,6 +91,7 @@ namespace UpcycleCity.Waste
         {
             body = GetComponent<Rigidbody>();
             colliders = GetComponentsInChildren<Collider>(true);
+            networkedGrabbable = GetComponent<INetworkedPhysicsGrabbable>();
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             SpawnTime = Time.time;
@@ -111,32 +115,53 @@ namespace UpcycleCity.Waste
             Removed?.Invoke(this);
         }
 
+        /// <summary>Refreshes cached child colliders after a dynamic visual/collider build (used by networked trash).</summary>
+        public void RefreshColliders()
+        {
+            colliders = GetComponentsInChildren<Collider>(true);
+            networkedGrabbable = GetComponent<INetworkedPhysicsGrabbable>();
+        }
+
         public bool CanGrab(PhysicsGrabController grabber)
         {
-            return !IsDisposed && !IsHeld && body != null;   // contained items can be taken back out of the cart
+            if (IsDisposed || heldLocally || body == null)
+                return false;
+            networkedGrabbable ??= GetComponent<INetworkedPhysicsGrabbable>();
+            if (networkedGrabbable != null && !networkedGrabbable.CanLocalGrab)
+                return false;
+            return true;
         }
 
         public void OnGrabbed(PhysicsGrabController grabber)
         {
-            IsHeld = true;
+            heldLocally = true;
             IsContained = false;
             restLayer = gameObject.layer == GameLayers.HeldObject ? GameLayers.Grabbable : gameObject.layer;
             GameLayers.SetLayerRecursively(gameObject, GameLayers.HeldObject);
 
-            body.useGravity = false;
-            body.linearDamping = 4f;
-            body.angularDamping = 6f;
+            if (body != null && !body.isKinematic)
+            {
+                body.useGravity = false;
+                body.linearDamping = 4f;
+                body.angularDamping = 6f;
+            }
         }
 
         public void OnReleased(PhysicsGrabController grabber, Vector3 releaseVelocity, bool thrown)
         {
-            IsHeld = false;
+            heldLocally = false;
             GameLayers.SetLayerRecursively(gameObject, restLayer);
 
-            body.useGravity = true;
-            body.linearDamping = 0.25f;
-            body.angularDamping = 0.5f;
-            body.linearVelocity = releaseVelocity;
+            if (body != null && !body.isKinematic)
+            {
+                body.useGravity = true;
+                body.linearDamping = 0.25f;
+                body.angularDamping = 0.5f;
+                body.linearVelocity = releaseVelocity;
+            }
+
+            networkedGrabbable ??= GetComponent<INetworkedPhysicsGrabbable>();
+            networkedGrabbable?.OnLocalReleased(releaseVelocity, thrown);
         }
 
         /// <summary>Marks the item as stowed in (or taken out of) a container such as the shopping cart.</summary>
@@ -158,8 +183,18 @@ namespace UpcycleCity.Waste
         {
             if (IsDisposed)
                 return;
+
+            networkedGrabbable ??= GetComponent<INetworkedPhysicsGrabbable>();
+            if (networkedGrabbable != null && networkedGrabbable.HandleDispose())
+            {
+                IsDisposed = true;
+                heldLocally = false;
+                IsContained = false;
+                return;
+            }
+
             IsDisposed = true;
-            IsHeld = false;
+            heldLocally = false;
             IsContained = false;
             Destroy(gameObject);
         }

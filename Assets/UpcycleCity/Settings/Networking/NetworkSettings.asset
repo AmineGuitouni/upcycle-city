@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86e4d7a632db44190bbf362d9a491a90, type: 3}
+  m_Name: NetworkSettings
+  m_EditorClassIdentifier: UpcycleCity.Networking::UpcycleCity.Networking.NetworkSettings
+  maxPlayers: 4
+  tickRate: 30
+  defaultTransportMode: 0
+  soloSceneName: 
+  coopSceneName: EcosystemSandbox
+  menuSceneName: CharacterCreator
+  defaultDirectAddress: 127.0.0.1
+  defaultDirectPort: 7777
+  relayTimeoutSeconds: 12
+  disconnectTimeoutSeconds: 15
+  stateSyncIntervalSeconds: 0.25
+  networkPrefabsList: {fileID: 11400000, guid: 3b787f12f523c4bb1a5e340e7764ea53, type: 2}
+  networkPlayerPrefab: {fileID: 6703747391664533089, guid: 7af6c0b3ae45b4ea0a74546cf827a57a, type: 3}
+  networkTrashPrefab: {fileID: 3021161385148546387, guid: 18bad6cfecd7149bf919c8c7dc5d153d, type: 3}
+  networkCityStatePrefab: {fileID: 692175556341802631, guid: 9ec14e2bc0a33430885edb78d900353c, type: 3}
+  panelSettings: {fileID: 11400000, guid: 91a55be76536f43168719810d49e78c4, type: 2}
+  coopMenuStyleSheet: {fileID: 7433441132597879392, guid: 9abc5966f3f894f5c8827b74757f5279, type: 3}

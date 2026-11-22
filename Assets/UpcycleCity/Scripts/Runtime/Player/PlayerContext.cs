@@ -30,7 +30,8 @@ namespace UpcycleCity.Player
             PlayerUnregistered = null;
         }
 
-        internal static void Register(PlayerController player)
+        /// <summary>Registers the active local player instance.</summary>
+        public static void Register(PlayerController player)
         {
             if (player == null || Active == player)
                 return;
@@ -38,7 +39,8 @@ namespace UpcycleCity.Player
             PlayerRegistered?.Invoke(player);
         }
 
-        internal static void Unregister(PlayerController player)
+        /// <summary>Unregisters the given player if it is currently the active local player.</summary>
+        public static void Unregister(PlayerController player)
         {
             if (player == null || Active != player)
                 return;

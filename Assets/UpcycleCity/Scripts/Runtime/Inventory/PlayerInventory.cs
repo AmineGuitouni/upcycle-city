@@ -80,6 +80,42 @@ namespace UpcycleCity.Inventory
             return true;
         }
 
+        /// <summary>Sets the coin balance directly from the authoritative shared co-op team wallet.</summary>
+        public void SetCoinsFromNetwork(int authoritativeCoins)
+        {
+            int clamped = Mathf.Max(0, authoritativeCoins);
+            int delta = clamped - coins;
+            if (delta == 0)
+                return;
+            coins = clamped;
+            CoinsChanged?.Invoke(coins, delta);
+            Changed?.Invoke();
+        }
+
+        /// <summary>Returns true if at least one unit of <paramref name="item"/> can fit in the hotbar without mutating slots.</summary>
+        public bool CanAddItem(IInventoryItem item, int amount = 1)
+        {
+            if (item == null || amount <= 0 || slots == null)
+                return false;
+
+            if (item.MaxStack > 1)
+            {
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (Matches(slots[i].Item, item) && slots[i].Count < item.MaxStack)
+                        return true;
+                }
+            }
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i].IsEmpty)
+                    return true;
+            }
+
+            return false;
+        }
+
         public bool TryAddItem(IInventoryItem item, int amount = 1, bool silent = false)
         {
             if (item == null || amount <= 0 || slots == null)
