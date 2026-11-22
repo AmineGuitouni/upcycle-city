@@ -26,7 +26,7 @@ namespace UpcycleCity.Networking
         [Header("Session")]
         [SerializeField, Range(2, 4)] int maxPlayers = 4;
         [SerializeField, Range(15, 60)] uint tickRate = 30;
-        [SerializeField] CoopTransportMode defaultTransportMode = CoopTransportMode.Relay;
+        [SerializeField] CoopTransportMode defaultTransportMode = CoopTransportMode.Direct;
         [Tooltip("Gameplay scene loaded when a solo player confirms their look in the Character Creator. Leave empty to use CharacterCreatorController.GameplayScene.")]
         [SerializeField] string soloSceneName = "EcosystemSandbox";
         [Tooltip("Gameplay scene the host loads for everyone (NGO scene management) once all players are ready.")]

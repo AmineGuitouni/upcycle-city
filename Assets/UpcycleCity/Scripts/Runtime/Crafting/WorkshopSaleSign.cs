@@ -36,6 +36,12 @@ namespace UpcycleCity.Crafting
             interactCollider = collider;
         }
 
+        void Awake()
+        {
+            WorldTextLabel.BindFontAtlas(titleText);
+            WorldTextLabel.BindFontAtlas(detailText);
+        }
+
         internal void Bind(WorkshopProperty owner)
         {
             property = owner;

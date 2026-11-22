@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UpcycleCity.Networking::UpcycleCity.Networking.NetworkSettings
   maxPlayers: 4
   tickRate: 30
-  defaultTransportMode: 0
+  defaultTransportMode: 1
   soloSceneName: EcosystemSandbox
   coopSceneName: EcosystemSandbox
   menuSceneName: MainMenu

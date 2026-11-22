@@ -496,7 +496,7 @@ namespace UpcycleCity.Networking
             transportRow.Add(directToggleButton);
             transportRow.Add(relayToggleButton);
             titleView.Add(transportRow);
-            titleView.Add(MakeLabel("Online Code works over the internet. Direct IP is for testing on the same Wi-Fi.", "coop-hint"));
+            titleView.Add(MakeLabel("Same Wi-Fi: everyone on one Wi-Fi network, rooms show up automatically. Online Code needs the project linked to Unity Cloud.", "coop-hint"));
             // Graphics level + frame-rate cap (applies instantly, saved per device)
             titleView.Add(new UpcycleCity.UI.GraphicsSettingsView());
             titleView.Add(MakeButton("Done", "coop-btn coop-btn--muted", ToggleSettings));

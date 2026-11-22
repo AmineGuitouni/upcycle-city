@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ab18c8bb7082400fa8251fd32e8a180, type: 3}
+  m_Name: WorkshopConfig
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.WorkshopConfig
+  propertyId: upcycle_garage
+  displayName: Upcycle Garage
+  propertyPrice: 120
+  purchaseRange: 6
+  machines:
+  - slotId: pedal_generator
+    machine: {fileID: 11400000, guid: 433fb5f61d9ca4782910bf5d2ae42bcc, type: 2}
+    displayNameOverride: Pedal Generator
+    price: 40
+    iconKey: ui_energy
+  - slotId: pulper
+    machine: {fileID: 11400000, guid: 1f470b5d977c247269fa0a4104fb280c, type: 2}
+    displayNameOverride: Pulper
+    price: 60
+    iconKey: stream_paper
+  - slotId: plastic_melter
+    machine: {fileID: 11400000, guid: 6c189c05b81be4b94827e1737f416910, type: 2}
+    displayNameOverride: Plastic Melter
+    price: 80
+    iconKey: stream_plastic
+  - slotId: crucible_furnace
+    machine: {fileID: 11400000, guid: 529f1c3302fc649f9a7d04ec24ce6d21, type: 2}
+    displayNameOverride: Crucible Furnace
+    price: 100
+    iconKey: stream_cans
+  - slotId: tyre_stripper
+    machine: {fileID: 11400000, guid: c39889f7c7579410796c8cede9106a4e, type: 2}
+    displayNameOverride: Tyre Stripper
+    price: 90
+    iconKey: mat_old_wheel
+  - slotId: workbench
+    machine: {fileID: 11400000, guid: 16f3cfc46153d4307ac085a56e21854d, type: 2}
+    displayNameOverride: Upcycle Workbench
+    price: 120
+    iconKey: mat_built_bicycle

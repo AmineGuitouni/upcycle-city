@@ -331,8 +331,29 @@ namespace UpcycleCity.Editor
             tm.color = color;
             tm.text = name;
             if (font != null)
-                go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+                go.GetComponent<MeshRenderer>().sharedMaterial = WorldTextMaterial(font);
             return tm;
+        }
+
+        /// <summary>Depth-tested, back-face culled text material on the font atlas (the built-in font material draws over walls).</summary>
+        static Material WorldTextMaterial(Font font)
+        {
+            string path = $"{MaterialDir}/Workshop_WorldText.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            Shader shader = Shader.Find("UpcycleCity/World Text");
+            if (shader == null)
+                return font.material;
+            if (mat == null)
+            {
+                if (!AssetDatabase.IsValidFolder(MaterialDir))
+                    AssetDatabase.CreateFolder("Assets/UpcycleCity/Materials", "Workshop");
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            mat.shader = shader;
+            mat.mainTexture = font.material.mainTexture;
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         sealed class Materials

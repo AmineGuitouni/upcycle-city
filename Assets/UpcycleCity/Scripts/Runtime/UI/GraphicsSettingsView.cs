@@ -48,6 +48,7 @@ namespace UpcycleCity.UI
                 levels.Add(b);
                 levelButtons[i] = b;
             }
+            levelButtons[levelButtons.Length - 1].AddToClassList("gfx-seg--last");
             hint = MakeLabel(string.Empty, "gfx-hint");
             Add(hint);
 
@@ -63,6 +64,7 @@ namespace UpcycleCity.UI
                 caps.Add(b);
                 capButtons[i] = b;
             }
+            capButtons[capButtons.Length - 1].AddToClassList("gfx-seg--last");
 
             RegisterCallback<AttachToPanelEvent>(_ =>
             {

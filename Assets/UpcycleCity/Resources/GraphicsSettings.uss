@@ -38,7 +38,7 @@
 
 .gfx-seg:hover { background-color: rgb(60, 65, 70); }
 
-.gfx-seg:last-child { margin-right: 0; }
+.gfx-seg--last { margin-right: 0; }
 
 .gfx-seg--active,
 .gfx-seg--active:hover {

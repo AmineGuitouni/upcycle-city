@@ -63,6 +63,12 @@ namespace UpcycleCity.Crafting
             iconRenderer = icon;
         }
 
+        void Awake()
+        {
+            WorldTextLabel.BindFontAtlas(nameText);
+            WorldTextLabel.BindFontAtlas(priceText);
+        }
+
         internal void Bind(WorkshopProperty owner)
         {
             property = owner;
