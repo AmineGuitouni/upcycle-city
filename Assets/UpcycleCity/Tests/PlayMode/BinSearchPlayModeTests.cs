@@ -12,6 +12,7 @@ using UpcycleCity.Core;
 using UpcycleCity.Crafting;
 using UpcycleCity.Ecosystem;
 using UpcycleCity.Networking;
+using UpcycleCity.Shops;
 using UpcycleCity.Waste;
 
 namespace UpcycleCity.Tests.PlayMode
@@ -62,6 +63,7 @@ namespace UpcycleCity.Tests.PlayMode
 
             GameAuthority.ResetToLocal();
             GameAuthority.LocalClientIdResolver = null;
+            CarryItems.CatalogOverride = null;
             SyncedStateRegistry.Clear();
         }
 
@@ -216,6 +218,156 @@ namespace UpcycleCity.Tests.PlayMode
             yield return WaitUntil(() => close.Done, 4f, "No reply to close.");
             Assert.IsFalse(bin.Contents.Searching);
             yield return WaitUntil(() => !binMirror.Contents.Searching, 4f, "Pausing did not replicate.");
+        }
+
+        [UnityTest]
+        public IEnumerator HostAndClient_Carry_StoreHeldTrash_HandsLimit_SellBuyBagAndThrow()
+        {
+            WasteCatalog catalog = AssetDatabase.LoadAssetAtPath<WasteCatalog>("Assets/UpcycleCity/Settings/Ecosystem/WasteCatalog.asset");
+            Assert.IsNotNull(catalog);
+            CarryItems.CatalogOverride = catalog;
+            WasteCatalog.Entry bottle = null;
+            foreach (WasteCatalog.Entry e in catalog.Entries)
+            {
+                if (e != null && !e.isBulky && e.stream == WasteStream.Plastic) { bottle = e; break; }
+            }
+            Assert.IsNotNull(bottle);
+
+            NetworkSettings settings = AssetDatabase.LoadAssetAtPath<NetworkSettings>("Assets/UpcycleCity/Settings/Networking/NetworkSettings.asset");
+            yield return StartHostAndClient(settings, nextPort++);
+
+            var clientRegistry = new SyncedStateRegistryInstance();
+            GameObject repGo = UnityEngine.Object.Instantiate(settings.NetworkCityStatePrefab);
+            spawnedRoots.Add(repGo);
+            NetworkStateReplicator hostRep = repGo.GetComponent<NetworkStateReplicator>();
+            hostRep.Configure(settings.NetworkTrashPrefab, syncInterval: 0.1f, initialCoins: 0);
+            repGo.GetComponent<NetworkObject>().Spawn();
+            NetworkStateReplicator clientRep = null;
+            yield return WaitUntil(() =>
+            {
+                clientRep = FindSpawned<NetworkStateReplicator>(clientManager);
+                return clientRep != null && clientRep.IsSpawned;
+            }, 5f, "Client did not receive the replicator.");
+            clientRep.SetStateRegistry(clientRegistry);
+            IGameAuthority host = hostRep, client = clientRep;
+            ulong clientId = clientManager.LocalClientId;
+            RecyclingBagService service = RecyclingBagService.EnsureInstance();
+
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            floor.transform.localScale = new Vector3(40f, 1f, 40f);
+            spawnedRoots.Add(floor);
+            GameObject playerGo = UnityEngine.Object.Instantiate(settings.NetworkPlayerPrefab, new Vector3(1f, 0.5f, 0f), Quaternion.identity);
+            spawnedRoots.Add(playerGo);
+            playerGo.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+            playerGo.GetComponent<NetworkPlayerController>().InitializeServerIdentity(
+                2, "Carrier", NetworkCharacterAppearance.From(CharacterAppearance.Default), new Vector3(1f, 0.5f, 0f), Quaternion.identity);
+            NetworkPlayerController clientCopy = null;
+            yield return WaitUntil(() =>
+            {
+                foreach (NetworkObject obj in clientManager.SpawnManager.SpawnedObjectsList)
+                    if (obj != null && obj.TryGetComponent(out NetworkPlayerController p) && p.OwnerClientId == clientId)
+                        clientCopy = p;
+                return clientCopy != null;
+            }, 5f, "The client's player did not spawn on the client.");
+            foreach (Rigidbody body in new[] { playerGo.GetComponent<Rigidbody>(), clientCopy.GetComponent<Rigidbody>() })
+                if (body != null) body.isKinematic = true;
+
+            var bagMirror = new RecyclingBag(clientId);
+            clientRegistry.Register(bagMirror);
+
+            // Hands hold 3: pick up (hold) and store three pieces of street trash; the fourth is refused
+            for (int n = 0; n < 4; n++)
+            {
+                TrashItem hostTrash = host.SpawnTrash(catalog, bottle, WasteSourceKind.Citizen, new Vector3(1.5f, 0.4f, 0f), Vector3.zero);
+                Assert.IsNotNull(hostTrash);
+                ulong netId = hostTrash.GetComponent<NetworkObject>().NetworkObjectId;
+                NetworkedPhysicsItem clientItem = null;
+                yield return WaitUntil(() => clientManager.SpawnManager.SpawnedObjects.TryGetValue(netId, out NetworkObject o)
+                    && (clientItem = o.GetComponent<NetworkedPhysicsItem>()) != null, 4f, "Trash did not spawn on the client.");
+                clientItem.OnLocalPickupStarted();
+                NetworkedPhysicsItem hostItem = hostTrash.GetComponent<NetworkedPhysicsItem>();
+                yield return WaitUntil(() => hostItem.HolderClientId == clientId, 4f, "The host never saw the client holding the trash.");
+
+                Result store = Request(client, RecyclingBagService.ActionStore, string.Empty);
+                yield return WaitUntil(() => store.Done, 4f, "No reply to store.");
+                if (n < CarryItems.HandsCapacity)
+                {
+                    Assert.IsTrue(store.Success, store.Message);
+                    yield return WaitUntil(() => hostTrash == null || !hostItem.IsSpawned, 4f, "Stored trash was not despawned.");
+                }
+                else
+                {
+                    Assert.IsFalse(store.Success, "Hands hold only 3.");
+                    StringAssert.Contains("arms are full", store.Message);
+                    hostItem.GetComponent<TrashItem>().Dispose();
+                }
+            }
+            RecyclingBag hostBag = service.GetHostBag(clientId);
+            Assert.AreEqual(CarryItems.HandsCapacity, hostBag.Count);
+            int carriedId = hostBag[0];
+            Assert.IsTrue(CarryItems.IsTrashId(carriedId));
+            yield return WaitUntil(() => bagMirror.Count == CarryItems.HandsCapacity, 4f, "The carry did not replicate to its owner.");
+
+            // Sell one at RÉCUP: the host prices it, the team is paid
+            var buyBackGo = new GameObject("TestRecup");
+            buyBackGo.transform.position = new Vector3(2f, 0f, 0f);
+            spawnedRoots.Add(buyBackGo);
+            RecyclingBuyBack buyBack = buyBackGo.AddComponent<RecyclingBuyBack>();
+            int expected = buyBack.PriceFor(bottle.stream, bottle.baseCoinValue);
+            int coinsBefore = hostRep.TeamCoins;
+            Result sell = Request(client, RecyclingBagService.ActionSell, buyBack.SyncKey, 0, carriedId);
+            yield return WaitUntil(() => sell.Done, 4f, "No reply to sell.");
+            Assert.IsTrue(sell.Success, sell.Message);
+            Assert.AreEqual(coinsBefore + expected, hostRep.TeamCoins);
+            Assert.AreEqual(2, hostBag.Count);
+
+            // Stale sell (wrong expected id) is refused; sell all empties the rest
+            Result stale = Request(client, RecyclingBagService.ActionSell, buyBack.SyncKey, 0, CarryItems.MaxId);
+            yield return WaitUntil(() => stale.Done, 4f, "No reply to the stale sell.");
+            Assert.IsFalse(stale.Success);
+            Result sellAll = Request(client, RecyclingBagService.ActionSell, buyBack.SyncKey, RecyclingBagService.SellAll, 0);
+            yield return WaitUntil(() => sellAll.Done, 4f, "No reply to sell all.");
+            Assert.IsTrue(sellAll.Success, sellAll.Message);
+            Assert.AreEqual(0, hostBag.Count);
+            Assert.AreEqual(coinsBefore + expected * 3, hostRep.TeamCoins);
+            yield return WaitUntil(() => bagMirror.Count == 0, 4f, "The emptied carry did not replicate.");
+
+            // Buy the Recycling Bag at the Quincaillerie: host price, team wallet, capacity 10
+            ShopCatalog tools = AssetDatabase.LoadAssetAtPath<ShopCatalog>("Assets/UpcycleCity/Settings/Shops/Shop_Tools.asset");
+            Assert.IsTrue(tools.TryFindOffer(CarryItems.BagUpgradeItemId, 1, out ShopCatalog.Offer bagOffer), "The Quincaillerie must sell the bag.");
+            var counterGo = new GameObject("TestQuincaillerie");
+            counterGo.transform.position = new Vector3(0f, 0f, 2f);
+            spawnedRoots.Add(counterGo);
+            counterGo.AddComponent<ShopCounter>().Configure(tools, null);
+
+            Result poor = Request(client, RecyclingBagService.ActionBuyBag, string.Empty);
+            yield return WaitUntil(() => poor.Done, 4f, "No reply to the first bag purchase.");
+            if (hostRep.TeamCoins < bagOffer.price)
+                Assert.IsFalse(poor.Success, "Can't buy without the coins.");
+            host.CreditTeamCoins(bagOffer.price);
+            int beforeBag = hostRep.TeamCoins;
+            Result buy = poor.Success ? poor : Request(client, RecyclingBagService.ActionBuyBag, string.Empty);
+            yield return WaitUntil(() => buy.Done, 4f, "No reply to buy bag.");
+            Assert.IsTrue(buy.Success, buy.Message);
+            Assert.IsTrue(hostBag.HasBag);
+            Assert.AreEqual(CarryItems.BagCapacity, hostBag.Capacity);
+            if (!ReferenceEquals(buy, poor))
+                Assert.AreEqual(beforeBag - bagOffer.price, hostRep.TeamCoins);
+            yield return WaitUntil(() => bagMirror.HasBag, 4f, "Owning the bag did not replicate.");
+            Result again = Request(client, RecyclingBagService.ActionBuyBag, string.Empty);
+            yield return WaitUntil(() => again.Done, 4f, "No reply to the second bag purchase.");
+            Assert.IsFalse(again.Success, "Only one bag.");
+
+            // Throw an item back out: the host spawns real trash and the carry shrinks
+            hostBag.TryAdd(carriedId);
+            int trashBefore = UnityEngine.Object.FindObjectsByType<TrashItem>(FindObjectsInactive.Exclude).Length;
+            Result toss = Request(client, RecyclingBagService.ActionThrow, string.Empty, 0, carriedId);
+            yield return WaitUntil(() => toss.Done, 4f, "No reply to throw.");
+            Assert.IsTrue(toss.Success, toss.Message);
+            Assert.AreEqual(0, hostBag.Count);
+            Assert.Greater(UnityEngine.Object.FindObjectsByType<TrashItem>(FindObjectsInactive.Exclude).Length, trashBefore,
+                "Throwing out spawns the item back into the world.");
         }
 
         [UnityTest]

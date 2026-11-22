@@ -25,7 +25,7 @@ MonoBehaviour:
   moveSpeedMultiplier: 1
   grantsSmogImmunity: 0
   useBehavior:
-    rid: 1445968247013507150
+    rid: 1445968247013507160
   grabTool: 0
   heldVisualPrefab: {fileID: 0}
   heldLocalPosition: {x: 0, y: 0, z: 0}
@@ -34,7 +34,7 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 1445968247013507150
+    - rid: 1445968247013507160
       type: {class: DepositMaterialStockItemBehavior, ns: UpcycleCity.Crafting, asm: UpcycleCity.Runtime}
       data:
         materialId: catalyst

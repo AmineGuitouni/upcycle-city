@@ -5,6 +5,7 @@ using Unity.Jobs;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Jobs;
+using UpcycleCity.Core;
 using UpcycleCity.Pollution;
 
 namespace UpcycleCity.Crowd
@@ -162,6 +163,9 @@ namespace UpcycleCity.Crowd
             get => animatedBudget;
             set => animatedBudget = Mathf.Max(0, value);
         }
+
+        /// <summary><see cref="AnimatedBudget"/> capped by the player's graphics level.</summary>
+        public int EffectiveAnimatedBudget => Mathf.Min(animatedBudget, GraphicsQuality.Current.CrowdAnimatedMax);
 
         /// <summary>
         /// Updates a live agent's activity, movement pause, speed multiplier, and facing direction
@@ -649,7 +653,11 @@ namespace UpcycleCity.Crowd
 
             Vector3 eye = view.transform.position;
             GeometryUtility.CalculateFrustumPlanes(view, frustum);
-            float reach = animateDistance * animateDistance;
+            // The graphics level caps the animated set and how far it reaches (GraphicsQuality, Very Low → High)
+            GraphicsProfile quality = GraphicsQuality.Current;
+            int budget = EffectiveAnimatedBudget;
+            float reachDistance = animateDistance * quality.CrowdAnimateDistanceScale;
+            float reach = reachDistance * reachDistance;
 
             candidates.Clear();
             foreach (Slot slot in slots)
@@ -677,12 +685,12 @@ namespace UpcycleCity.Crowd
             }
 
             candidates.Sort(ByPriority);
-            for (int i = candidates.Count - 1; i >= animatedBudget; i--)
+            for (int i = candidates.Count - 1; i >= budget; i--)
             {
                 if (candidates[i].Rig != null)
                     ReleaseRig(candidates[i]);
             }
-            int count = Mathf.Min(animatedBudget, candidates.Count);
+            int count = Mathf.Min(budget, candidates.Count);
             for (int i = 0; i < count; i++)
             {
                 if (candidates[i].Rig == null)

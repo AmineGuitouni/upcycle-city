@@ -52,9 +52,7 @@ namespace UpcycleCity.Waste
         {
             if (acceptedStream == WasteStream.BulkyUpcyclable)
                 return 0;
-            RecyclingBag bag = RecyclingBagService.LocalBag;
-            BinLootTable table = BinLootTable.Active;
-            return bag != null && table != null ? bag.CountMatching(table, false, acceptedStream) : 0;
+            return RecyclingBagService.LocalCountMatching(false, acceptedStream);
         }
 
         /// <summary>Host: counts finds emptied from a Recycling Bag as correctly sorted (they were picked by hand).</summary>

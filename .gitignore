@@ -83,3 +83,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Phone builds (APK) made by Upcycle City > Build > Android APK
+/[Bb]uilds/

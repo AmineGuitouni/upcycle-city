@@ -48,6 +48,7 @@ namespace UpcycleCity.Player
         InputAction attackAction;
         InputAction dropAction;
         InputAction useItemAction;
+        InputAction bagAction;
         InputAction previousAction;
         InputAction nextAction;
         InputAction hotbarScrollAction;
@@ -57,7 +58,7 @@ namespace UpcycleCity.Player
         bool actionsBound;
 
         // Previous-frame state of the on-screen touch buttons (edge detection)
-        bool prevTouchJump, prevTouchAttack, prevTouchInteract, prevTouchDrop, prevTouchUse;
+        bool prevTouchJump, prevTouchAttack, prevTouchInteract, prevTouchDrop, prevTouchUse, prevTouchBag;
 
         public PlayerInput PlayerInput => playerInput;
         public PlayerInputMode InputMode { get; private set; } = PlayerInputMode.Gameplay;
@@ -82,6 +83,23 @@ namespace UpcycleCity.Player
         public bool InteractHeld { get; private set; }
         public bool InteractReleasedThisFrame { get; private set; }
         public bool UseItemPressedThisFrame { get; private set; }
+        /// <summary>Open / close the carry bag (Tab, B, gamepad Select, touch BAG).</summary>
+        public bool BagPressedThisFrame { get; private set; }
+        /// <summary>Open the pause menu (Esc, gamepad Start, touch ☰).</summary>
+        public bool MenuPressedThisFrame { get; private set; }
+
+        /// <summary>Frame on which the input mode last changed (so the Esc that closed a window doesn't open the pause menu).</summary>
+        public int InputModeChangedFrame { get; private set; } = -1;
+
+        bool prevTouchMenu;
+
+        bool ConsumeTouchMenu()
+        {
+            bool menu = VirtualTouchInput.MenuHeld;
+            bool pressed = menu && !prevTouchMenu;
+            prevTouchMenu = menu;
+            return pressed;
+        }
         public int HotbarScrollDelta { get; private set; }
         public int HotbarDirectSlot { get; private set; } = -1;
         public bool CursorLocked { get; private set; }
@@ -100,6 +118,7 @@ namespace UpcycleCity.Player
                 return;
 
             InputMode = mode;
+            InputModeChangedFrame = Time.frameCount;
             if (mode == PlayerInputMode.UI)
             {
                 ClearAllInputs();
@@ -208,6 +227,7 @@ namespace UpcycleCity.Player
             attackAction = map.FindAction("Attack", false);
             dropAction = map.FindAction("Drop", false);
             useItemAction = map.FindAction("UseItem", false);
+            bagAction = map.FindAction("Bag", false);
             previousAction = map.FindAction("Previous", false);
             nextAction = map.FindAction("Next", false);
             hotbarScrollAction = map.FindAction("HotbarScroll", false);
@@ -255,11 +275,12 @@ namespace UpcycleCity.Player
                 return;
             }
 
-            // Desktop cursor lock toggle (Escape) and click-to-relock when using Mouse
+            // Escape / gamepad Start / touch ☰ open the pause menu (which frees the cursor); click re-locks on desktop
+            MenuPressedThisFrame = (toggleCursorAction != null && toggleCursorAction.WasPressedThisFrame())
+                                   || (Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame)
+                                   || ConsumeTouchMenu();
             if (!IsUsingTouchOrMobile)
             {
-                if (toggleCursorAction != null && toggleCursorAction.WasPressedThisFrame())
-                    SetCursorLocked(!CursorLocked);
 
                 if (lockCursorOnDesktop && !CursorLocked && attackAction != null && attackAction.WasPressedThisFrame())
                 {
@@ -298,6 +319,7 @@ namespace UpcycleCity.Player
             InteractHeld = interactAction != null && interactAction.IsPressed();
             InteractReleasedThisFrame = interactAction != null && interactAction.WasReleasedThisFrame();
             UseItemPressedThisFrame = useItemAction != null && useItemAction.WasPressedThisFrame();
+            BagPressedThisFrame = bagAction != null && bagAction.WasPressedThisFrame();
 
             MergeVirtualTouchInput();
 
@@ -330,7 +352,7 @@ namespace UpcycleCity.Player
         {
             if (!VirtualTouchInput.Active)
             {
-                prevTouchJump = prevTouchAttack = prevTouchInteract = prevTouchDrop = prevTouchUse = false;
+                prevTouchJump = prevTouchAttack = prevTouchInteract = prevTouchDrop = prevTouchUse = prevTouchBag = false;
                 return;
             }
 
@@ -379,6 +401,10 @@ namespace UpcycleCity.Player
             bool use = VirtualTouchInput.UseItemHeld;
             UseItemPressedThisFrame |= use && !prevTouchUse;
             prevTouchUse = use;
+
+            bool bag = VirtualTouchInput.BagHeld;
+            BagPressedThisFrame |= bag && !prevTouchBag;
+            prevTouchBag = bag;
         }
 
         Vector2 ReadLookDelta()
@@ -426,6 +452,8 @@ namespace UpcycleCity.Player
             InteractPressedThisFrame = false;
             InteractReleasedThisFrame = false;
             UseItemPressedThisFrame = false;
+            BagPressedThisFrame = false;
+            MenuPressedThisFrame = false;
             HotbarScrollDelta = 0;
             HotbarDirectSlot = -1;
         }

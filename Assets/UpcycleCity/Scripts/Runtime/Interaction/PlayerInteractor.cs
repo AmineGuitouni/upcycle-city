@@ -336,19 +336,14 @@ namespace UpcycleCity.Interaction
         {
             if (grabber != null && grabber.IsPickingUp)
             {
-                ActivePrompt = grabber.CurrentPickup == PickupStyle.Hand
-                    ? "Picking up by hand…  (a Litter Picker grabs on the move)"
-                    : grabber.CurrentPickup == PickupStyle.ToolReach
-                        ? "Scooping it up…"
-                        : "Snap!";
+                ActivePrompt = string.Empty; // the pickup animation says it all
                 return;
             }
 
+            // Holding something: no control hints, only what the thing you look at offers (e.g. a sorting bin)
             if (grabber != null && grabber.IsHolding)
             {
-                string extra = hoveredInteractable != null ? $"  |  {hoveredInteractable.InteractionPrompt}" : string.Empty;
-                string bulkyNote = grabber.HeldObject.IsBulky ? " (Heavy)" : string.Empty;
-                ActivePrompt = $"Holding {grabber.HeldObject.DisplayName}{bulkyNote}  ·  [LMB Hold] Throw  |  [RMB] Drop{extra}";
+                ActivePrompt = hoveredInteractable != null ? hoveredInteractable.InteractionPrompt : string.Empty;
                 return;
             }
 

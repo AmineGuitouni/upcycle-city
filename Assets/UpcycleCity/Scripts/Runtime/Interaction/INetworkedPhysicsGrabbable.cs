@@ -12,6 +12,9 @@ namespace UpcycleCity.Interaction
         /// <summary>True when any player (local or remote) currently holds this item.</summary>
         bool IsHeldByAnyone { get; }
 
+        /// <summary>Client ID of the player holding this item (server-authoritative), or <see cref="ulong.MaxValue"/> when free.</summary>
+        ulong HolderClientId => ulong.MaxValue;
+
         /// <summary>False when another co-op player currently holds this item.</summary>
         bool CanLocalGrab { get; }
 

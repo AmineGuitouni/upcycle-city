@@ -175,6 +175,32 @@ namespace UpcycleCity.Networking
         /// </summary>
         public Func<CancellationToken, Task> PreConnectAsyncHook { get; set; }
 
+        /// <summary>True on the device hosting the session (the host phone).</summary>
+        public bool IsHostingSession() => networkManager != null && networkManager.IsServer && networkManager.IsListening;
+
+        /// <summary>This device's Wi-Fi IPv4 (what friends on the same Wi-Fi connect to), or null.</summary>
+        public string LocalWifiAddress => LanDiscovery.Instance != null ? LanDiscovery.Instance.LocalIPv4 : LanDiscovery.FindLocalIPv4();
+
+        // Same-Wi-Fi rooms announce themselves while friends can still join (Room + Character Creator)
+        void TickLanBeacon()
+        {
+            LanDiscovery lan = LanDiscovery.Instance;
+            if (lan == null)
+                return;
+            bool joinable = state == CoopSessionState.Lobby
+                            && activeTransportMode == CoopTransportMode.Direct
+                            && networkManager != null && networkManager.IsServer && networkManager.IsListening;
+            if (!joinable)
+            {
+                lan.StopBeacon();
+                return;
+            }
+            ushort port = settings != null ? settings.DefaultDirectPort : (ushort)7777;
+            if (networkManager.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
+                port = utp.ConnectionData.Port;
+            lan.TickBeacon(LocalPlayerName, port, lobbyPlayers.Count, MaxPlayers);
+        }
+
         public string LocalPlayerName
         {
             get => string.IsNullOrWhiteSpace(localPlayerName) ? "Cleaner" : localPlayerName;
@@ -310,6 +336,11 @@ namespace UpcycleCity.Networking
             Application.wantsToQuit += OnApplicationWantsToQuit;
             EnsureNetworkManager();
             EnsureInGameHud();
+
+            // The pause menu (UpcycleCity.Runtime) reads the room code and leaves through these, Netcode-free
+            GameSession.JoinCodeResolver = () => string.IsNullOrEmpty(joinCode) ? null : joinCode;
+            LanDiscovery.EnsureInstance(gameObject);
+            GameSession.LeaveSessionHandler = () => LeaveSession();
         }
 
         void Start()
@@ -319,6 +350,8 @@ namespace UpcycleCity.Networking
 
         void Update()
         {
+            TickLanBeacon();
+
             if (state == CoopSessionState.InGame
                 && NetworkStateReplicator.Active != null
                 && NetworkStateReplicator.Active.IsSpawned)
@@ -357,6 +390,8 @@ namespace UpcycleCity.Networking
 
             if (instance == this)
             {
+                GameSession.JoinCodeResolver = null;
+                GameSession.LeaveSessionHandler = null;
                 DisconnectAllClientsForHostShutdown(DisconnectCodeHostLeft);
                 UnbindNetworkCallbacks();
                 GameAuthority.ResetToLocal();

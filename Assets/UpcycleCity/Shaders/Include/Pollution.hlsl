@@ -36,6 +36,7 @@ float4 _PollutionDeadFoliageColor; // rgb colour that living plants dry out to
 float4 _PollutionSurfaceParams;    // x desaturation, y darkening, z grime scale (1/m), w ground dirt height (m)
 float4 _PollutionDissolveColor;    // rgb HDR rim colour of the clean-up dissolve
 float4 _PollutionDissolveParams;   // x noise scale (1/m), y glowing edge width, z per-object stagger, w noise spread
+float  _PollutionLowDetail;        // 1 on the Very Low graphics level (GraphicsQuality.cs): no noise blotches / wall streaks
 
 // ---------------------------------------------------------------- noise
 
@@ -141,10 +142,17 @@ half3 PollutionAlbedo(half3 albedo, PollutionSurface surface, float pollution)
     half greenness = saturate((albedo.g - max(albedo.r, albedo.b)) * 8.0h);
     dirty = lerp(dirty, _PollutionDeadFoliageColor.rgb * (0.6h + luminance), surface.foliage * greenness);
 
-    float3 p = surface.positionWS * _PollutionSurfaceParams.z;
-    half blotches = smoothstep(0.42h, 0.78h, PollutionFbm(p));
-    half wall = 1.0h - abs(surface.normalWS.y);
-    half streaks = smoothstep(0.55h, 0.85h, PollutionNoise(float3(p.x * 6.0, p.y * 0.6, p.z * 6.0))) * wall;
+    // Noise grime is the costliest part (4 value-noise lookups per pixel); Very Low keeps only the street dirt
+    half blotches = 0.0h;
+    half streaks = 0.0h;
+    UNITY_BRANCH
+    if (_PollutionLowDetail < 0.5)
+    {
+        float3 p = surface.positionWS * _PollutionSurfaceParams.z;
+        blotches = smoothstep(0.42h, 0.78h, PollutionFbm(p));
+        half wall = 1.0h - abs(surface.normalWS.y);
+        streaks = smoothstep(0.55h, 0.85h, PollutionNoise(float3(p.x * 6.0, p.y * 0.6, p.z * 6.0))) * wall;
+    }
     half ground = 1.0h - saturate(surface.positionWS.y / max(_PollutionSurfaceParams.w, 0.01h));
     half grime = saturate(max(blotches, streaks) * 0.8h + ground * 0.6h) * surface.grime * _PollutionGrimeColor.a;
     dirty = lerp(dirty, dirty * _PollutionGrimeColor.rgb, grime);

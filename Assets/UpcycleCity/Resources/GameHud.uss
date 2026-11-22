@@ -427,6 +427,8 @@
 .uc-tbtn--use { right: 136px; bottom: 100px; }
 .uc-tbtn--tool { right: 46px; bottom: 166px; }
 .uc-tbtn--drop { right: 116px; bottom: 170px; width: 48px; height: 48px; }
+.uc-tbtn--bag { right: 186px; bottom: 170px; width: 48px; height: 48px; }
+.uc-tbtn--menu { right: 16px; top: 64px; width: 44px; height: 44px; }
 .uc-tbtn--crouch { right: 200px; bottom: 30px; width: 48px; height: 48px; }
 .uc-tbtn--sprint { left: 196px; bottom: 44px; width: 48px; height: 48px; }
 
@@ -563,6 +565,8 @@
 .uc-tbtn--jump .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_jump.png"); }
 .uc-tbtn--use .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_interact.png"); }
 .uc-tbtn--drop .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_throw.png"); width: 18px; height: 18px; }
+.uc-tbtn--menu .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_menu.png"); width: 20px; height: 20px; }
+.uc-tbtn--bag .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_bag.png"); width: 18px; height: 18px; }
 .uc-tbtn--crouch .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_crouch.png"); width: 18px; height: 18px; }
 .uc-tbtn--sprint .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_sprint.png"); width: 18px; height: 18px; }
 /* GRAB keeps its orange identity: tinted base */

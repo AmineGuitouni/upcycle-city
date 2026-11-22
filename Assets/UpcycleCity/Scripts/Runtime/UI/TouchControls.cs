@@ -105,6 +105,8 @@ namespace UpcycleCity.UI
             HoldButton("uc-tbtn--use", "USE", null, v => VirtualTouchInput.InteractHeld = v);
             HoldButton("uc-tbtn--tool", "TOOL", "tool_wrench", v => VirtualTouchInput.UseItemHeld = v);
             HoldButton("uc-tbtn--drop", "DROP", null, v => VirtualTouchInput.DropHeld = v);
+            HoldButton("uc-tbtn--bag", "BAG", null, v => VirtualTouchInput.BagHeld = v);
+            HoldButton("uc-tbtn--menu", string.Empty, null, v => VirtualTouchInput.MenuHeld = v);
             HoldButton("uc-tbtn--jump", "JUMP", null, v => VirtualTouchInput.JumpHeld = v);
             HoldButton("uc-tbtn--crouch", "DUCK", null, v => VirtualTouchInput.CrouchHeld = v);
             sprintButton = HoldButton("uc-tbtn--sprint", "RUN", null, v =>

@@ -50,9 +50,9 @@ namespace UpcycleCity.Editor
                 new Color(0.20f, 0.55f, 0.30f), "mint_tea", 60f,
                 new PlayerBoosts.Effect { moveSpeed = 1f, jump = 1f, grabReach = 1.0f, throwForce = 2.5f }, "Thé à la menthe! Steady hands", "cup_espresso_tan");
             ItemDefinition water = Consumable("Item_Water", "food_water", "Bouteille d'Eau",
-                "Cold mineral water. Breathe easy in the smog for a while.",
+                "Cold mineral water. A quick refresh: walk and jump a little better.",
                 new Color(0.22f, 0.55f, 0.85f), "water", 60f,
-                new PlayerBoosts.Effect { moveSpeed = 1f, jump = 1f, smogImmune = true }, "Fresh water! Smog can't slow you", "bottle_water");
+                new PlayerBoosts.Effect { moveSpeed = 1.1f, jump = 1.1f }, "Fresh water! You feel refreshed", "bottle_water");
             ItemDefinition kaskrout = Consumable("Item_Kaskrout", "food_kaskrout", "Kaskrout",
                 "A baguette of tuna, harissa and olives. Energy to run and jump.",
                 new Color(0.86f, 0.52f, 0.18f), "kaskrout", 90f,
@@ -64,8 +64,14 @@ namespace UpcycleCity.Editor
 
             ItemDefinition broom = Load("Item_Broom");
             ItemDefinition wrench = Load("Item_Wrench");
-            ItemDefinition mask = Load("Item_RespiratorMask");
             ItemDefinition picker = Load("Item_LitterPicker");
+            ItemDefinition recyclingBag = CarryUpgrade("Item_RecyclingBag", UpcycleCity.Waste.CarryItems.BagUpgradeItemId, "Recycling Bag",
+                "A sturdy woven bag: carry 10 pieces of trash instead of the 3 you can hug in your arms.",
+                new Color(0.18f, 0.55f, 0.34f));
+            ItemDefinition shoppingCart = CarryUpgrade("Item_ShoppingCart", UpcycleCity.Waste.CarryItems.CartUpgradeItemId, "Shopping Cart",
+                $"A wire cart you push around: a moving bag for {UpcycleCity.Waste.CarryItems.CartCapacity} pieces of trash. " +
+                "Toss trash in, or pick it up while pushing. One per player; any teammate can push it.",
+                new Color(0.72f, 0.74f, 0.77f));
 
             var content = new Content
             {
@@ -74,7 +80,7 @@ namespace UpcycleCity.Editor
                     new Color(0.70f, 0.12f, 0.09f), false, Offer(espresso, 6), Offer(tea, 8)),
                 tools = Catalog("Shop_Tools", "Quincaillerie", "Si Mounir",
                     "Marhba! Good tools make a clean city. What are you fixing today?",
-                    new Color(0.95f, 0.76f, 0.11f), false, Offer(broom, 30), Offer(wrench, 45), Offer(mask, 60), Offer(picker, 20), Offer(catalyst, 8)),
+                    new Color(0.95f, 0.76f, 0.11f), false, Offer(recyclingBag, 30), Offer(shoppingCart, ShoppingCartPrice), Offer(picker, 20), Offer(broom, 30), Offer(wrench, 45), Offer(catalyst, 8)),
                 grocery = Catalog("Shop_Grocery", "Épicerie", "Khalti Fatma",
                     "Ahla ya wildi! Water, kaskrout, everything fresh this morning.",
                     new Color(0.10f, 0.45f, 0.25f), false, Offer(water, 7), Offer(kaskrout, 10), Offer(espresso, 7)),
@@ -87,6 +93,9 @@ namespace UpcycleCity.Editor
             AssetDatabase.SaveAssets();
             return content;
         }
+
+        /// <summary>Quincaillerie price of the Shopping Cart (tune here, then Rebuild Shop Catalogs).</summary>
+        public const int ShoppingCartPrice = 80;
 
         static ShopCatalog.Offer Offer(ItemDefinition item, int price, int quantity = 1) =>
             item == null ? null : new ShopCatalog.Offer { item = item, price = price, quantity = quantity };
@@ -146,6 +155,21 @@ namespace UpcycleCity.Editor
             }
             item.Configure(id, label, desc, ItemCategory.Usable, colour, stackLimit: 10, consume: true);
             item.SetUseBehavior(new DepositMaterialStockItemBehavior(materialId, amount, directOnPurchase: true));
+            EditorUtility.SetDirty(item);
+            return item;
+        }
+
+        // Carry upgrades (Recycling Bag) aren't hotbar gear: buying one goes through RecyclingBagService on the host
+        static ItemDefinition CarryUpgrade(string file, string id, string label, string desc, Color colour)
+        {
+            string path = $"{ShopsDir}/{file}.asset";
+            ItemDefinition item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            if (item == null)
+            {
+                item = ScriptableObject.CreateInstance<ItemDefinition>();
+                AssetDatabase.CreateAsset(item, path);
+            }
+            item.Configure(id, label, desc, ItemCategory.UpgradePart, colour, stackLimit: 1, consume: false);
             EditorUtility.SetDirty(item);
             return item;
         }

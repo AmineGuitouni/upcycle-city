@@ -208,6 +208,15 @@ public static class CityEventHelper
 
 ---
 
+### 5. Pushable Props One Player Drives (the Shopping Cart)
+
+The Shopping Cart (`Props/ShoppingCart.cs`, prefab `Resources/ShoppingCart.prefab`) is the third carry tier, a "moving bag" for 24 items.
+- **Push sync:** `NetworkObject` + owner-authoritative `NetworkTransform` + `NetworkMachineIdentity` (stable `cart_<buyer>_<n>` id) + `NetworkedShoppingCart` (implements the Netcode-free `Interaction/INetworkedPushable`). `cart.push` (a `GameAuthority` custom action) makes the host record the pusher and hand **NGO ownership** to them, so the pusher simulates the body locally (no lag) while everyone else follows the transform (kinematic, interpolated). `cart.release` (speed in `floatArg`) gives ownership back to the server, which rolls the cart on. One pusher at a time; if the pusher disconnects, NGO returns ownership and the host frees the cart.
+- **Storage:** `Waste/CartStorage` is host-authoritative: 24 carry ids in three synced records `cart:<id>:0..2` (10/10/4 ids, `CarryCodec`); record 0 also carries the pusher. The basket pile is cosmetic, rebuilt on each peer from the ids.
+- **Moving bag:** `RecyclingBagService` (partial `RecyclingBagService.Cart.cs`): `carry.store` overflows into the cart the sender pushes or stands within 3.5 m of; `cart.put` / `cart.take` move bag ↔ cart; `carry.throw` / `carry.sell` address cart slots as `100 + slot`; sell-all and `bag.deposit` also empty that cart. Trash thrown into the basket is stored by the host when it fits (free, host-simulated trash only).
+- **Buying:** `carry.buy_cart` takes the price from the host's Quincaillerie catalog (`upgrade_shopping_cart`, 80 coins, `ShopContentBuilder.ShoppingCartPrice`), spends team coins and spawns the cart on the pavement in front of the shop. **One cart per player** (`RecyclingBag.HasCart`, flags bit 1); any teammate may push any cart. A cart that's gone can be bought again.
+- Rebuild the prefab with **Upcycle City → Props → Build Shopping Cart Prefab** (it also refreshes network prefabs). Dev: **Spawn Shopping Cart (Play Mode)**. Tests: `Tests/PlayMode/ShoppingCartPlayModeTests.cs`.
+
 ## Known Limitations
 
 - **No Mid-Game Late Join:** Players must join while the party is in the Room (`MainMenu`) or Character Creation (`CharacterCreator`). Once the host starts gameplay (`LoadingGame` / `InGame`), `CoopSessionManager` rejects new connections during connection approval with `"Game already in progress. Join a lobby before the host starts."` so late joiners never enter a partially synchronized scene without stripped offline actors.

@@ -18,17 +18,20 @@ MonoBehaviour:
   accent: {r: 0.95, g: 0.76, b: 0.11, a: 1}
   showsSellPrices: 0
   offers:
+  - item: {fileID: 11400000, guid: d94dd572da94f4e1c8c7c4148d8bb507, type: 2}
+    price: 30
+    quantity: 1
+  - item: {fileID: 11400000, guid: 6ecdcda5088d042818c6e6fd698e49aa, type: 2}
+    price: 80
+    quantity: 1
+  - item: {fileID: 11400000, guid: 8fcb24f12db934f06ba162843fe09ec4, type: 2}
+    price: 20
+    quantity: 1
   - item: {fileID: 11400000, guid: 0447f8ae9f36d489e94e605e7138eb81, type: 2}
     price: 30
     quantity: 1
   - item: {fileID: 11400000, guid: 860f1ec756a234621950d3d3a9a032b6, type: 2}
     price: 45
-    quantity: 1
-  - item: {fileID: 11400000, guid: d70a286a757224439bf2ebe3c0776892, type: 2}
-    price: 60
-    quantity: 1
-  - item: {fileID: 11400000, guid: 8fcb24f12db934f06ba162843fe09ec4, type: 2}
-    price: 20
     quantity: 1
   - item: {fileID: 11400000, guid: 5889579539bed4790a2649b46cc71d6c, type: 2}
     price: 8

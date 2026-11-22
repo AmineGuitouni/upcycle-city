@@ -151,3 +151,21 @@ Both UI previews (`CraftingRules.ValidateQuick` — zero-alloc) and authoritativ
 3. Player within interaction range (`OutOfRange` — `"Move closer to the <Machine>"`; in co-op, requests with no known sender position are rejected)
 4. Machine not currently processing (`MachineBusy`)
 5. All input materials and team NRG present (`InsufficientResources` — lists **every** missing material and energy shortfall; consumes nothing on failure)
+
+---
+
+## 6. Workshop Purchase (Buy the Garage, then each Machine)
+
+In `EcosystemSandbox.unity` the Factory Yard `Upcycle_Workshop_Bay` is a buyable lot, the **Upcycle Garage**. Everything runs through `GameAuthority` custom actions, so solo and co-op use the same path, and the lot replicates as **one** synced record.
+
+| Piece | Role |
+| --- | --- |
+| [`WorkshopConfig`](WorkshopConfig.cs) (`Settings/Crafting/WorkshopConfig.asset`) | Lot id/name/price (`120`), purchase range, and one `MachineOffer` per stand (`slotId`, `machine`, short name, `price`, `iconKey`). A stand's list index is its bit, so append to the list and never reorder it. Prices are read on the host only. |
+| [`WorkshopProperty`](WorkshopProperty.cs) | `ISyncedStateProvider` (`workshop:<propertyId>`) with the owned flag + machine bitmask ([`WorkshopPropertyState`](WorkshopPropertyState.cs): `flags` bit 0, `i0` mask). Host handlers `workshop.buy_property` / `workshop.buy_machine` (IntArg = stand index) check range, owned state and duplicates, then call `TrySpendTeamCoins`. On every peer it toggles the cordon, the sign and the stands, and shows a toast + `ShopPurchase`/`MachineUpgraded` sound when the state changes (a late joiner's first record is a silent baseline). Dev flags: `devOwnedAtStart`, `devAllMachinesAtStart`. |
+| [`WorkshopSaleSign`](WorkshopSaleSign.cs) | `IInteractable` FOR SALE board: `[E] Buy Upcycle Garage · 120 coins` / `… · Not enough coins (need 40 more)`. Once owned it becomes the name plate. |
+| [`WorkshopMachineStand`](WorkshopMachineStand.cs) | `IInteractable` plinth + sign (name, icon, price) on each machine spot. `[E] Buy Pulper · 60 coins` once the lot is owned. Hidden after purchase. |
+| [`WorkshopMachineLock`](WorkshopMachineLock.cs) | On each **scene-placed** machine: while locked, renderers, lights and colliders are off. The GameObject stays active so its in-scene `NetworkObject`, placement ID and synced state are untouched. `CraftingMachine` / `ManualEnergyGenerator` also refuse every request while locked (`Buy the X first.`): cards, upgrades, cranks and hopper deposits. |
+
+- **Editor:** **Upcycle City → Crafting → Setup Workshop Purchase In Open Scene** (`WorkshopPurchaseSetup`) adds or rebuilds the `Workshop_Purchase` group under the bay and adds the locks. It is idempotent, and it saves the scene only if the scene was clean before. `EcosystemSandboxBuilder` calls the same `BuildInBay`. The config asset is created only when missing, so tuning survives re-runs.
+- **Dev scenes:** `CraftingWorkshop.unity` has no `WorkshopProperty` or locks, so its machines stay free. A machine without a `WorkshopMachineLock` is always usable.
+- **Tests:** `Tests/EditMode/WorkshopEditModeTests.cs` (codec + shipped config) and `Tests/PlayMode/WorkshopPurchasePlayModeTests.cs` (host + client over loopback incl. late join, and solo).

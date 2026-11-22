@@ -1005,8 +1005,9 @@ namespace UpcycleCity.Tests.EditMode
             Assert.IsNotNull(lib.AmbienceLoop, "Default SoundLibrary should have an AmbienceLoop clip.");
 
             // Serialized silent-scene list defaults to real menu scene(s) only
-            Assert.AreEqual(1, lib.AmbienceSilentScenes.Count);
-            Assert.AreEqual("CharacterCreator", lib.AmbienceSilentScenes[0]);
+            // Menu scenes stay silent: the character creator and the main menu
+            CollectionAssert.AreEquivalent(new[] { "CharacterCreator", "MainMenu" }, lib.AmbienceSilentScenes);
+            Assert.IsFalse(lib.ShouldPlayAmbienceInScene("MainMenu"));
 
             // Character Creator menu scene stays silent
             Assert.IsFalse(lib.ShouldPlayAmbienceInScene("CharacterCreator"));

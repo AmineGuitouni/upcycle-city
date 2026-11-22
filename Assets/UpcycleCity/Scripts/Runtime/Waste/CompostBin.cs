@@ -38,9 +38,7 @@ namespace UpcycleCity.Waste
 
         static int OrganicInBag()
         {
-            RecyclingBag bag = RecyclingBagService.LocalBag;
-            BinLootTable table = BinLootTable.Active;
-            return bag != null && table != null ? bag.CountMatching(table, true, WasteStream.Plastic) : 0;
+            return RecyclingBagService.LocalCountMatching(true, WasteStream.Plastic);
         }
 
         void Awake()

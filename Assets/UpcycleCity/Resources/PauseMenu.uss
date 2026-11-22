@@ -1,0 +1,215 @@
+/* Pause / in-game menu — same language as the rest of the UI (dark cards, orange primary, brand colours).
+   Reference 1080x608 landscape (Resources/CraftingPanelSettings). */
+
+.pm-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    -unity-font-style: bold;
+}
+
+.pm-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(6, 9, 11, 0.66);
+}
+
+.pm-window {
+    flex-direction: row;
+    width: 900px;
+    max-width: 94%;
+    max-height: 92%;
+    padding: 26px;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgb(62, 67, 71);
+    background-color: rgb(30, 33, 36);
+}
+
+.pm-left {
+    width: 300px;
+    flex-shrink: 0;
+    margin-right: 22px;
+}
+
+.pm-right {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.pm-title {
+    font-size: 38px;
+    letter-spacing: 3px;
+    color: rgb(245, 245, 240);
+}
+
+.pm-subtitle {
+    font-size: 14px;
+    -unity-font-style: normal;
+    color: rgb(150, 162, 166);
+    white-space: normal;
+    margin-bottom: 18px;
+}
+
+.pm-buttons, .pm-confirm-buttons {
+    flex-direction: column;
+}
+
+.pm-button {
+    height: 50px;
+    margin: 0 0 10px 0;
+    padding: 0 18px;
+    border-radius: 25px;
+    border-width: 0;
+    font-size: 17px;
+    -unity-text-align: middle-center;
+    color: rgb(240, 240, 236);
+    background-color: rgb(52, 56, 60);
+}
+
+.pm-button:hover { background-color: rgb(66, 71, 76); }
+
+.pm-button--primary { background-color: rgb(242, 106, 27); }
+.pm-button--primary:hover { background-color: rgb(255, 128, 50); }
+
+.pm-button--danger { background-color: rgb(200, 70, 59); }
+.pm-button--danger:hover { background-color: rgb(222, 88, 76); }
+
+.pm-button--quiet {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgb(70, 76, 80);
+    color: rgb(170, 178, 182);
+}
+
+.pm-button--small {
+    height: 34px;
+    margin: 0 0 0 10px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 17px;
+    background-color: rgb(47, 143, 138);
+}
+
+.pm-confirm { margin-top: 4px; }
+
+.pm-confirm-text {
+    font-size: 18px;
+    color: rgb(242, 194, 27);
+    margin-bottom: 10px;
+}
+
+.pm-card {
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    background-color: rgb(24, 27, 29);
+}
+
+.pm-card-head {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.pm-card-title {
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: rgb(242, 194, 27);
+    margin-bottom: 10px;
+}
+
+.pm-card-title--right { -unity-text-align: middle-right; }
+
+.pm-player {
+    flex-direction: row;
+    align-items: center;
+    height: 46px;
+    padding: 0 12px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background-color: rgb(36, 40, 43);
+}
+
+.pm-player--local {
+    border-width: 1px;
+    border-color: rgba(242, 106, 27, 0.7);
+}
+
+.pm-player-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    margin-right: 12px;
+}
+
+.pm-player-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 17px;
+    color: rgb(240, 240, 236);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pm-player-tags {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: rgb(150, 200, 196);
+    margin-right: 14px;
+}
+
+.pm-bars {
+    flex-direction: row;
+    align-items: flex-end;
+    height: 18px;
+    margin-right: 8px;
+}
+
+.pm-bar {
+    width: 5px;
+    margin-left: 2px;
+    border-radius: 1px;
+}
+
+.pm-player-ping {
+    width: 64px;
+    font-size: 15px;
+    -unity-text-align: middle-right;
+}
+
+.pm-code-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.pm-code {
+    flex-grow: 1;
+    font-size: 15px;
+    color: rgb(200, 206, 208);
+    letter-spacing: 1px;
+}
+
+.pm-control {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(44, 48, 51);
+}
+
+.pm-control-action {
+    flex-shrink: 1;
+    font-size: 14px;
+    -unity-font-style: normal;
+    color: rgb(210, 214, 216);
+    white-space: normal;
+}
+
+.pm-control-keys {
+    flex-shrink: 0;
+    margin-left: 14px;
+    font-size: 14px;
+    color: rgb(242, 194, 27);
+}

@@ -11,7 +11,7 @@ namespace UpcycleCity.Ecosystem
     /// Central Phase 2 simulation coordinator for the Living Cause-and-Effect Pollution Ecosystem.
     /// Tracks every physical TrashItem (via events, zero FindObjectsByType), updates all CityDistricts,
     /// drives PollutionController's global atmosphere/sky/smog, enforces mobile-safe trash caps,
-    /// and applies a keyed "SmogZone" movement penalty via PlayerModifiers when the player walks into thick smog.
+    /// and tracks how much smog the player is standing in (visual/ecosystem only: smog does not slow the player).
     /// </summary>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-40)]
@@ -455,19 +455,11 @@ namespace UpcycleCity.Ecosystem
             if (mods == null)
                 return;
 
-            IsPlayerSmogProtected = mods.HasFlag(PlayerModifierFlag.SmogImmune);
-            if (!IsPlayerSmogProtected && PlayerSmogExposure >= SmogSlowThreshold)
-            {
-                float t = Mathf.InverseLerp(SmogSlowThreshold, 1f, PlayerSmogExposure);
-                float speedMult = Mathf.Lerp(0.94f, MaxSmogSpeedMultiplier, t);
-                mods.SetMultiplier(SmogModifierSourceId, PlayerStat.MoveSpeedMultiplier, speedMult);
-                IsPlayerSlowedBySmog = true;
-            }
-            else
-            {
-                mods.RemoveAllFromSource(SmogModifierSourceId);
-                IsPlayerSlowedBySmog = false;
-            }
+            // Smog no longer slows the player or calls for a mask: it stays a visual and ecosystem effect only.
+            // (Clears any penalty left by an older build or a saved modifier stack.)
+            mods.RemoveAllFromSource(SmogModifierSourceId);
+            IsPlayerSmogProtected = false;
+            IsPlayerSlowedBySmog = false;
         }
     }
 }

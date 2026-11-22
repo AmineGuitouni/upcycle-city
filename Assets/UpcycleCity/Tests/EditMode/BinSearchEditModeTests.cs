@@ -121,26 +121,59 @@ namespace UpcycleCity.Tests.EditMode
         }
 
         [Test]
-        public void Bag_RespectsCapacityAndMatchesStreams()
+        public void Bag_HandsHoldThree_BagHoldsTen_AndReplicates()
         {
+            // Uses the shipped loot table, as the game does (CarryItems resolves ids from the shared assets)
+            BinLootTable shipped = Resources.Load<BinLootTable>(BinLootTable.ResourcePath);
+            Assert.IsNotNull(shipped);
+            int organic = -1, plastic = -1;
+            for (int i = 0; i < shipped.Entries.Count; i++)
+            {
+                if (organic < 0 && shipped.Entries[i].organic) organic = i;
+                if (plastic < 0 && !shipped.Entries[i].organic && shipped.Entries[i].stream == WasteStream.Plastic) plastic = i;
+            }
+
             var bag = new RecyclingBag(7);
             Assert.AreEqual("bag:7", bag.SyncKey);
-            Assert.IsTrue(bag.TryAdd(0));
-            Assert.IsTrue(bag.TryAdd(1));
-            Assert.IsTrue(bag.TryAdd(2));
-            Assert.AreEqual(1, bag.CountMatching(table, true, WasteStream.Plastic));
-            Assert.AreEqual(1, bag.CountMatching(table, false, WasteStream.Plastic));
-            Assert.AreEqual(1, bag.CountMatching(table, false, WasteStream.Glass));
+            Assert.IsFalse(bag.HasBag);
+            Assert.AreEqual(CarryItems.HandsCapacity, bag.Capacity);
+            Assert.IsTrue(bag.TryAdd(CarryItems.IdForLoot(organic)));
+            Assert.IsTrue(bag.TryAdd(CarryItems.IdForLoot(plastic)));
+            Assert.IsTrue(bag.TryAdd(CarryItems.IdForLoot(plastic)));
+            Assert.IsFalse(bag.TryAdd(CarryItems.IdForLoot(plastic)), "Hands hold 3.");
+            Assert.AreEqual(1, bag.CountMatching(true, WasteStream.Plastic));
+            Assert.AreEqual(2, bag.CountMatching(false, WasteStream.Plastic));
+            Assert.AreEqual(0, bag.CountMatching(false, WasteStream.Glass));
+
+            bag.GrantBag();
+            Assert.AreEqual(CarryItems.BagCapacity, bag.Capacity);
+            for (int i = bag.Count; i < CarryItems.BagCapacity; i++)
+                Assert.IsTrue(bag.TryAdd(CarryItems.IdForCatalogIndex(i % 20)));
+            Assert.IsFalse(bag.TryAdd(0), "The bag holds 10.");
 
             var mirror = new RecyclingBag(7);
             int changes = 0;
             mirror.Changed += () => changes++;
             mirror.ApplySyncState(bag.CaptureSyncState());
-            Assert.AreEqual(3, mirror.Count);
-            Assert.AreEqual(2, mirror[2]);
+            Assert.IsTrue(mirror.HasBag, "Owning a bag replicates.");
+            Assert.AreEqual(bag.Count, mirror.Count);
+            for (int i = 0; i < bag.Count; i++)
+                Assert.AreEqual(bag[i], mirror[i]);
             Assert.AreEqual(1, changes);
             mirror.ApplySyncState(bag.CaptureSyncState());
             Assert.AreEqual(1, changes, "Re-applying the same state is not a change.");
+        }
+
+        [Test]
+        public void CarryCodec_RoundTripsTenSixBitIds()
+        {
+            var values = new[] { 0, 62, 31, 32, 1, 45, 17, 60, 33, 9 };
+            CarryCodec.Pack(values, values.Length, out int i0, out int i1);
+            var back = new int[CarryCodec.MaxSlots];
+            Assert.AreEqual(10, CarryCodec.Unpack(i0, i1, back));
+            CollectionAssert.AreEqual(values, back);
+            Assert.IsTrue(CarryItems.IsTrashId(CarryItems.IdForCatalogIndex(0)));
+            Assert.IsFalse(CarryItems.IsTrashId(CarryItems.IdForLoot(5)));
         }
 
         [Test]
@@ -166,7 +199,7 @@ namespace UpcycleCity.Tests.EditMode
             Assert.IsNotNull(shipped, "Run Upcycle City → Waste → Setup Bin Search to create Resources/BinLootTable.");
             Assert.LessOrEqual(shipped.Entries.Count, BinLootTable.MaxEntries);
             Assert.LessOrEqual(shipped.BinSlots, LootCodec.MaxSlots);
-            Assert.LessOrEqual(shipped.BagSlots, LootCodec.MaxSlots);
+            Assert.LessOrEqual(shipped.Entries.Count, CarryItems.TrashOffset, "Loot ids must stay below the trash id range.");
         }
     }
 }

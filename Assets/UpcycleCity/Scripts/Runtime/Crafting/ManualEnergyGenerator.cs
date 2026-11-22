@@ -32,6 +32,7 @@ namespace UpcycleCity.Crafting
         [SerializeField, Min(1.5f)] float interactRange = 5.5f;
 
         CraftingMachineVisuals visuals;
+        WorkshopMachineLock workshopLock;
         string syncKey;
         string registeredKey;
         SyncedStateRegistryInstance registeredRegistry;
@@ -275,6 +276,7 @@ namespace UpcycleCity.Crafting
             visuals = GetComponent<CraftingMachineVisuals>();
             if (visuals == null)
                 visuals = gameObject.AddComponent<CraftingMachineVisuals>();
+            workshopLock = GetComponent<WorkshopMachineLock>();
             visuals.BindChildren();
             visuals.SetMachineLevel(level);
 
@@ -301,11 +303,14 @@ namespace UpcycleCity.Crafting
             UnregisterFromRegistry();
         }
 
-        public bool CanInteract(PlayerInteractor interactor) => interactor != null;
+        /// <summary>True while this generator sits on an unbought workshop stand (hidden; every request is refused).</summary>
+        public bool IsWorkshopLocked => WorkshopMachineLock.IsMachineLocked(workshopLock);
+
+        public bool CanInteract(PlayerInteractor interactor) => interactor != null && !IsWorkshopLocked;
 
         public void Interact(PlayerInteractor interactor)
         {
-            if (interactor == null)
+            if (interactor == null || IsWorkshopLocked)
                 return;
 
             // Open the phone-friendly Generator mode in CraftingUI so players can both crank NRG and upgrade the generator
@@ -358,6 +363,8 @@ namespace UpcycleCity.Crafting
 
         CustomGameActionResult HandleCrank(in CustomGameActionContext context)
         {
+            if (IsWorkshopLocked)
+                return CustomGameActionResult.Fail($"Buy the {DisplayName} first.");
             float range = definition != null ? definition.InteractRange : interactRange;
             if (!MachineUpgradeHelper.ValidateRange(range, DisplayName, transform.position, in context, out string rangeError))
                 return CustomGameActionResult.Fail(rangeError);
@@ -383,6 +390,8 @@ namespace UpcycleCity.Crafting
 
         CustomGameActionResult HandleUpgrade(in CustomGameActionContext context)
         {
+            if (IsWorkshopLocked)
+                return CustomGameActionResult.Fail($"Buy the {DisplayName} first.");
             TeamMaterialStock stock = TeamMaterialStock.EnsureInstance(database ?? CraftingDatabase.LoadDefault());
             CustomGameActionResult result = MachineUpgradeHelper.TryExecuteUpgrade(
                 definition,

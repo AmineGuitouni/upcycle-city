@@ -1,0 +1,57 @@
+/* Graphics settings block (GraphicsSettingsView.cs), shared by the Main Menu Settings card and the pause menu.
+   Dark-card language; selected segment = brand green #2E8B57. Reference 1080x608 landscape, phone-size touch targets. */
+
+.gfx-root {
+    flex-direction: column;
+    -unity-font-style: bold;
+}
+
+.gfx-label {
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: rgb(242, 194, 27);
+    margin: 4px 0 6px 0;
+}
+
+.gfx-row {
+    flex-direction: row;
+    margin-bottom: 6px;
+}
+
+.gfx-seg {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 46px;
+    min-width: 0;
+    margin: 0 4px 0 0;
+    padding: 0 4px;
+    border-width: 1px;
+    border-color: rgb(70, 76, 80);
+    border-radius: 10px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    color: rgb(214, 220, 222);
+    background-color: rgb(46, 50, 54);
+}
+
+.gfx-seg:hover { background-color: rgb(60, 65, 70); }
+
+.gfx-seg:last-child { margin-right: 0; }
+
+.gfx-seg--active,
+.gfx-seg--active:hover {
+    border-color: rgb(86, 190, 130);
+    color: rgb(255, 255, 255);
+    background-color: rgb(46, 139, 87);
+}
+
+.gfx-hint {
+    font-size: 13px;
+    -unity-font-style: normal;
+    color: rgb(160, 170, 174);
+    white-space: normal;
+    min-height: 34px;
+    margin-bottom: 10px;
+}

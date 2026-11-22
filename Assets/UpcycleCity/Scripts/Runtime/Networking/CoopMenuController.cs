@@ -44,7 +44,12 @@ namespace UpcycleCity.Networking
 
         ScreenMode currentScreen = ScreenMode.Title;
         ScreenMode screenBeforeConnecting = ScreenMode.Title;
-        CoopTransportMode selectedTransport = CoopTransportMode.Relay;
+        // Same-Wi-Fi play needs no cloud account: it's the default; "Online Code" (Relay) needs Unity Cloud linked
+        CoopTransportMode selectedTransport = CoopTransportMode.Direct;
+        VisualElement lanRoomsBox, lanRoomsList;
+        Label lanRoomsHint;
+        float lanRefreshTimer;
+        int lanShownCount = -1;
         bool busy;
         bool showingCopiedFeedback;
         float copiedFeedbackUntil;
@@ -138,6 +143,52 @@ namespace UpcycleCity.Networking
         {
             if (showingCopiedFeedback && Time.unscaledTime >= copiedFeedbackUntil)
                 ResetCopyButtonVisual();
+            UpdateLanRooms();
+        }
+
+        // Listen for same-Wi-Fi rooms only while the Join screen is open in Same Wi-Fi mode
+        void UpdateLanRooms()
+        {
+            LanDiscovery lan = LanDiscovery.Instance;
+            bool wanted = currentScreen == ScreenMode.JoinInput && selectedTransport == CoopTransportMode.Direct;
+            if (lanRoomsBox != null)
+                lanRoomsBox.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
+            if (lan == null)
+                return;
+            if (!wanted)
+            {
+                if (lan.Listening)
+                    lan.StopListening();
+                lanShownCount = -1;
+                return;
+            }
+            if (!lan.Listening)
+                lan.StartListening();
+
+            lanRefreshTimer -= Time.unscaledDeltaTime;
+            if (lanRefreshTimer > 0f)
+                return;
+            lanRefreshTimer = 0.5f;
+
+            IReadOnlyList<LanDiscovery.Room> rooms = lan.Rooms;
+            lanRoomsList.Clear();
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                LanDiscovery.Room room = rooms[i];
+                string endpoint = room.Endpoint;
+                bool full = room.MaxPlayers > 0 && room.Players >= room.MaxPlayers;
+                Button b = MakeButton($"{room.HostName}'s room  ·  {room.Players}/{room.MaxPlayers}", "coop-btn coop-btn--teal", () =>
+                {
+                    joinInputField.SetValueWithoutNotify(endpoint);
+                    SubmitJoin(endpoint, CoopTransportMode.Direct);
+                });
+                b.SetEnabled(!full);
+                lanRoomsList.Add(b);
+            }
+            lanShownCount = rooms.Count;
+            lanRoomsHint.text = rooms.Count == 0
+                ? "Looking for rooms… make sure everyone is on the same Wi-Fi."
+                : "Tap a room to join, or type the host's IP below.";
         }
 
         void OnDisable()
@@ -422,7 +473,7 @@ namespace UpcycleCity.Networking
             });
         }
 
-        /// <summary>Title-screen Settings card: connection mode (Online Code / Direct IP).</summary>
+        /// <summary>Title-screen Settings card: connection mode (Online Code / Direct IP) and graphics quality.</summary>
         void BuildTitleView(VisualElement parent)
         {
             titleView = new VisualElement();
@@ -437,15 +488,17 @@ namespace UpcycleCity.Networking
                 selectedTransport = CoopTransportMode.Relay;
                 RefreshTransportToggle();
             });
-            directToggleButton = MakeButton("Direct IP (LAN)", "coop-toggle", () =>
+            directToggleButton = MakeButton("Same Wi-Fi", "coop-toggle", () =>
             {
                 selectedTransport = CoopTransportMode.Direct;
                 RefreshTransportToggle();
             });
-            transportRow.Add(relayToggleButton);
             transportRow.Add(directToggleButton);
+            transportRow.Add(relayToggleButton);
             titleView.Add(transportRow);
             titleView.Add(MakeLabel("Online Code works over the internet. Direct IP is for testing on the same Wi-Fi.", "coop-hint"));
+            // Graphics level + frame-rate cap (applies instantly, saved per device)
+            titleView.Add(new UpcycleCity.UI.GraphicsSettingsView());
             titleView.Add(MakeButton("Done", "coop-btn coop-btn--muted", ToggleSettings));
         }
 
@@ -491,6 +544,16 @@ namespace UpcycleCity.Networking
             joinView = new VisualElement();
             joinView.AddToClassList("coop-section");
             parent.Add(joinView);
+
+            // Rooms heard on this Wi-Fi (LanDiscovery): tap to join, no typing
+            lanRoomsBox = new VisualElement();
+            lanRoomsBox.AddToClassList("coop-section");
+            lanRoomsBox.Add(MakeLabel("ROOMS ON THIS WI-FI", "coop-label"));
+            lanRoomsList = new VisualElement();
+            lanRoomsBox.Add(lanRoomsList);
+            lanRoomsHint = MakeLabel("Looking for rooms… make sure everyone is on the same Wi-Fi.", "coop-hint");
+            lanRoomsBox.Add(lanRoomsHint);
+            joinView.Add(lanRoomsBox);
 
             joinInputHint = MakeLabel("Enter the Join Code from the host:", "coop-label");
             joinView.Add(joinInputHint);
@@ -727,10 +790,11 @@ namespace UpcycleCity.Networking
             }
             else
             {
-                string addr = sm != null && sm.Settings != null ? sm.Settings.DefaultDirectAddress : "127.0.0.1";
-                ushort port = sm != null && sm.Settings != null ? sm.Settings.DefaultDirectPort : (ushort)7777;
-                joinInputHint.text = "Enter Host IP:Port (LAN or local testing):";
-                joinInputField.SetValueWithoutNotify($"{addr}:{port}");
+                // Pre-fill this Wi-Fi's prefix (e.g. "192.168.1.") so friends only type the host's last number
+                string mine = LanDiscovery.FindLocalIPv4();
+                string prefix = !string.IsNullOrEmpty(mine) && mine.LastIndexOf('.') > 0 ? mine.Substring(0, mine.LastIndexOf('.') + 1) : string.Empty;
+                joinInputHint.text = "Or type the host's Wi-Fi IP (shown on the host's Room screen):";
+                joinInputField.SetValueWithoutNotify(prefix);
             }
         }
 
@@ -747,7 +811,10 @@ namespace UpcycleCity.Networking
             }
             else
             {
-                joinCodeBadge.text = $"DIRECT HOST:  {sm.ActiveEndpointLabel}";
+                string ip = sm.LocalWifiAddress;
+                joinCodeBadge.text = sm.IsHostingSession()
+                    ? $"SAME WI-FI ROOM  ·  HOST IP  {(string.IsNullOrEmpty(ip) ? "(no Wi-Fi)" : ip)}"
+                    : $"SAME WI-FI ROOM  ·  {sm.ActiveEndpointLabel}";
             }
 
             if (copyCodeButton != null)

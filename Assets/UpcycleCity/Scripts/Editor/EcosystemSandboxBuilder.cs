@@ -740,6 +740,9 @@ namespace UpcycleCity.Editor
             PlaceCraftingPrefab(crafting.workbenchPrefab, "Factory_UpcycleWorkbench", "bourguiba_workbench", bay, new Vector3(43.2f, 0.02f, -22.6f), -90f);
             // Pedal Energy Generator across the open courtyard so players can crank NRG right next to the workshop line
             PlaceCraftingPrefab(crafting.pedalGeneratorPrefab, "Factory_PedalGenerator", "bourguiba_pedal_generator", bay, new Vector3(38.0f, 0.02f, -14.6f), 90f);
+
+            // The bay is a buyable lot: FOR SALE sign, cordon tape, and one stand per machine (machines locked until bought)
+            WorkshopPurchaseSetup.BuildInBay(bay);
         }
 
         static void PlaceCraftingPrefab(GameObject prefab, string instanceName, string placementId, Transform parent, Vector3 pos, float yaw)

@@ -175,6 +175,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Bag",
+                    "type": "Button",
+                    "id": "fd0b70cc-c3a9-4b09-94df-72aa5d1dc3b9",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -705,6 +714,39 @@
                     "action": "ToggleCursor",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d1dd25d7-7a67-4d75-86fb-e26ca534ac48",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Bag",
+                    "isComposite": false,
+                    "isPartOf": false
+                },
+                {
+                    "name": "",
+                    "id": "88dc8fc9-9520-4e39-851e-3d725ce4b0dc",
+                    "path": "<Keyboard>/b",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Bag",
+                    "isComposite": false,
+                    "isPartOf": false
+                },
+                {
+                    "name": "",
+                    "id": "095bc0ed-d056-40c5-84ce-25421f60324a",
+                    "path": "<Gamepad>/select",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Bag",
+                    "isComposite": false,
+                    "isPartOf": false
                 }
             ]
         },

@@ -272,7 +272,7 @@ namespace UpcycleCity.Ecosystem
             else if (eco.IsPlayerSlowedBySmog)
             {
                 DrawBox(new Rect(x, y, w, 30f), new Color(0.76f, 0.24f, 0.16f, 0.92f));
-                GUI.Label(new Rect(x, y, w, 30f), $"THICK SMOG ({Mathf.RoundToInt(eco.PlayerSmogExposure * 100f)}%) · Movement Slowed (Equip Mask!)", warnStyle);
+                GUI.Label(new Rect(x, y, w, 30f), $"THICK SMOG ({Mathf.RoundToInt(eco.PlayerSmogExposure * 100f)}%)", warnStyle);
             }
         }
 

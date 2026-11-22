@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UpcycleCity.Character;
+using UpcycleCity.Core;
 using UpcycleCity.Interaction;
 using UpcycleCity.Player;
 
@@ -27,8 +28,20 @@ namespace UpcycleCity.Networking
     [RequireComponent(typeof(NetworkTransform))]
     [RequireComponent(typeof(PlayerController))]
     [AddComponentMenu("Upcycle City/Networking/Network Player Controller")]
-    public sealed class NetworkPlayerController : NetworkBehaviour
+    public sealed class NetworkPlayerController : NetworkBehaviour, ISessionPlayer
     {
+        const float PingSampleInterval = 1f;
+
+        // Host-measured round-trip time to this player's client (0 for the host's own player)
+        readonly NetworkVariable<ushort> syncedPingMs =
+            new NetworkVariable<ushort>(
+                0,
+                NetworkVariableReadPermission.Everyone,
+                NetworkVariableWritePermission.Server);
+
+        float pingTimer;
+        string cachedName = "Player";
+
         static readonly List<NetworkPlayerController> ActivePlayers = new List<NetworkPlayerController>(4);
         static readonly List<NetworkPlayerController> RemotePlayersList = new List<NetworkPlayerController>(4);
 
@@ -214,6 +227,7 @@ namespace UpcycleCity.Networking
             base.OnNetworkSpawn();
             if (!ActivePlayers.Contains(this))
                 ActivePlayers.Add(this);
+            GameSession.Register(this);
 
             syncedAppearance.OnValueChanged += OnAppearanceChanged;
             syncedHasSpawnPose.OnValueChanged += OnSpawnPoseReady;
@@ -246,6 +260,7 @@ namespace UpcycleCity.Networking
                 playerController.Inventory.Changed -= SyncLocalEquippedItem;
             ActivePlayers.Remove(this);
             RemotePlayersList.Remove(this);
+            GameSession.Unregister(this);
             base.OnNetworkDespawn();
         }
 
@@ -260,6 +275,7 @@ namespace UpcycleCity.Networking
             int slot = syncedSlotNumber.Value > 0 ? syncedSlotNumber.Value : 1;
             cachedSlotTag = $"P{slot}";
             string nameText = syncedName.Value.IsEmpty ? $"Player {slot}" : syncedName.Value.ToString();
+            cachedName = nameText;
             cachedDisplayLabel = $"P{slot} · {nameText}";
         }
 
@@ -421,10 +437,50 @@ namespace UpcycleCity.Networking
             }
         }
 
+        // ---------------------------------------------------------------- ISessionPlayer (pause menu)
+
+        string ISessionPlayer.DisplayName => cachedName;
+        int ISessionPlayer.Slot => syncedSlotNumber.Value > 0 ? syncedSlotNumber.Value : 1;
+        bool ISessionPlayer.IsHost => IsSpawned && NetworkManager != null && OwnerClientId == NetworkManager.ServerClientId;
+        bool ISessionPlayer.IsLocal => IsSpawned && IsOwner;
+
+        int ISessionPlayer.PingMs
+        {
+            get
+            {
+                if (!IsSpawned || NetworkManager == null)
+                    return -1;
+                if (OwnerClientId == NetworkManager.ServerClientId)
+                    return 0;
+                // Our own ping is measured live on this client; other players' come from the host
+                if (IsOwner && !IsServer && NetworkManager.NetworkConfig?.NetworkTransport != null)
+                    return (int)NetworkManager.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId);
+                return syncedPingMs.Value;
+            }
+        }
+
+        // Host: sample each client's RTT from the transport about once a second (event-driven sync: only on change)
+        void SamplePingOnServer()
+        {
+            pingTimer -= Time.unscaledDeltaTime;
+            if (pingTimer > 0f)
+                return;
+            pingTimer = PingSampleInterval;
+            ulong rtt = OwnerClientId == NetworkManager.ServerClientId || NetworkManager.NetworkConfig?.NetworkTransport == null
+                ? 0UL
+                : NetworkManager.NetworkConfig.NetworkTransport.GetCurrentRtt(OwnerClientId);
+            ushort value = (ushort)Mathf.Min((float)rtt, ushort.MaxValue);
+            if (syncedPingMs.Value != value)
+                syncedPingMs.Value = value;
+        }
+
         void Update()
         {
             if (!IsSpawned)
                 return;
+
+            if (IsServer)
+                SamplePingOnServer();
 
             if (IsOwner)
             {

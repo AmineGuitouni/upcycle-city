@@ -37,6 +37,7 @@ namespace UpcycleCity.Crafting
         [SerializeField] bool allowHopperIntake = true;
 
         CraftingMachineVisuals visuals;
+        WorkshopMachineLock workshopLock;
         string syncKey;
         string registeredKey;
         SyncedStateRegistryInstance registeredRegistry;
@@ -78,6 +79,9 @@ namespace UpcycleCity.Crafting
         public CraftingCard ActiveCard => isProcessing && activeCardIndex >= 0 ? ResolveDatabase()?.GetCardAt(activeCardIndex) : null;
         public float InteractRange => interactRangeOverride > 0.1f ? interactRangeOverride : (definition != null ? definition.InteractRange : 6.5f);
         public string DisplayName => definition != null ? definition.DisplayName : gameObject.name;
+
+        /// <summary>True while this machine sits on an unbought workshop stand (hidden; every request is refused).</summary>
+        public bool IsWorkshopLocked => WorkshopMachineLock.IsMachineLocked(workshopLock);
 
         public Transform Transform => transform;
         public string PlacementId => placementId ?? string.Empty;
@@ -371,6 +375,7 @@ namespace UpcycleCity.Crafting
             visuals = GetComponent<CraftingMachineVisuals>();
             if (visuals == null)
                 visuals = gameObject.AddComponent<CraftingMachineVisuals>();
+            workshopLock = GetComponent<WorkshopMachineLock>();
 
             int defStart = definition != null ? Mathf.Max(initialLevel, definition.DefaultLevel) : initialLevel;
             level = Mathf.Clamp(defStart, 0, MaxLevel);
@@ -426,11 +431,11 @@ namespace UpcycleCity.Crafting
 
         // ------------------------------------------------------------ IInteractable
 
-        public bool CanInteract(PlayerInteractor interactor) => interactor != null;
+        public bool CanInteract(PlayerInteractor interactor) => interactor != null && !IsWorkshopLocked;
 
         public void Interact(PlayerInteractor interactor)
         {
-            if (interactor == null)
+            if (interactor == null || IsWorkshopLocked)
                 return;
 
             // If holding a physical TrashItem, E deposits it into the intake hopper -> TeamMaterialStock
@@ -456,7 +461,7 @@ namespace UpcycleCity.Crafting
 
         void OnTriggerEnter(Collider other)
         {
-            if (!allowHopperIntake || !GameAuthority.IsAuthoritative)
+            if (!allowHopperIntake || !GameAuthority.IsAuthoritative || IsWorkshopLocked)
                 return;
 
             TrashItem item = other.GetComponentInParent<TrashItem>();
@@ -478,6 +483,15 @@ namespace UpcycleCity.Crafting
 
             if (!allowHopperIntake || item == null || item.IsDisposed)
                 return false;
+
+            if (IsWorkshopLocked)
+            {
+                message = $"Buy the {DisplayName} first.";
+                feedbackColor = new Color(0.85f, 0.30f, 0.24f);
+                if (emitLocalFeedback)
+                    interactor?.NotifyFeedback(message, feedbackColor);
+                return false;
+            }
 
             CraftingDatabase db = ResolveDatabase();
             if (db == null || !db.TryResolveTrashMaterial(item, out MaterialDefinition material, out float yieldAmount))
@@ -619,6 +633,8 @@ namespace UpcycleCity.Crafting
 
         CustomGameActionResult HandleExecuteCard(in CustomGameActionContext context)
         {
+            if (IsWorkshopLocked)
+                return CustomGameActionResult.Fail($"Buy the {DisplayName} first.");
             CraftingDatabase db = ResolveDatabase();
             CraftingCard card = db != null ? db.GetCardAt(context.IntArg) : null;
             TeamMaterialStock stock = TeamMaterialStock.EnsureInstance(db);
@@ -665,6 +681,8 @@ namespace UpcycleCity.Crafting
 
         CustomGameActionResult HandleUpgrade(in CustomGameActionContext context)
         {
+            if (IsWorkshopLocked)
+                return CustomGameActionResult.Fail($"Buy the {DisplayName} first.");
             TeamMaterialStock stock = TeamMaterialStock.EnsureInstance(ResolveDatabase());
             CustomGameActionResult result = MachineUpgradeHelper.TryExecuteUpgrade(
                 definition,

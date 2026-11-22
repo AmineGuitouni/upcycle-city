@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -439,6 +440,11 @@ namespace UpcycleCity.Shops
                 return;
 
             ItemDefinition item = offer.item;
+            if (IsCarryUpgrade(item))
+            {
+                BuyCarryUpgrade(item, offer);
+                return;
+            }
             bool directToMaterialStock = item.UseBehavior is IMaterialStockCreditBehavior credit && credit.CreditOnPurchase;
 
             if (!directToMaterialStock && IsOwnedTool(item))
@@ -522,6 +528,52 @@ namespace UpcycleCity.Shops
 
         bool IsOwnedTool(ItemDefinition item) => item.MaxStack <= 1 && inventory != null && inventory.HasItem(item);
 
+        // The Recycling Bag isn't hotbar gear: the host records it on the player's carry (RecyclingBagService)
+        // The Shopping Cart likewise: the host spawns the cart in the world and records it on the buyer's carry
+        static bool IsCarryUpgrade(ItemDefinition item) =>
+            item != null && (item.ItemId == Waste.CarryItems.BagUpgradeItemId || item.ItemId == Waste.CarryItems.CartUpgradeItemId);
+
+        static bool OwnsCarryUpgrade(ItemDefinition item)
+        {
+            Waste.RecyclingBag bag = Waste.RecyclingBagService.LocalBag;
+            if (item == null || bag == null)
+                return false;
+            if (item.ItemId == Waste.CarryItems.CartUpgradeItemId)
+                return bag.HasCart;
+            return item.ItemId == Waste.CarryItems.BagUpgradeItemId && bag.HasBag;
+        }
+
+        void BuyCarryUpgrade(ItemDefinition item, ShopCatalog.Offer offer)
+        {
+            if (OwnsCarryUpgrade(item))
+            {
+                SetStatus($"You already have the {item.DisplayName}.", false);
+                EmitPurchaseFailed();
+                return;
+            }
+            if (inventory.Coins < offer.price)
+            {
+                SetStatus($"Not enough coins — the {item.DisplayName} costs {offer.price}.", false);
+                EmitPurchaseFailed();
+                return;
+            }
+            purchaseInFlight = true;
+            Action<bool, string> done = (ok, message) =>
+            {
+                purchaseInFlight = false;
+                if (!IsOpen)
+                    return;
+                SetStatus(message, ok);
+                if (!ok)
+                    EmitPurchaseFailed();
+                Refresh();
+            };
+            if (item.ItemId == Waste.CarryItems.CartUpgradeItemId)
+                Waste.RecyclingBagService.RequestBuyCart(done);
+            else
+                Waste.RecyclingBagService.RequestBuyBag(done);
+        }
+
         void SetStatus(string text, bool good)
         {
             status.text = text;
@@ -539,7 +591,7 @@ namespace UpcycleCity.Shops
             foreach ((ShopCatalog.Offer offer, Button button, Label state) in cards)
             {
                 bool directToStock = offer.item.UseBehavior is IMaterialStockCreditBehavior credit && credit.CreditOnPurchase;
-                bool owned = !directToStock && IsOwnedTool(offer.item);
+                bool owned = IsCarryUpgrade(offer.item) ? OwnsCarryUpgrade(offer.item) : !directToStock && IsOwnedTool(offer.item);
                 bool affordable = coins >= offer.price;
                 button.SetEnabled(!owned && affordable);
                 button.EnableInClassList("shop-buy-button--short", !owned && !affordable);
@@ -554,7 +606,7 @@ namespace UpcycleCity.Shops
                 else
                 {
                     int count = inventory != null ? inventory.CountOf(offer.item) : 0;
-                    state.text = owned ? "OWNED" : count > 0 ? $"In bag: {count}" : affordable ? string.Empty : $"Need {offer.price - coins} more";
+                    state.text = owned ? "OWNED" : count > 0 ? $"In hotbar: {count}" : affordable ? string.Empty : $"Need {offer.price - coins} more";
                 }
             }
         }

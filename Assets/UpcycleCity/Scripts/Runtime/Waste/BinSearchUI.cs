@@ -91,10 +91,15 @@ namespace UpcycleCity.Waste
         void OnEnable()
         {
             RecyclingBagService.LocalBagChanged += OnBagChanged;
+            Props.ShoppingCart.LocalCartChanged += OnBagChanged;
             bagDirty = true;
         }
 
-        void OnDisable() => RecyclingBagService.LocalBagChanged -= OnBagChanged;
+        void OnDisable()
+        {
+            RecyclingBagService.LocalBagChanged -= OnBagChanged;
+            Props.ShoppingCart.LocalCartChanged -= OnBagChanged;
+        }
 
         void OnDestroy()
         {
@@ -277,10 +282,14 @@ namespace UpcycleCity.Waste
             if (bagBadge == null)
                 return;
             RecyclingBag bag = RecyclingBagService.LocalBag;
-            bool show = !IsOpen && bag != null && bag.Count > 0;
+            Props.ShoppingCart cart = Props.ShoppingCart.LocalPushed;
+            bool show = !IsOpen && bag != null && (bag.Count > 0 || cart != null);
             bagBadge.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
             if (show)
-                bagBadge.text = $"BAG {bag.Count}/{bag.Capacity}" + (bag.IsFull ? " · FULL" : string.Empty);
+            {
+                bagBadge.text = $"{(bag.HasBag ? "BAG" : "HANDS")} {bag.Count}/{bag.Capacity}" + (bag.IsFull && cart == null ? " · FULL" : string.Empty)
+                    + (cart != null ? $"  ·  CART {cart.Count}/{cart.Capacity}" + (cart.IsFull ? " · FULL" : string.Empty) : string.Empty);
+            }
         }
 
         void Unbind()
@@ -318,7 +327,7 @@ namespace UpcycleCity.Waste
             RecyclingBag bag = RecyclingBagService.LocalBag;
             if (bag != null && bag.Count + pendingTakes.Count >= bag.Capacity)
             {
-                ShowStatus("Your bag is full. Empty it at the sorting bins.");
+                ShowStatus(RecyclingBagService.FullMessage(RecyclingBagService.LocalBag));
                 return;
             }
             pendingTakes.Add(slot);
@@ -352,7 +361,7 @@ namespace UpcycleCity.Waste
             }
             if (room <= 0)
             {
-                ShowStatus("Your bag is full. Empty it at the sorting bins.");
+                ShowStatus(RecyclingBagService.FullMessage(RecyclingBagService.LocalBag));
                 return;
             }
             // Prefer the rarest finds when the bag can't hold them all
@@ -491,7 +500,7 @@ namespace UpcycleCity.Waste
         void RebuildBag(BinLootTable table)
         {
             RecyclingBag bag = RecyclingBagService.LocalBag;
-            int capacity = bag != null ? bag.Capacity : table.BagSlots;
+            int capacity = bag != null ? bag.Capacity : CarryItems.HandsCapacity;
             while (bagSlots.Count < capacity)
                 bagSlots.Add(MakeSlot(bagGrid, bagSlots.Count, inBin: false));
             for (int i = 0; i < bagSlots.Count; i++)
@@ -501,7 +510,7 @@ namespace UpcycleCity.Waste
                 if (bag != null && i < bag.Count)
                 {
                     bool fresh = view.Entry != bag[i];
-                    ShowFind(view, table, bag[i]);
+                    ShowCarried(view, bag[i]);
                     view.Entry = bag[i];
                     if (fresh)
                         Pop(view.Root);
@@ -529,6 +538,27 @@ namespace UpcycleCity.Waste
             Sprite icon = UpcycleCity.UI.IconLibrary.Active != null ? UpcycleCity.UI.IconLibrary.Active.ForLoot(e.id) : null;
             SetIcon(view, icon);
             view.Tag.text = e.organic ? "ORGANIC" : $"{WasteStreamPalette.LabelFor(e.stream)} · {e.rarity.ToString().ToUpperInvariant()}";
+            view.Chip.style.backgroundColor = accent;
+            view.Root.style.borderTopColor = view.Root.style.borderBottomColor =
+                view.Root.style.borderLeftColor = view.Root.style.borderRightColor = rarity;
+            view.Tag.style.color = rarity;
+        }
+
+        // Something in the player's carry: a bin find or a piece of street trash
+        static void ShowCarried(SlotView view, int id)
+        {
+            view.Root.RemoveFromClassList("bs-slot-hidden");
+            view.Root.RemoveFromClassList("bs-slot-empty");
+            view.Root.RemoveFromClassList("bs-slot-digging");
+            view.Fill.style.width = 0f;
+            CarryItems.Info info = CarryItems.Resolve(id);
+            if (!info.Valid)
+                return;
+            Color accent = CarryItems.AccentFor(info);
+            Color rarity = info.Organic || info.IsTrash ? accent : BinLootTable.RarityColor(info.Rarity);
+            view.Name.text = info.Name;
+            SetIcon(view, CarryItems.IconFor(id));
+            view.Tag.text = info.Organic ? "ORGANIC" : WasteStreamPalette.LabelFor(info.Stream);
             view.Chip.style.backgroundColor = accent;
             view.Root.style.borderTopColor = view.Root.style.borderBottomColor =
                 view.Root.style.borderLeftColor = view.Root.style.borderRightColor = rarity;

@@ -4,7 +4,9 @@ using UnityEngine;
 using UpcycleCity.Core;
 using UpcycleCity.Crafting;
 using UpcycleCity.Ecosystem;
+using UpcycleCity.Interaction;
 using UpcycleCity.Player;
+using UpcycleCity.Props;
 
 namespace UpcycleCity.Waste
 {
@@ -22,12 +24,19 @@ namespace UpcycleCity.Waste
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Waste/Recycling Bag Service")]
-    public sealed class RecyclingBagService : MonoBehaviour
+    public sealed partial class RecyclingBagService : MonoBehaviour
     {
         public const string ActionOpen = "bin.search.open";
         public const string ActionClose = "bin.search.close";
         public const string ActionTake = "bin.search.take";
         public const string ActionDeposit = "bag.deposit";
+        public const string ActionStore = "carry.store";
+        public const string ActionThrow = "carry.throw";
+        public const string ActionSell = "carry.sell";
+        public const string ActionBuyBag = "carry.buy_bag";
+
+        /// <summary>Slot value for <see cref="ActionSell"/> that sells everything RÉCUP buys.</summary>
+        public const int SellAll = -1;
 
         const float ReachRange = 4.5f;
 
@@ -79,6 +88,11 @@ namespace UpcycleCity.Waste
             GameAuthority.RegisterCustomActionHandler(ActionClose, HandleClose);
             GameAuthority.RegisterCustomActionHandler(ActionTake, HandleTake);
             GameAuthority.RegisterCustomActionHandler(ActionDeposit, HandleDeposit);
+            GameAuthority.RegisterCustomActionHandler(ActionStore, HandleStore);
+            GameAuthority.RegisterCustomActionHandler(ActionThrow, HandleThrow);
+            GameAuthority.RegisterCustomActionHandler(ActionSell, HandleSell);
+            GameAuthority.RegisterCustomActionHandler(ActionBuyBag, HandleBuyBag);
+            RegisterCartHandlers();
         }
 
         void OnDisable()
@@ -87,6 +101,11 @@ namespace UpcycleCity.Waste
             GameAuthority.UnregisterCustomActionHandler(ActionClose, HandleClose);
             GameAuthority.UnregisterCustomActionHandler(ActionTake, HandleTake);
             GameAuthority.UnregisterCustomActionHandler(ActionDeposit, HandleDeposit);
+            GameAuthority.UnregisterCustomActionHandler(ActionStore, HandleStore);
+            GameAuthority.UnregisterCustomActionHandler(ActionThrow, HandleThrow);
+            GameAuthority.UnregisterCustomActionHandler(ActionSell, HandleSell);
+            GameAuthority.UnregisterCustomActionHandler(ActionBuyBag, HandleBuyBag);
+            UnregisterCartHandlers();
             foreach (RecyclingBag bag in hostBags.Values)
                 SyncedStateRegistry.Unregister(bag);
             if (localBag != null && !localBagIsHostBag)
@@ -99,7 +118,14 @@ namespace UpcycleCity.Waste
                 Instance = null;
         }
 
-        void Update() => EnsureLocalBag();
+        void Update()
+        {
+            EnsureLocalBag();
+            TickAutoStore();
+            TickCartOwnership();
+            if (PlayerContext.Active != null && CarryBagUI.Instance == null)
+                CarryBagUI.EnsureInstance();
+        }
 
         // ------------------------------------------------------------ bags
 
@@ -167,6 +193,26 @@ namespace UpcycleCity.Waste
         public static void RequestDeposit(ISyncedStateProvider target, Action<bool, string> onResult = null) =>
             GameAuthority.Current.RequestCustomAction(ActionDeposit, target.SyncKey, 0, 0f, onResult);
 
+        /// <summary>Stores the street trash the local player is holding into their carry.</summary>
+        public static void RequestStoreHeld(Action<bool, string> onResult = null) =>
+            GameAuthority.Current.RequestCustomAction(ActionStore, string.Empty, 0, 0f, onResult);
+
+        /// <summary>Throws the carried item in <paramref name="slot"/> (expected to be <paramref name="id"/>) back into the world.</summary>
+        public static void RequestThrow(int slot, int id, Action<bool, string> onResult = null) =>
+            GameAuthority.Current.RequestCustomAction(ActionThrow, string.Empty, slot, id, onResult);
+
+        /// <summary>Sells the carried item in <paramref name="slot"/> at RÉCUP, or everything it buys with <see cref="SellAll"/>.</summary>
+        public static void RequestSell(ISyncedStateProvider buyBack, int slot, int id, Action<bool, string> onResult = null) =>
+            GameAuthority.Current.RequestCustomAction(ActionSell, buyBack.SyncKey, slot, id, onResult);
+
+        /// <summary>Buys a Recycling Bag at the shop counter that sells it.</summary>
+        public static void RequestBuyBag(Action<bool, string> onResult = null) =>
+            GameAuthority.Current.RequestCustomAction(ActionBuyBag, string.Empty, 0, 0f, onResult);
+
+        public static string FullMessage(RecyclingBag bag) => bag != null && bag.HasBag
+            ? "Your bag is full. Sell at RÉCUP or empty it at the sorting bins."
+            : "Your arms are full! Sell at RÉCUP, or buy a bag at the Quincaillerie.";
+
         // ------------------------------------------------------------ host handlers
 
         static bool TryResolve<T>(string key, out T target) where T : class
@@ -210,12 +256,12 @@ namespace UpcycleCity.Waste
 
             RecyclingBag bag = GetHostBag(context.SenderClientId);
             if (bag.IsFull)
-                return CustomGameActionResult.Fail("Your bag is full. Empty it at the sorting bins.");
+                return CustomGameActionResult.Fail(FullMessage(bag));
 
             int entry = bin.AuthoritativeTake(context.IntArg, Mathf.RoundToInt(context.FloatArg), context.SenderClientId);
             if (entry < 0)
                 return CustomGameActionResult.Fail("Someone got there first.");
-            bag.TryAdd(entry);
+            bag.TryAdd(CarryItems.IdForLoot(entry));
             GameAuthority.Current.FlushSyncedStates();
 
             table.TryGet(entry, out BinLootTable.Entry e);
@@ -224,10 +270,6 @@ namespace UpcycleCity.Waste
 
         CustomGameActionResult HandleDeposit(in CustomGameActionContext context)
         {
-            BinLootTable table = BinLootTable.Active;
-            if (table == null)
-                return CustomGameActionResult.Fail("No loot table.");
-
             bool organic;
             WasteStream stream = WasteStream.Plastic;
             Vector3 position;
@@ -260,19 +302,40 @@ namespace UpcycleCity.Waste
             int delivered = 0, coins = 0;
             for (int i = bag.Count - 1; i >= 0; i--)
             {
-                if (!table.TryGet(bag[i], out BinLootTable.Entry e) || !RecyclingBag.Accepts(e, organic, stream))
+                CarryItems.Info e = CarryItems.Resolve(bag[i]);
+                if (!CarryItems.Accepts(e, organic, stream))
                     continue;
-                if (stock != null && !string.IsNullOrEmpty(e.materialId) && e.materialAmount > 0f)
-                    stock.TryAddMaterialAuthoritative(e.materialId, e.materialAmount * Mathf.Max(0f, yieldScale));
-                coins += Mathf.RoundToInt(e.coins * coinScale);
+                if (stock != null && !string.IsNullOrEmpty(e.MaterialId) && e.MaterialAmount > 0f)
+                    stock.TryAddMaterialAuthoritative(e.MaterialId, e.MaterialAmount * Mathf.Max(0f, yieldScale));
+                coins += Mathf.RoundToInt(e.BaseValue * coinScale);
                 delivered++;
                 bag.RemoveAt(i);
             }
 
+            // The cart the player pushes (or stands next to) is emptied too
+            CartStorage cart = CartFor(context);
+            if (cart != null)
+            {
+                for (int i = cart.Count - 1; i >= 0; i--)
+                {
+                    CarryItems.Info e = CarryItems.Resolve(cart[i]);
+                    if (!CarryItems.Accepts(e, organic, stream))
+                        continue;
+                    if (stock != null && !string.IsNullOrEmpty(e.MaterialId) && e.MaterialAmount > 0f)
+                        stock.TryAddMaterialAuthoritative(e.MaterialId, e.MaterialAmount * Mathf.Max(0f, yieldScale));
+                    coins += Mathf.RoundToInt(e.BaseValue * coinScale);
+                    delivered++;
+                    cart.RemoveAt(i);
+                }
+            }
+
             if (delivered == 0)
+            {
+                string where = cart != null ? "your bag or cart" : "your bag";
                 return CustomGameActionResult.Fail(organic
-                    ? "No organic waste in your bag."
-                    : $"No {WasteStreamPalette.LabelFor(stream)} in your bag.");
+                    ? $"No organic waste in {where}."
+                    : $"No {WasteStreamPalette.LabelFor(stream)} in {where}.");
+            }
 
             if (coins > 0)
                 GameAuthority.Current.CreditTeamCoins(coins);
@@ -286,5 +349,254 @@ namespace UpcycleCity.Waste
             GameAuthority.Current.SendTargetedFeedback(context.SenderClientId, message, color, PlayerFeedbackEvent.SortCorrect, position);
             return CustomGameActionResult.Ok(message);
         }
-    }
+    
+        // ------------------------------------------------------------ carrying street trash, throwing, selling, buying
+
+        CustomGameActionResult HandleStore(in CustomGameActionContext context)
+        {
+            TrashItem item = FindHeldBy(context.SenderClientId);
+            if (item == null)
+                return CustomGameActionResult.Fail("Nothing in your hands.");
+            int id = CarryItems.IdForTrash(item);
+            if (id < 0)
+                return CustomGameActionResult.Fail(item.IsBulky ? "Too bulky to carry: drag it to RÉCUP." : "Can't carry that.");
+
+            RecyclingBag bag = GetHostBag(context.SenderClientId);
+            CartStorage overflow = null;
+            if (bag.IsFull)
+            {
+                // A moving bag: what doesn't fit the hands/bag goes into the cart the player pushes or stands next to
+                overflow = CartFor(context);
+                if (overflow == null)
+                    return CustomGameActionResult.Fail(FullMessage(bag));
+                if (overflow.IsFull)
+                    return CustomGameActionResult.Fail("Your bag and your cart are full. Sell at RÉCUP or empty them at the sorting bins.");
+            }
+
+            // The host's own grabber lets go before the item disappears (remote holders are cleared by the despawn)
+            PhysicsGrabController grabber = PlayerContext.ActiveGrabber;
+            if (context.SenderClientId == GameAuthority.LocalClientId && grabber != null && ReferenceEquals(grabber.HeldObject, item))
+                grabber.ReleaseForDeposit();
+
+            string name = item.DisplayName;
+            if (overflow != null)
+            {
+                overflow.TryAdd(id);
+                item.Dispose();
+                GameAuthority.Current.FlushSyncedStates();
+                return CustomGameActionResult.Ok($"+ {name} → cart  ({overflow.Count}/{overflow.Capacity})");
+            }
+            bag.TryAdd(id);
+            item.Dispose();
+            GameAuthority.Current.FlushSyncedStates();
+            return CustomGameActionResult.Ok($"+ {name}  ({bag.Count}/{bag.Capacity})");
+        }
+
+        static TrashItem FindHeldBy(ulong clientId)
+        {
+            if (clientId == GameAuthority.LocalClientId && PlayerContext.ActiveGrabber != null
+                && PlayerContext.ActiveGrabber.HeldObject is TrashItem local && !local.IsDisposed)
+                return local;
+            foreach (TrashItem t in FindObjectsByType<TrashItem>(FindObjectsInactive.Exclude))
+            {
+                if (t == null || t.IsDisposed)
+                    continue;
+                if (t.TryGetComponent(out INetworkedPhysicsGrabbable net) && net.IsHeldByAnyone && net.HolderClientId == clientId)
+                    return t;
+            }
+            return null;
+        }
+
+        CustomGameActionResult HandleThrow(in CustomGameActionContext context)
+        {
+            RecyclingBag bag = GetHostBag(context.SenderClientId);
+            int slot = context.IntArg, expected = Mathf.RoundToInt(context.FloatArg);
+            ShoppingCart fromCart = null;
+            if (slot >= CartSlotBase)
+            {
+                slot -= CartSlotBase;
+                fromCart = CartObjectFor(context);
+                if (fromCart == null || slot >= fromCart.Storage.Count || fromCart.Storage[slot] != expected)
+                    return CustomGameActionResult.Fail("That item isn't there any more.");
+            }
+            else if (slot < 0 || slot >= bag.Count || bag[slot] != expected)
+                return CustomGameActionResult.Fail("That item isn't there any more.");
+
+            CarryItems.Info info = CarryItems.Resolve(expected);
+            WasteCatalog catalog = CarryItems.Catalog;
+            if (catalog == null || info.CatalogIndex < 0 || info.CatalogIndex >= catalog.Entries.Count)
+                return CustomGameActionResult.Fail("Can't throw that out here.");
+
+            Vector3 origin = fromCart != null ? fromCart.transform.position : context.SenderPosition ?? Vector3.zero;
+            var rng = new System.Random(unchecked((int)(context.SenderClientId * 7919UL) ^ bag.Count ^ (int)(Time.time * 1000f)));
+            float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
+            var dir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+            Vector3 position = origin + Vector3.up * 1.2f + dir * 0.6f;
+            Vector3 velocity = dir * 1.6f + Vector3.up * 1.4f;
+
+            TrashItem spawned = GameAuthority.Current.SpawnTrash(catalog, catalog.Entries[info.CatalogIndex], WasteSourceKind.Initial, position, velocity);
+            if (spawned == null)
+                return CustomGameActionResult.Fail("Couldn't throw it out.");
+            if (fromCart != null)
+                fromCart.Storage.RemoveAt(slot);
+            else
+                bag.RemoveAt(slot);
+            GameAuthority.Current.FlushSyncedStates();
+            return CustomGameActionResult.Ok($"Threw out {info.Name}");
+        }
+
+        CustomGameActionResult HandleSell(in CustomGameActionContext context)
+        {
+            if (!TryResolve(context.TargetId, out Shops.RecyclingBuyBack buyBack))
+                return CustomGameActionResult.Fail("RÉCUP isn't here.");
+            if (!context.IsWithinRange(buyBack.transform.position, ReachRange) && context.SenderPosition.HasValue)
+                return CustomGameActionResult.Fail("Too far from RÉCUP.");
+
+            RecyclingBag bag = GetHostBag(context.SenderClientId);
+            CartStorage cart = CartFor(context);
+            int slot = context.IntArg, expected = Mathf.RoundToInt(context.FloatArg);
+            int sold = 0, coins = 0;
+            if (slot == SellAll)
+            {
+                for (int i = bag.Count - 1; i >= 0; i--)
+                {
+                    CarryItems.Info info = CarryItems.Resolve(bag[i]);
+                    if (!info.Valid || info.Organic)
+                        continue;
+                    coins += buyBack.PriceFor(info.Stream, info.BaseValue);
+                    sold++;
+                    bag.RemoveAt(i);
+                }
+                for (int i = cart != null ? cart.Count - 1 : -1; i >= 0; i--)
+                {
+                    CarryItems.Info info = CarryItems.Resolve(cart[i]);
+                    if (!info.Valid || info.Organic)
+                        continue;
+                    coins += buyBack.PriceFor(info.Stream, info.BaseValue);
+                    sold++;
+                    cart.RemoveAt(i);
+                }
+                if (sold == 0)
+                    return CustomGameActionResult.Fail("Nothing RÉCUP buys. Organic waste goes to the compost bin.");
+            }
+            else
+            {
+                bool fromCart = slot >= CartSlotBase;
+                if (fromCart)
+                    slot -= CartSlotBase;
+                int count = fromCart ? (cart != null ? cart.Count : 0) : bag.Count;
+                if (slot < 0 || slot >= count || (fromCart ? cart[slot] : bag[slot]) != expected)
+                    return CustomGameActionResult.Fail("That item isn't there any more.");
+                CarryItems.Info info = CarryItems.Resolve(expected);
+                if (!info.Valid || info.Organic)
+                    return CustomGameActionResult.Fail("RÉCUP doesn't buy organic waste: use the compost bin.");
+                coins = buyBack.PriceFor(info.Stream, info.BaseValue);
+                sold = 1;
+                if (fromCart)
+                    cart.RemoveAt(slot);
+                else
+                    bag.RemoveAt(slot);
+            }
+
+            GameAuthority.Current.CreditTeamCoins(coins);
+            GameAuthority.Current.FlushSyncedStates();
+            string message = sold == 1 ? $"Sold · +{coins} Coins" : $"Sold {sold} items · +{coins} Coins";
+            GameAuthority.Current.SendTargetedFeedback(context.SenderClientId, message, new Color(0.95f, 0.76f, 0.11f),
+                PlayerFeedbackEvent.SellTrash, buyBack.transform.position);
+            return CustomGameActionResult.Ok(message);
+        }
+
+        CustomGameActionResult HandleBuyBag(in CustomGameActionContext context)
+        {
+            RecyclingBag bag = GetHostBag(context.SenderClientId);
+            if (bag.HasBag)
+                return CustomGameActionResult.Fail("You already have a bag.");
+
+            // The price comes from the host's own shop catalogs, never from the client
+            Shops.ShopCounter seller = null;
+            int price = 0;
+            foreach (Shops.ShopCounter counter in FindObjectsByType<Shops.ShopCounter>(FindObjectsInactive.Exclude))
+            {
+                if (counter.Catalog == null || !counter.Catalog.TryFindOffer(CarryItems.BagUpgradeItemId, 1, out Shops.ShopCatalog.Offer offer))
+                    continue;
+                if (context.SenderPosition.HasValue && !context.IsWithinRange(counter.transform.position, ReachRange + 2f))
+                    continue;
+                seller = counter;
+                price = offer.price;
+                break;
+            }
+            if (seller == null)
+                return CustomGameActionResult.Fail("Bags are sold at the Quincaillerie.");
+            if (!GameAuthority.Current.TrySpendTeamCoins(price))
+                return CustomGameActionResult.Fail($"Not enough coins (need {price}).");
+
+            bag.GrantBag();
+            GameAuthority.Current.FlushSyncedStates();
+            return CustomGameActionResult.Ok($"Recycling Bag! You can carry {bag.Capacity} items now.");
+        }
+
+        // ------------------------------------------------------------ local: picked-up trash goes straight into the carry
+
+        PhysicsGrabController watchedGrabber;
+        TrashItem pendingStore;
+        float pendingStoreTime;
+        bool storeInFlight;
+
+        void TickAutoStore()
+        {
+            PhysicsGrabController grabber = PlayerContext.ActiveGrabber;
+            if (grabber != watchedGrabber)
+            {
+                if (watchedGrabber != null)
+                    watchedGrabber.Grabbed -= OnLocalGrabbed;
+                watchedGrabber = grabber;
+                if (watchedGrabber != null)
+                    watchedGrabber.Grabbed += OnLocalGrabbed;
+            }
+
+            if (pendingStore == null || storeInFlight)
+                return;
+            if (pendingStore.IsDisposed || grabber == null || !ReferenceEquals(grabber.HeldObject, pendingStore)
+                || Time.unscaledTime - pendingStoreTime > 3f)
+            {
+                pendingStore = null;
+                return;
+            }
+
+            // In co-op, wait until the host has us down as the holder, so it can find the item
+            if (!GameAuthority.IsAuthoritative && pendingStore.TryGetComponent(out INetworkedPhysicsGrabbable net)
+                && net.HolderClientId != GameAuthority.LocalClientId)
+                return;
+
+            storeInFlight = true;
+            TrashItem target = pendingStore;
+            RequestStoreHeld((ok, message) =>
+            {
+                storeInFlight = false;
+                if (ReferenceEquals(pendingStore, target))
+                    pendingStore = null;
+                if (!ok && !string.IsNullOrEmpty(message))
+                    PlayerContext.ActiveInteractor?.NotifyFeedback(message, new Color(0.95f, 0.55f, 0.2f));
+            });
+        }
+
+        void OnLocalGrabbed(IGrabbable grabbed)
+        {
+            if (grabbed is not TrashItem item || item.IsBulky)
+                return;
+            RecyclingBag bag = EnsureLocalBag();
+            if (bag != null && bag.IsFull)
+            {
+                ShoppingCart cart = ShoppingCart.FindForLocal();
+                if (cart == null || cart.IsFull)
+                {
+                    PlayerContext.ActiveInteractor?.NotifyFeedback(cart != null
+                        ? "Your bag and your cart are full." : FullMessage(bag), new Color(0.95f, 0.55f, 0.2f));
+                    return;
+                }
+            }
+            pendingStore = item;
+            pendingStoreTime = Time.unscaledTime;
+        }
+}
 }

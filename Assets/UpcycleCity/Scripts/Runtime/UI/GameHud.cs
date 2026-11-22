@@ -380,10 +380,15 @@ namespace UpcycleCity.UI
             coinDeltaTimer = 1.4f;
         }
 
+        int shownCoins = int.MinValue;
+
         void SetCoins(int total)
         {
-            if (coinLabel != null)
-                coinLabel.text = Num(Mathf.Max(0, total));
+            total = Mathf.Max(0, total);
+            if (coinLabel == null || total == shownCoins)
+                return;
+            shownCoins = total;
+            coinLabel.text = Num(total);
         }
 
         /// <summary>Shows a short feedback toast (also used by gameplay feedback events).</summary>
@@ -431,6 +436,10 @@ namespace UpcycleCity.UI
 
             if (hotbarDirty)
                 RefreshHotbar();
+
+            // Some paths set coins without raising CoinsChanged (co-op team wallet mirror, debug credits): poll the number
+            if (inventory != null)
+                SetCoins(inventory.Coins);
 
             UpdatePrompt();
             UpdateCharge();

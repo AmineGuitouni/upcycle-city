@@ -64,8 +64,11 @@ namespace UpcycleCity.Shops
             get
             {
                 TrashItem held = Held(PlayerContext.ActiveInteractor);
-                return held != null
-                    ? $"[E] Sell {held.DisplayName} · +{PriceOf(held)} Coins"
+                if (held != null)
+                    return $"[E] Sell {held.DisplayName} · +{PriceOf(held)} Coins";
+                int carried = RecyclingBagService.LocalCarriedCount;
+                return carried > 0
+                    ? $"[E] Sell what you carry ({carried})"
                     : $"{label} · bring trash here to sell it";
             }
         }
@@ -87,12 +90,22 @@ namespace UpcycleCity.Shops
         /// <summary>Price of a typical item of each stream at base value <paramref name="baseValue"/>.</summary>
         public int PriceFor(WasteStream stream, int baseValue) => Mathf.Max(1, Mathf.RoundToInt(baseValue * RateFor(stream)));
 
-        public bool CanInteract(PlayerInteractor interactor) => Held(interactor) != null;
+        public bool CanInteract(PlayerInteractor interactor)
+        {
+            if (Held(interactor) != null)
+                return true;
+            return RecyclingBagService.LocalCarriedCount > 0;
+        }
 
         public void Interact(PlayerInteractor interactor)
         {
             if (Held(interactor) == null)
+            {
+                // Hands free: open the carry screen in sell mode (pick an item, see its price, confirm)
+                if (CanInteract(interactor))
+                    CarryBagUI.EnsureInstance().Open(this);
                 return;
+            }
             TrashItem item = interactor.Grabber.ReleaseForDeposit() as TrashItem;
             if (item != null)
                 GameAuthority.Current.RequestSellTrash(this, item, interactor);

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.ItemDefinition
   itemId: food_water
   displayName: Bouteille d'Eau
-  description: Cold mineral water. Breathe easy in the smog for a while.
+  description: 'Cold mineral water. A quick refresh: walk and jump a little better.'
   category: 1
   accentColor: {r: 0.22, g: 0.55, b: 0.85, a: 1}
   maxStack: 5
@@ -25,7 +25,7 @@ MonoBehaviour:
   moveSpeedMultiplier: 1
   grantsSmogImmunity: 0
   useBehavior:
-    rid: 1445968247013507148
+    rid: 1445968247013507158
   grabTool: 0
   heldVisualPrefab: {fileID: 919132149155446097, guid: a9922f9dbde77456cb870bdd3e1cab27, type: 3}
   heldLocalPosition: {x: 0, y: 0, z: 0}
@@ -34,15 +34,15 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 1445968247013507148
+    - rid: 1445968247013507158
       type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
       data:
         boostId: water
         duration: 60
         effect:
-          moveSpeed: 1
-          jump: 1
+          moveSpeed: 1.1
+          jump: 1.1
           grabReach: 0
           throwForce: 0
-          smogImmune: 1
-        message: Fresh water! Smog can't slow you
+          smogImmune: 0
+        message: Fresh water! You feel refreshed

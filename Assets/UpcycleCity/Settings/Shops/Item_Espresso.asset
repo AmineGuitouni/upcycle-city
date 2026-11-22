@@ -25,7 +25,7 @@ MonoBehaviour:
   moveSpeedMultiplier: 1
   grantsSmogImmunity: 0
   useBehavior:
-    rid: 1445968247013507146
+    rid: 1445968247013507156
   grabTool: 0
   heldVisualPrefab: {fileID: 919132149155446097, guid: 7e2a449e351844462a5febc3b16e9830, type: 3}
   heldLocalPosition: {x: 0, y: 0, z: 0}
@@ -34,7 +34,7 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 1445968247013507146
+    - rid: 1445968247013507156
       type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
       data:
         boostId: espresso

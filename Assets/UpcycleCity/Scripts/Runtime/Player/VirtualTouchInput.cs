@@ -23,6 +23,8 @@ namespace UpcycleCity.Player
         public static bool InteractHeld;
         public static bool DropHeld;
         public static bool UseItemHeld;
+        public static bool BagHeld;
+        public static bool MenuHeld;
 
         static Vector2 pendingLook;
 
@@ -41,7 +43,7 @@ namespace UpcycleCity.Player
         public static void ReleaseAll()
         {
             Move = Vector2.zero;
-            SprintHeld = CrouchHeld = JumpHeld = AttackHeld = InteractHeld = DropHeld = UseItemHeld = false;
+            SprintHeld = CrouchHeld = JumpHeld = AttackHeld = InteractHeld = DropHeld = UseItemHeld = BagHeld = MenuHeld = false;
             pendingLook = Vector2.zero;
         }
 

@@ -25,7 +25,7 @@ MonoBehaviour:
   moveSpeedMultiplier: 1
   grantsSmogImmunity: 0
   useBehavior:
-    rid: 1445968247013507149
+    rid: 1445968247013507159
   grabTool: 0
   heldVisualPrefab: {fileID: 919132149155446097, guid: d7f2b4a6a78064d22a4a34cb588bd610, type: 3}
   heldLocalPosition: {x: 0, y: 0, z: 0}
@@ -34,7 +34,7 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
-    - rid: 1445968247013507149
+    - rid: 1445968247013507159
       type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
       data:
         boostId: kaskrout
