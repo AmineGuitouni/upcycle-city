@@ -23,6 +23,10 @@ namespace UpcycleCity.Character
         public GameObject maleBody;
         public GameObject femaleBody;
 
+        [Header("Skinned Bodies (same look, with a skeleton; posed by code, e.g. in the intro)")]
+        public GameObject maleBodyRigged;
+        public GameObject femaleBodyRigged;
+
         [Header("Styles")]
         public Part[] faceStyles = Array.Empty<Part>();
         public Part[] hairStyles = Array.Empty<Part>();
@@ -41,6 +45,18 @@ namespace UpcycleCity.Character
         public Color[] hairColors = Array.Empty<Color>();
 
         public GameObject BodyFor(CharacterSex sex) => sex == CharacterSex.Female && femaleBody != null ? femaleBody : maleBody;
+
+        /// <summary>The skinned body when asked for and available, otherwise the static one.</summary>
+        public GameObject BodyFor(CharacterSex sex, bool rigged)
+        {
+            if (rigged)
+            {
+                GameObject skinned = sex == CharacterSex.Female && femaleBodyRigged != null ? femaleBodyRigged : maleBodyRigged;
+                if (skinned != null)
+                    return skinned;
+            }
+            return BodyFor(sex);
+        }
 
         /// <summary>Clamps every index into range, so old saves keep working when options are removed.</summary>
         public CharacterAppearance Sanitize(CharacterAppearance a)

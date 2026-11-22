@@ -100,6 +100,10 @@ namespace UpcycleCity.Editor
                 library.maleBody = Load("body_male");
             if (library.femaleBody == null)
                 library.femaleBody = Load("body_female");
+            if (library.maleBodyRigged == null)
+                library.maleBodyRigged = Load("Rigged/body_male_rigged");
+            if (library.femaleBodyRigged == null)
+                library.femaleBodyRigged = Load("Rigged/body_female_rigged");
             if (library.rightArmOpen == null) library.rightArmOpen = Load("fp_arm_right_open");
             if (library.rightArmGrip == null) library.rightArmGrip = Load("fp_arm_right_grip");
             if (library.leftArmOpen == null) library.leftArmOpen = Load("fp_arm_left_open");

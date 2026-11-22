@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Character.CharacterPartsLibrary
   maleBody: {fileID: 919132149155446097, guid: ebe35c1c2db724a3fbe1679fd0119f5c, type: 3}
   femaleBody: {fileID: 919132149155446097, guid: 45902f08872d14714a8158e4ab453aa6, type: 3}
+  maleBodyRigged: {fileID: 919132149155446097, guid: 706b8a9f6f28a1a96b73cb463474e33d, type: 3}
+  femaleBodyRigged: {fileID: 919132149155446097, guid: c675524ae3a00836db61be6aba118b77, type: 3}
   faceStyles:
   - displayName: Tired
     prefab: {fileID: 919132149155446097, guid: 2c2244a1c08784400b003c62d41e40c5, type: 3}

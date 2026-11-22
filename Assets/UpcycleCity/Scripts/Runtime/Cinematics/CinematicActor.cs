@@ -4,47 +4,23 @@ using UnityEngine;
 namespace UpcycleCity.Cinematics
 {
     /// <summary>
-    /// Procedural acting for an unrigged character (the player's <see cref="Character.CharacterAvatar"/>).
-    /// The root moves and turns; a child "body" carries the walk bob and sway, kneeling, sitting and a sad slump.
-    /// Every action is a coroutine so <see cref="IntroDirector"/> can run it or yield on it.
+    /// Stage directions for the intro's actor. It moves and turns the actor's root; the body itself is animated by
+    /// <see cref="CharacterRigPoser"/> (walk cycle, kneel, sit, reach, look), which this drives by tweening its
+    /// layers. Every action is a coroutine so <see cref="IntroDirector"/> can run it or yield on it.
     /// </summary>
     [AddComponentMenu("Upcycle City/Cinematics/Cinematic Actor")]
+    [RequireComponent(typeof(CharacterRigPoser))]
     public sealed class CinematicActor : MonoBehaviour
     {
-        [Tooltip("Child that holds the character model. Bob, sway, kneel and slump are applied to it.")]
-        [SerializeField] Transform body;
-        [Tooltip("Where carried props hang, relative to the root (right hand at rest).")]
-        [SerializeField] Vector3 handOffset = new Vector3(0.3f, 0.78f, 0.1f);
+        [SerializeField] CharacterRigPoser poser;
+        [SerializeField, Min(0.1f)] float turnSharpness = 4f;
 
-        [Header("Walk")]
-        [SerializeField, Min(0.1f)] float stepLength = 0.62f;
-        [SerializeField, Min(0f)] float bobHeight = 0.035f;
-        [SerializeField, Min(0f)] float swayDegrees = 2.2f;
-        [SerializeField, Min(0.1f)] float turnSharpness = 5f;
-
-        [Header("Poses")]
-        [Tooltip("How far the body drops to kneel; the legs sink out of frame into the sand.")]
-        [SerializeField] float kneelDrop = 0.55f;
-        [SerializeField] float kneelPitch = 18f;
-        [SerializeField] float sitDrop = 0.55f;
-        [SerializeField] float sitPitch = -4f;
-        [SerializeField] float breathScale = 0.008f;
-
-        float lower;          // current body drop (m)
-        float pitch;          // current body lean (deg, + is forward)
-        float slump;          // extra forward lean for sadness (deg)
-        float walkPhase;
-        float swayRoll;
-        float bob;
-
-        public Transform Body => body;
+        public CharacterRigPoser Poser => poser != null ? poser : poser = GetComponent<CharacterRigPoser>();
         public bool IsWalking { get; private set; }
 
-        void Reset()
-        {
-            if (transform.childCount > 0)
-                body = transform.GetChild(0);
-        }
+        void Reset() => poser = GetComponent<CharacterRigPoser>();
+
+        // ---------------------------------------------------------------- placement and instant poses
 
         public void Place(Vector3 position, float yawDegrees)
         {
@@ -57,22 +33,24 @@ namespace UpcycleCity.Cinematics
                 Place(point.position, point.eulerAngles.y);
         }
 
-        /// <summary>Snaps the pose without a transition (used at cuts).</summary>
-        public void SetPose(float drop, float leanDegrees, float slumpDegrees = 0f)
+        /// <summary>Snaps the body's pose layers (used at cuts).</summary>
+        public void SetPose(float kneel, float sit, float slumpDegrees = 0f)
         {
-            lower = drop;
-            pitch = leanDegrees;
-            slump = slumpDegrees;
+            Poser.kneel = kneel;
+            Poser.sit = sit;
+            Poser.slump = slumpDegrees;
         }
 
-        public void SetSlump(float degrees) => slump = degrees;
+        public void SetSlump(float degrees) => Poser.slump = degrees;
+        public void SetWalkStyle(CharacterRigPoser.WalkStyle style) => Poser.walk = style;
+        public void SetCarry(float elbowDegrees) => Poser.carryRight = elbowDegrees;
 
-        /// <summary>Call when a walk coroutine is stopped early, so the walk bob settles.</summary>
+        /// <summary>Call when a walk coroutine is stopped early.</summary>
         public void Halt() => IsWalking = false;
 
-        // ---------------------------------------------------------------- actions
+        // ---------------------------------------------------------------- moving
 
-        /// <summary>Walks through the points at the given speed, turning smoothly into each leg.</summary>
+        /// <summary>Walks through the points at the given speed, turning smoothly into each leg. The legs follow.</summary>
         public IEnumerator WalkPath(Vector3[] points, float speed)
         {
             if (points == null || points.Length == 0)
@@ -87,7 +65,9 @@ namespace UpcycleCity.Cinematics
                     Vector3 delta = target - transform.position;
                     delta.y = 0f;
                     float distance = delta.magnitude;
-                    float step = speed * Time.deltaTime;
+                    // Ease into the final stop instead of halting mid-stride
+                    float pace = i == points.Length - 1 ? Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(distance / 0.9f)) : 1f;
+                    float step = speed * pace * Time.deltaTime;
                     if (distance <= step || distance < 1e-3f)
                     {
                         transform.position = target;
@@ -97,7 +77,6 @@ namespace UpcycleCity.Cinematics
                     transform.position += dir * step;
                     Quaternion facing = Quaternion.LookRotation(dir, Vector3.up);
                     transform.rotation = Quaternion.Slerp(transform.rotation, facing, 1f - Mathf.Exp(-turnSharpness * Time.deltaTime));
-                    walkPhase += step / stepLength * Mathf.PI;
                     yield return null;
                 }
             }
@@ -130,38 +109,97 @@ namespace UpcycleCity.Cinematics
             yield return Tween(seconds, t => transform.rotation = Quaternion.Slerp(from, to, t));
         }
 
-        public IEnumerator Kneel(float seconds) => BlendPose(kneelDrop, kneelPitch, seconds);
-        public IEnumerator Sit(float seconds) => BlendPose(sitDrop, sitPitch, seconds);
+        // ---------------------------------------------------------------- body poses
+
+        public IEnumerator Kneel(float seconds) => BlendPose(1f, 0f, seconds);
+        public IEnumerator Sit(float seconds) => BlendPose(0f, 1f, seconds);
         public IEnumerator Stand(float seconds) => BlendPose(0f, 0f, seconds);
 
-        public IEnumerator Slump(float degrees, float seconds)
+        IEnumerator BlendPose(float kneel, float sit, float seconds)
         {
-            float from = slump;
-            yield return Tween(seconds, t => slump = Mathf.Lerp(from, degrees, t));
-        }
-
-        IEnumerator BlendPose(float drop, float lean, float seconds)
-        {
-            float fromDrop = lower, fromLean = pitch;
+            float k0 = Poser.kneel, s0 = Poser.sit;
             yield return Tween(seconds, t =>
             {
-                lower = Mathf.Lerp(fromDrop, drop, t);
-                pitch = Mathf.Lerp(fromLean, lean, t);
+                Poser.kneel = Mathf.Lerp(k0, kneel, t);
+                Poser.sit = Mathf.Lerp(s0, sit, t);
             });
         }
 
-        /// <summary>Parents a prop to the actor's hand (on the body, so it follows kneeling and sitting).</summary>
-        public void Hold(Transform prop)
+        public IEnumerator Slump(float degrees, float seconds)
+        {
+            float from = Poser.slump;
+            yield return Tween(seconds, t => Poser.slump = Mathf.Lerp(from, degrees, t));
+        }
+
+        /// <summary>Reaches a hand to a world point (IK) over the given time, and holds it there.</summary>
+        public IEnumerator Reach(CharacterRigPoser.Side side, Vector3 target, float seconds)
+        {
+            SetReachTarget(side, target);
+            float from = ReachWeight(side);
+            yield return Tween(seconds, t => SetReachWeight(side, Mathf.Lerp(from, 1f, t)));
+        }
+
+        /// <summary>Lets a reaching hand fall back to the body's own pose.</summary>
+        public IEnumerator Release(CharacterRigPoser.Side side, float seconds)
+        {
+            float from = ReachWeight(side);
+            yield return Tween(seconds, t => SetReachWeight(side, Mathf.Lerp(from, 0f, t)));
+        }
+
+        public void SetReachTarget(CharacterRigPoser.Side side, Vector3 target)
+        {
+            if (side == CharacterRigPoser.Side.Left)
+                Poser.reachLeft = target;
+            else
+                Poser.reachRight = target;
+        }
+
+        float ReachWeight(CharacterRigPoser.Side side) =>
+            side == CharacterRigPoser.Side.Left ? Poser.reachLeftWeight : Poser.reachRightWeight;
+
+        void SetReachWeight(CharacterRigPoser.Side side, float w)
+        {
+            if (side == CharacterRigPoser.Side.Left)
+                Poser.reachLeftWeight = w;
+            else
+                Poser.reachRightWeight = w;
+        }
+
+        public IEnumerator LookAt(Transform target, float seconds, float weight = 1f)
+        {
+            Poser.lookTarget = target;
+            float from = Poser.lookWeight;
+            yield return Tween(seconds, t => Poser.lookWeight = Mathf.Lerp(from, weight, t));
+        }
+
+        public IEnumerator LookAtPoint(Vector3 point, float seconds, float weight = 1f)
+        {
+            Poser.lookTarget = null;
+            Poser.lookPoint = point;
+            float from = Poser.lookWeight;
+            yield return Tween(seconds, t => Poser.lookWeight = Mathf.Lerp(from, weight, t));
+        }
+
+        public IEnumerator LookAway(float seconds)
+        {
+            float from = Poser.lookWeight;
+            yield return Tween(seconds, t => Poser.lookWeight = Mathf.Lerp(from, 0f, t));
+        }
+
+        // ---------------------------------------------------------------- props
+
+        /// <summary>Puts a prop in a hand: parented to the hand bone, its pivot at the palm.</summary>
+        public void Hold(Transform prop, CharacterRigPoser.Side side = CharacterRigPoser.Side.Right)
         {
             if (prop == null)
                 return;
-            Transform hand = body != null ? body : transform;
-            prop.SetParent(hand, true);
-            prop.localPosition = handOffset;
+            Transform hand = Poser.Hand(side);
+            prop.SetParent(hand != null ? hand : transform, true);
+            prop.position = Poser.Palm(side);
         }
 
-        /// <summary>The world position of the hand, for arcs into or out of it.</summary>
-        public Vector3 HandPosition => (body != null ? body : transform).TransformPoint(handOffset);
+        /// <summary>The middle of the right palm in world space, for arcs into or out of it.</summary>
+        public Vector3 HandPosition => Poser.Palm(CharacterRigPoser.Side.Right);
 
         /// <summary>Moves a prop along an arc to a world position (unparenting it), e.g. setting it down.</summary>
         public static IEnumerator Toss(Transform prop, Vector3 to, Quaternion rotation, float arcHeight, float seconds)
@@ -179,6 +217,16 @@ namespace UpcycleCity.Cinematics
             });
         }
 
+        /// <summary>Moves a prop to follow a moving point (e.g. a hand) for the given time.</summary>
+        public static IEnumerator Follow(Transform prop, System.Func<Vector3> point, float seconds)
+        {
+            if (prop == null)
+                yield break;
+            prop.SetParent(null, true);
+            Vector3 from = prop.position;
+            yield return Tween(seconds, t => prop.position = Vector3.Lerp(from, point(), t));
+        }
+
         public static IEnumerator Tween(float seconds, System.Action<float> step)
         {
             if (seconds <= 0f)
@@ -193,26 +241,6 @@ namespace UpcycleCity.Cinematics
                 yield return null;
             }
             step(1f);
-        }
-
-        // ---------------------------------------------------------------- per-frame body motion
-
-        void LateUpdate()
-        {
-            if (body == null)
-                return;
-
-            // Walk bob and sway settle to rest when standing still
-            float targetBob = IsWalking ? Mathf.Abs(Mathf.Sin(walkPhase)) * bobHeight : 0f;
-            float targetSway = IsWalking ? Mathf.Sin(walkPhase) * swayDegrees : 0f;
-            float settle = 1f - Mathf.Exp(-10f * Time.deltaTime);
-            bob = Mathf.Lerp(bob, targetBob, settle);
-            swayRoll = Mathf.Lerp(swayRoll, targetSway, settle);
-
-            float breath = Mathf.Sin(Time.time * 1.6f) * breathScale;
-            body.localPosition = new Vector3(0f, bob - lower, 0f);
-            body.localRotation = Quaternion.Euler(pitch + slump, 0f, swayRoll);
-            body.localScale = new Vector3(1f, 1f + breath, 1f);
         }
     }
 }

@@ -20,6 +20,9 @@ namespace UpcycleCity.Character
         [SerializeField] ShadowCastingMode shadows = ShadowCastingMode.On;
         [Tooltip("How far stubble leans from skin colour towards hair colour.")]
         [SerializeField, Range(0f, 1f)] float stubbleStrength = 0.55f;
+        [Tooltip("Use the skinned body (with a skeleton) so code can pose it, e.g. the intro cinematic. " +
+                 "The face, hair and beard then follow the Head bone.")]
+        [SerializeField] bool useRiggedBody;
 
         readonly List<CharacterColorRoles.Slot> slots = new List<CharacterColorRoles.Slot>(16);
         MaterialPropertyBlock block;
@@ -29,8 +32,16 @@ namespace UpcycleCity.Character
         CharacterAppearance appearance;
         bool hasAppearance;
 
+        Transform headBone;
+        Matrix4x4 headRestInverse = Matrix4x4.identity; // avatar space -> head bone space, at rest
+
         public CharacterPartsLibrary Library => library;
         public CharacterAppearance Appearance => appearance;
+        /// <summary>The spawned body (with its bones when <see cref="UseRiggedBody"/> is on).</summary>
+        public Transform BodyInstance => bodyInstance != null ? bodyInstance.transform : null;
+        public bool UseRiggedBody => useRiggedBody;
+        /// <summary>Raised after the body mesh is replaced, so anything holding its bones can rebind.</summary>
+        public event System.Action BodyRebuilt;
 
         public void SetLibrary(CharacterPartsLibrary partsLibrary) => library = partsLibrary;
 
@@ -39,6 +50,13 @@ namespace UpcycleCity.Character
         {
             loadSavedOnAwake = followSavedAppearance;
             shadows = shadowMode;
+        }
+
+        /// <summary>Editor setup: as above, choosing the skinned body.</summary>
+        public void Configure(bool followSavedAppearance, ShadowCastingMode shadowMode, bool riggedBody)
+        {
+            Configure(followSavedAppearance, shadowMode);
+            useRiggedBody = riggedBody;
         }
 
         void Awake()
@@ -64,11 +82,18 @@ namespace UpcycleCity.Character
             next = library.Sanitize(next);
             bool partsChanged = false;
 
+            bool bodyChanged = false;
             if (builtSex != (int)next.sex || bodyInstance == null)
             {
-                Replace(ref bodyInstance, library.BodyFor(next.sex), "Body");
+                Replace(ref bodyInstance, library.BodyFor(next.sex, useRiggedBody), "Body");
                 builtSex = (int)next.sex;
                 partsChanged = true;
+                bodyChanged = true;
+                FindHeadBone();
+                // Head parts already spawned move onto the new body's head
+                AttachToHead(faceInstance);
+                AttachToHead(facialHairInstance);
+                AttachToHead(hairInstance);
             }
             if (builtFace != next.eyeStyle)
             {
@@ -95,6 +120,50 @@ namespace UpcycleCity.Character
             appearance = next;
             hasAppearance = true;
             Recolour();
+            if (bodyChanged)
+                BodyRebuilt?.Invoke();
+        }
+
+        void FindHeadBone()
+        {
+            headBone = null;
+            headRestInverse = Matrix4x4.identity;
+            if (bodyInstance == null)
+                return;
+            foreach (Transform t in bodyInstance.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "Head" && t != bodyInstance.transform)
+                {
+                    headBone = t;
+                    break;
+                }
+            }
+            if (headBone != null)
+            {
+                // The body was just spawned, so its bones are at rest: remember the head's rest pose in avatar space
+                Matrix4x4 headInAvatar = transform.worldToLocalMatrix * headBone.localToWorldMatrix;
+                headRestInverse = headInAvatar.inverse;
+            }
+        }
+
+        /// <summary>
+        /// Head parts are modelled in avatar space around the shared head. On a skinned body they are parented to
+        /// the Head bone at the offset that puts them where they belong when the head is at rest.
+        /// </summary>
+        void AttachToHead(GameObject part)
+        {
+            if (part == null)
+                return;
+            if (headBone == null)
+            {
+                part.transform.SetParent(transform, false);
+                part.transform.localPosition = Vector3.zero;
+                part.transform.localRotation = Quaternion.identity;
+                return;
+            }
+            part.transform.SetParent(headBone, false);
+            part.transform.localPosition = headRestInverse.MultiplyPoint3x4(Vector3.zero);
+            part.transform.localRotation = headRestInverse.rotation;
         }
 
         static GameObject PrefabAt(CharacterPartsLibrary.Part[] parts, int index) =>
@@ -110,6 +179,8 @@ namespace UpcycleCity.Character
 
             instance = Instantiate(prefab, transform, false);
             instance.name = $"{label}_{prefab.name}";
+            if (label != "Body")
+                AttachToHead(instance);
             int layer = gameObject.layer;
             foreach (Transform t in instance.GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = layer;

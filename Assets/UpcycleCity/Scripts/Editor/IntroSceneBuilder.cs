@@ -765,14 +765,21 @@ namespace UpcycleCity.Editor
             bodyGo.transform.SetParent(actorGo.transform, false);
             var avatar = bodyGo.AddComponent<CharacterAvatar>();
             avatar.SetLibrary(CharacterCreatorBuilder.CreateOrFillLibrary());
-            // The saved look, or the default worn-coat look on a first run: the same man the creator then shows
-            avatar.Configure(followSavedAppearance: true, ShadowCastingMode.On);
+            // The saved look, or the default worn-coat look on a first run: the same man the creator then shows.
+            // The skinned body lets CharacterRigPoser walk, kneel and sit him.
+            avatar.Configure(followSavedAppearance: true, ShadowCastingMode.On, riggedBody: true);
             EditorUtility.SetDirty(avatar);
 
+            var poser = actorGo.AddComponent<CharacterRigPoser>();
+            using (var so = new SerializedObject(poser))
+            {
+                so.FindProperty("avatar").objectReferenceValue = avatar;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
             ctx.actor = actorGo.AddComponent<CinematicActor>();
             using (var so = new SerializedObject(ctx.actor))
             {
-                so.FindProperty("body").objectReferenceValue = bodyGo.transform;
+                so.FindProperty("poser").objectReferenceValue = poser;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
             Transform start = ctx.anchors.Find("Mark_ShoreStart");
