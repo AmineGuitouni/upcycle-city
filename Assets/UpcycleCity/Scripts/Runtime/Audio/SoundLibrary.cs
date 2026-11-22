@@ -51,6 +51,10 @@ namespace UpcycleCity.Audio
         [SerializeField, Range(0f, 1f)] float ambienceBaseVolume = 0.22f;
         [Tooltip("Ambience multiplier in heavy smog (clean city blooms smoothly up to 1.0).")]
         [SerializeField, Range(0.2f, 1f)] float ambienceSmogMinMultiplier = 0.55f;
+        [Tooltip("Ambience multiplier while a shop UI is open (0 = silent inside shops).")]
+        [SerializeField, Range(0f, 1f)] float shopOpenAmbienceDuck = 0f;
+        [Tooltip("Scene names where outdoor city ambience must stay silent (e.g. CharacterCreator).")]
+        [SerializeField] string[] ambienceSilentScenes = { "CharacterCreator", "MainMenu" };
 
         [Header("Default Bus Volumes")]
         [SerializeField, Range(0f, 1f)] float masterVolume = 1.0f;
@@ -76,9 +80,37 @@ namespace UpcycleCity.Audio
         public AudioClip AmbienceLoop => ambienceLoop;
         public float AmbienceBaseVolume => ambienceBaseVolume;
         public float AmbienceSmogMinMultiplier => ambienceSmogMinMultiplier;
+        public float ShopOpenAmbienceDuck => shopOpenAmbienceDuck;
+        public IReadOnlyList<string> AmbienceSilentScenes => ambienceSilentScenes ?? Array.Empty<string>();
 
         public int InitialPoolSize => initialPoolSize;
         public int MaxPoolSize => maxPoolSize;
+
+        /// <summary>
+        /// Returns true if outdoor city ambience should play in <paramref name="sceneName"/>.
+        /// Menu / Character Creator scenes listed in <see cref="AmbienceSilentScenes"/> return false.
+        /// </summary>
+        public bool ShouldPlayAmbienceInScene(string sceneName)
+        {
+            if (string.IsNullOrWhiteSpace(sceneName))
+                return false;
+
+            string trimmed = sceneName.Trim();
+            string[] silent = ambienceSilentScenes;
+            if (silent != null)
+            {
+                for (int i = 0; i < silent.Length; i++)
+                {
+                    if (!string.IsNullOrWhiteSpace(silent[i])
+                        && string.Equals(trimmed, silent[i].Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
 
         public float GetDefaultCategoryVolume(SoundCategory category)
         {

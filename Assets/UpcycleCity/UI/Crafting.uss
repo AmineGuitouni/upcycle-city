@@ -1,0 +1,1174 @@
+/* Upcycle City — Crafting, Card Inspector & Manual Machines UI Toolkit stylesheet.
+   Phone-first responsive layout (portrait + landscape), >= 16px minimum font size,
+   >= 48px touch targets, safe-area aware, matching UI/Shop.uss dark-teal + orange palette.
+   Brand colors: Company Green #2E8B57, Teal #2F8F8A, Safety Yellow #F2C21B, Hi-Vis Orange #FF7A1A. */
+
+.craft-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    -unity-font-style: bold;
+}
+
+.craft-backdrop {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(6, 9, 11, 0.72);
+}
+
+.craft-window {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    background-color: rgb(28, 32, 36);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgb(62, 72, 78);
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.craft-root--portrait .craft-window {
+    border-radius: 10px;
+}
+
+/* ---------------- Header ---------------- */
+
+.craft-header {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-height: 54px;
+    padding: 5px 12px 5px 0;
+    background-color: rgb(19, 23, 26);
+    border-bottom-width: 1px;
+    border-color: rgb(48, 56, 62);
+    flex-shrink: 0;
+}
+
+.craft-root--portrait .craft-header {
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: 6px 12px 6px 0;
+}
+
+.craft-accent {
+    width: 8px;
+    align-self: stretch;
+    margin-right: 12px;
+    background-color: rgb(47, 143, 138);
+    flex-shrink: 0;
+}
+
+.craft-root--portrait .craft-accent {
+    margin-right: 10px;
+}
+
+.craft-header-titles {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 160px;
+    margin-right: 10px;
+}
+
+.craft-root--portrait .craft-header-titles {
+    flex-basis: 85%;
+    min-width: 0;
+    margin-right: 0;
+}
+
+.craft-title-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.craft-title {
+    font-size: 20px;
+    color: rgb(242, 244, 240);
+    letter-spacing: 0.6px;
+    white-space: normal;
+}
+
+.craft-level-badge {
+    margin-left: 8px;
+    padding: 2px 9px;
+    border-radius: 6px;
+    background-color: rgb(29, 77, 82);
+    border-width: 1px;
+    border-color: rgb(69, 168, 136);
+    font-size: 16px;
+    color: rgb(130, 230, 178);
+    flex-shrink: 0;
+}
+
+.craft-subtitle {
+    margin-top: 2px;
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(164, 178, 184);
+    white-space: normal;
+}
+
+.craft-header-pills {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+.craft-root--portrait .craft-header-pills {
+    flex-wrap: wrap;
+    padding-left: 18px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.craft-pill {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 4px 10px;
+    margin: 2px 6px 2px 0;
+    border-radius: 20px;
+    background-color: rgb(36, 42, 48);
+    border-width: 1px;
+    border-color: rgb(58, 66, 72);
+}
+
+.craft-pill-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    margin-right: 7px;
+    flex-shrink: 0;
+}
+
+.craft-pill-dot--nrg {
+    background-color: rgb(255, 162, 40);
+    border-width: 2px;
+    border-color: rgb(255, 224, 130);
+}
+
+.craft-pill-dot--coin {
+    background-color: rgb(242, 194, 27);
+    border-width: 2px;
+    border-color: rgb(196, 146, 18);
+}
+
+.craft-pill-text {
+    font-size: 16px;
+    color: rgb(244, 232, 176);
+}
+
+.craft-upgrade-btn {
+    min-height: 48px;
+    min-width: 48px;
+    max-width: 310px;
+    padding: 4px 10px;
+    margin: 2px 0 2px 2px;
+    flex-shrink: 1;
+    border-radius: 8px;
+    border-width: 0;
+    font-size: 16px;
+    white-space: normal;
+    color: rgb(255, 255, 255);
+    background-color: rgb(232, 126, 38);
+}
+
+.craft-root--portrait .craft-upgrade-btn {
+    max-width: 100%;
+}
+
+.craft-upgrade-btn:hover {
+    background-color: rgb(248, 144, 52);
+}
+
+.craft-upgrade-btn:disabled {
+    background-color: rgb(52, 58, 64);
+    color: rgb(156, 166, 172);
+}
+
+/* ---------------- Tab Bar & Progress ---------------- */
+
+.craft-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 12px;
+    background-color: rgb(24, 28, 32);
+    border-bottom-width: 1px;
+    border-color: rgb(46, 54, 60);
+    flex-shrink: 0;
+}
+
+.craft-tabs {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.craft-tab {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0 14px;
+    margin: 2px 8px 2px 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(58, 66, 74);
+    background-color: rgb(36, 42, 48);
+    color: rgb(196, 206, 210);
+    font-size: 16px;
+}
+
+.craft-tab:hover {
+    background-color: rgb(46, 54, 60);
+}
+
+.craft-tab--active {
+    background-color: rgb(47, 143, 138);
+    border-color: rgb(92, 204, 194);
+    color: rgb(255, 255, 255);
+}
+
+.craft-filter-btn {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0 12px;
+    margin: 2px 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(62, 72, 80);
+    background-color: rgb(34, 40, 46);
+    color: rgb(206, 218, 222);
+    font-size: 16px;
+}
+
+.craft-filter-btn--active {
+    border-color: rgb(242, 194, 27);
+    color: rgb(242, 194, 27);
+}
+
+.craft-progress-wrap {
+    margin: 6px 14px 0 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: rgb(22, 40, 44);
+    border-width: 1px;
+    border-color: rgb(47, 143, 138);
+    flex-shrink: 0;
+}
+
+.craft-progress-label {
+    font-size: 16px;
+    color: rgb(164, 232, 214);
+    margin-bottom: 5px;
+}
+
+.craft-progress-track {
+    height: 12px;
+    border-radius: 6px;
+    background-color: rgb(18, 24, 28);
+    overflow: hidden;
+}
+
+.craft-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgb(46, 184, 120);
+}
+
+/* ---------------- Body ---------------- */
+
+.craft-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: row;
+    min-height: 0;
+    padding: 8px 12px;
+}
+
+.craft-cards-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: row;
+    min-height: 0;
+}
+
+.craft-root--portrait .craft-cards-body {
+    flex-direction: column;
+}
+
+.craft-cards-pane {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    min-height: 0;
+    margin-right: 12px;
+}
+
+.craft-root--portrait .craft-cards-pane {
+    margin-right: 0;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 47%;
+    min-height: 260px;
+}
+
+.craft-cards-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+/* ---------------- Card Tile (PNG & Procedural Data Card) ---------------- */
+
+.craft-card-tile {
+    width: 192px;
+    height: 264px;
+    margin: 0 8px 8px 0;
+    border-radius: 10px;
+    background-color: rgb(43, 109, 115);
+    border-width: 3px;
+    border-color: rgb(30, 78, 84);
+    padding: 5px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.craft-root--portrait .craft-card-tile {
+    width: 47%;
+    height: 274px;
+    margin: 0 2% 8px 0;
+}
+
+.craft-card-tile:hover {
+    border-color: rgb(120, 214, 204);
+}
+
+.craft-card-tile--selected {
+    border-color: rgb(242, 194, 27);
+    border-width: 4px;
+}
+
+.craft-card-tile--dim {
+    opacity: 0.68;
+}
+
+.craft-card-art {
+    flex-grow: 1;
+    width: 100%;
+    border-radius: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: rgb(26, 62, 66);
+}
+
+/* Procedural data-rendered card matching the exact Refining PNG style (>=16px fonts) */
+.craft-proc-card {
+    flex-grow: 1;
+    flex-direction: column;
+    border-radius: 8px;
+    background-color: rgb(31, 83, 89);
+    border-width: 1px;
+    border-color: rgb(74, 152, 156);
+    padding: 6px;
+    overflow: hidden;
+}
+
+.craft-proc-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+}
+
+.craft-proc-tag {
+    padding: 2px 6px;
+    border-radius: 5px;
+    background-color: rgb(232, 146, 70);
+    color: rgb(255, 250, 240);
+    font-size: 16px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.craft-proc-lvl {
+    padding: 2px 6px;
+    border-radius: 5px;
+    background-color: rgb(20, 56, 60);
+    border-width: 1px;
+    border-color: rgb(88, 178, 134);
+    color: rgb(146, 232, 176);
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.craft-proc-titlebar {
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background-color: rgb(236, 241, 238);
+    color: rgb(26, 56, 60);
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    flex-shrink: 0;
+}
+
+.craft-proc-center {
+    flex-grow: 1;
+    flex-shrink: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    overflow: hidden;
+}
+
+.craft-proc-flow {
+    font-size: 16px;
+    color: rgb(242, 246, 242);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    margin-bottom: 2px;
+}
+
+.craft-proc-meta {
+    font-size: 16px;
+    color: rgb(246, 214, 118);
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+}
+
+.craft-proc-packet {
+    margin-top: 4px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background-color: rgb(222, 236, 232);
+    flex-shrink: 0;
+}
+
+.craft-card-tile .craft-proc-packet {
+    display: none;
+}
+
+.craft-proc-packet-hdr {
+    font-size: 16px;
+    color: rgb(42, 86, 90);
+    margin-bottom: 2px;
+}
+
+.craft-proc-packet-body {
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(26, 46, 48);
+    white-space: normal;
+}
+
+.craft-card-badge {
+    margin-top: 5px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    color: rgb(255, 255, 255);
+    background-color: rgb(46, 139, 87);
+}
+
+.craft-card-badge--locked {
+    background-color: rgb(186, 68, 56);
+}
+
+.craft-card-badge--short {
+    background-color: rgb(192, 116, 36);
+}
+
+.craft-card-badge--other {
+    background-color: rgb(72, 80, 88);
+}
+
+/* ---------------- Detail Panel ---------------- */
+
+.craft-detail-pane {
+    width: 380px;
+    flex-shrink: 0;
+    background-color: rgb(34, 39, 44);
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgb(56, 64, 72);
+    padding: 12px;
+    flex-direction: column;
+}
+
+.craft-root--portrait .craft-detail-pane {
+    width: 100%;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 53%;
+    min-height: 240px;
+}
+
+.craft-detail-scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.craft-detail-tags {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.craft-detail-title {
+    font-size: 20px;
+    color: rgb(244, 246, 244);
+    white-space: normal;
+    margin-bottom: 4px;
+}
+
+.craft-detail-desc {
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(184, 194, 198);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.craft-detail-stats {
+    font-size: 16px;
+    color: rgb(246, 212, 112);
+    margin-bottom: 8px;
+    white-space: normal;
+}
+
+.craft-section-hdr {
+    font-size: 16px;
+    letter-spacing: 0.8px;
+    color: rgb(138, 198, 194);
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.craft-io-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background-color: rgb(26, 30, 34);
+}
+
+.craft-io-left {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 1;
+}
+
+.craft-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.craft-io-name {
+    font-size: 16px;
+    color: rgb(232, 236, 236);
+    white-space: normal;
+}
+
+.craft-io-qty {
+    font-size: 16px;
+    color: rgb(118, 212, 158);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.craft-io-qty--short {
+    color: rgb(238, 114, 96);
+}
+
+.craft-validation-box {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 16px;
+    -unity-font-style: normal;
+    white-space: normal;
+    background-color: rgb(42, 48, 54);
+    color: rgb(206, 214, 216);
+}
+
+.craft-validation-box--ok {
+    background-color: rgb(24, 58, 42);
+    color: rgb(146, 232, 178);
+}
+
+.craft-validation-box--err {
+    background-color: rgb(68, 30, 28);
+    color: rgb(248, 166, 152);
+}
+
+.craft-detail-actions {
+    flex-direction: row;
+    align-items: stretch;
+    margin-top: 8px;
+    flex-shrink: 0;
+}
+
+.craft-inspect-btn {
+    min-height: 52px;
+    min-width: 100px;
+    padding: 0 12px;
+    margin: 0 8px 0 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(74, 152, 156);
+    font-size: 16px;
+    color: rgb(224, 244, 242);
+    background-color: rgb(32, 68, 72);
+}
+
+.craft-inspect-btn:hover {
+    background-color: rgb(44, 92, 98);
+}
+
+.craft-execute-btn {
+    flex-grow: 1;
+    min-height: 52px;
+    min-width: 48px;
+    padding: 0 14px;
+    margin: 0;
+    border-radius: 8px;
+    border-width: 0;
+    font-size: 17px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(46, 139, 87);
+}
+
+.craft-execute-btn:hover {
+    background-color: rgb(58, 162, 104);
+}
+
+.craft-execute-btn--blocked {
+    background-color: rgb(92, 62, 60);
+    color: rgb(238, 210, 206);
+}
+
+.craft-execute-btn--blocked:hover {
+    background-color: rgb(114, 72, 68);
+}
+
+/* ---------------- Generator Panel ---------------- */
+
+.craft-generator-pane {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background-color: rgb(34, 39, 44);
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgb(56, 64, 72);
+}
+
+.craft-gen-stats {
+    font-size: 20px;
+    color: rgb(244, 232, 176);
+    margin-bottom: 10px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.craft-gen-sub {
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(174, 188, 194);
+    margin-bottom: 16px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.craft-gen-crank-btn {
+    min-height: 70px;
+    min-width: 260px;
+    padding: 12px 28px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    border-width: 0;
+    font-size: 21px;
+    color: rgb(20, 26, 24);
+    background-color: rgb(242, 194, 27);
+}
+
+.craft-gen-crank-btn:hover {
+    background-color: rgb(255, 212, 60);
+}
+
+.craft-gen-upgrade-card {
+    width: 100%;
+    max-width: 520px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background-color: rgb(26, 30, 34);
+    border-width: 1px;
+    border-color: rgb(56, 66, 74);
+    align-items: center;
+}
+
+/* ---------------- Full-Screen Card Inspector Overlay ---------------- */
+
+.craft-inspector-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(8, 12, 16, 0.92);
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+}
+
+.craft-inspector-panel {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    background-color: rgb(26, 31, 36);
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: rgb(74, 152, 156);
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.craft-root--portrait .craft-inspector-panel {
+    border-radius: 10px;
+}
+
+.craft-inspector-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background-color: rgb(18, 22, 26);
+    border-bottom-width: 1px;
+    border-color: rgb(50, 60, 68);
+    flex-shrink: 0;
+}
+
+.craft-inspector-title {
+    font-size: 20px;
+    color: rgb(244, 246, 244);
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.craft-inspector-close-btn {
+    min-height: 48px;
+    min-width: 108px;
+    padding: 0 18px;
+    margin-left: 10px;
+    border-radius: 8px;
+    border-width: 0;
+    font-size: 17px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(186, 64, 52);
+    flex-shrink: 0;
+}
+
+.craft-inspector-close-btn:hover {
+    background-color: rgb(212, 78, 64);
+}
+
+.craft-inspector-body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: row;
+    min-height: 0;
+    padding: 12px;
+}
+
+.craft-root--portrait .craft-inspector-body {
+    flex-direction: column;
+}
+
+.craft-inspector-art-wrap {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 44%;
+    min-width: 220px;
+    min-height: 220px;
+    margin-right: 12px;
+    padding: 8px;
+    border-radius: 10px;
+    background-color: rgb(20, 48, 52);
+    border-width: 2px;
+    border-color: rgb(62, 140, 146);
+    align-items: center;
+    justify-content: center;
+}
+
+.craft-root--portrait .craft-inspector-art-wrap {
+    margin-right: 0;
+    margin-bottom: 12px;
+    flex-basis: 48%;
+    width: 100%;
+}
+
+.craft-inspector-art {
+    width: 100%;
+    height: 100%;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.craft-inspector-data-scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 56%;
+    min-height: 0;
+}
+
+.craft-inspector-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 14px;
+    background-color: rgb(18, 22, 26);
+    border-top-width: 1px;
+    border-color: rgb(50, 60, 68);
+    flex-shrink: 0;
+}
+
+/* ---------------- Inventory (Team Material Stock) View ---------------- */
+
+.craft-stock-pane {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.craft-stock-group {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: rgb(34, 39, 44);
+    border-width: 1px;
+    border-color: rgb(52, 60, 66);
+}
+
+.craft-stock-group-title {
+    font-size: 16px;
+    letter-spacing: 0.8px;
+    color: rgb(138, 208, 196);
+    margin-bottom: 8px;
+}
+
+.craft-stock-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.craft-stock-item {
+    width: 31%;
+    min-width: 220px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 0 10px 8px 0;
+    border-radius: 7px;
+    background-color: rgb(25, 29, 33);
+    border-width: 1px;
+    border-color: rgb(46, 52, 58);
+}
+
+.craft-root--portrait .craft-stock-item {
+    width: 100%;
+    margin-right: 0;
+}
+
+.craft-stock-qty {
+    font-size: 16px;
+    color: rgb(242, 224, 148);
+}
+
+.craft-stock-qty--zero {
+    color: rgb(124, 134, 140);
+}
+
+/* ---------------- Debug Bar & Footer ---------------- */
+
+.craft-debug-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 4px 12px;
+    background-color: rgb(23, 27, 31);
+    border-top-width: 1px;
+    border-color: rgb(46, 54, 60);
+    flex-shrink: 0;
+}
+
+.craft-debug-label {
+    font-size: 16px;
+    color: rgb(156, 168, 176);
+    margin-right: 8px;
+}
+
+.craft-debug-btn {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0 12px;
+    margin: 2px 6px 2px 0;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(68, 78, 86);
+    background-color: rgb(38, 44, 50);
+    color: rgb(222, 230, 234);
+    font-size: 16px;
+}
+
+.craft-debug-btn:hover {
+    background-color: rgb(52, 60, 68);
+}
+
+.craft-debug-btn--accent {
+    border-color: rgb(47, 143, 138);
+    background-color: rgb(28, 72, 74);
+}
+
+.craft-footer {
+    flex-direction: row;
+    align-items: center;
+    min-height: 56px;
+    padding: 4px 12px;
+    background-color: rgb(18, 21, 24);
+    border-top-width: 1px;
+    border-color: rgb(46, 54, 60);
+    flex-shrink: 0;
+}
+
+.craft-status-col {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-right: 12px;
+}
+
+.craft-status-banner {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 16px;
+    color: rgb(212, 220, 222);
+    background-color: rgb(30, 35, 40);
+    white-space: normal;
+}
+
+.craft-status-banner--good {
+    background-color: rgb(22, 72, 46);
+    color: rgb(164, 244, 192);
+}
+
+.craft-status-banner--bad {
+    background-color: rgb(92, 30, 26);
+    color: rgb(255, 184, 172);
+}
+
+.craft-log-line {
+    margin-top: 3px;
+    font-size: 16px;
+    -unity-font-style: normal;
+    color: rgb(156, 168, 174);
+    white-space: normal;
+}
+
+.craft-leave-btn {
+    min-height: 52px;
+    min-width: 108px;
+    padding: 0 18px;
+    margin: 0;
+    border-radius: 8px;
+    border-width: 0;
+    font-size: 17px;
+    color: rgb(242, 244, 240);
+    background-color: rgb(70, 76, 82);
+    flex-shrink: 0;
+}
+
+.craft-leave-btn:hover {
+    background-color: rgb(88, 96, 104);
+}
+
+/* ================================================================ kit restyle (overrides the rules above)
+   Charcoal surfaces, rounded pills, green active tab / execute, orange upgrade, material icon tiles
+   (MaterialDefinition.Icon → IconLibrary fallback), coin & energy icons. Presentation only. */
+.craft-backdrop { background-color: rgba(8, 10, 12, 0.6); }
+.craft-window {
+    background-color: rgba(30, 32, 35, 0.97);
+    border-radius: 20px;
+    border-color: rgba(255, 255, 255, 0.07);
+}
+.craft-header {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+.craft-accent { border-radius: 3px; }
+.craft-level-badge {
+    border-radius: 11px;
+    background-color: rgba(46, 170, 92, 0.18);
+    border-color: rgb(46, 170, 92);
+    color: rgb(110, 214, 150);
+}
+.craft-pill {
+    background-color: rgba(20, 22, 24, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.craft-pill-text { color: rgb(255, 255, 255); }
+.craft-pill-dot {
+    width: 20px;
+    height: 20px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-scale-mode: scale-to-fit;
+}
+.craft-pill-dot--nrg { background-image: url("project://database/Assets/UpcycleCity/Art/Icons/UI/ui_energy.png"); background-color: rgba(0, 0, 0, 0); }
+.craft-pill-dot--coin { background-image: url("project://database/Assets/UpcycleCity/Art/Icons/UI/ui_coin.png"); background-color: rgba(0, 0, 0, 0); }
+.craft-upgrade-btn {
+    border-radius: 22px;
+    background-color: rgb(242, 106, 27);
+}
+.craft-upgrade-btn:hover { background-color: rgb(255, 124, 46); }
+
+.craft-toolbar {
+    background-color: rgba(0, 0, 0, 0.12);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+.craft-tab,
+.craft-filter-btn {
+    border-radius: 22px;
+    border-color: rgba(255, 255, 255, 0.06);
+    background-color: rgb(46, 49, 54);
+    color: rgb(214, 218, 222);
+}
+.craft-tab:hover,
+.craft-filter-btn:hover { background-color: rgb(58, 62, 68); }
+.craft-tab--active {
+    background-color: rgb(46, 170, 92);
+    border-color: rgb(46, 170, 92);
+    color: rgb(255, 255, 255);
+}
+.craft-filter-btn--active { border-color: rgb(242, 194, 27); color: rgb(242, 194, 27); }
+.craft-progress-fill { background-color: rgb(46, 170, 92); }
+
+.craft-card-tile { border-radius: 16px; }
+.craft-card-tile--selected { border-color: rgb(242, 194, 27); }
+
+.craft-detail-pane {
+    background-color: rgb(36, 39, 44);
+    border-radius: 18px;
+    border-color: rgba(255, 255, 255, 0.06);
+}
+.craft-section-hdr { color: rgb(242, 194, 27); letter-spacing: 1px; }
+.craft-io-row {
+    min-height: 48px;
+    border-radius: 12px;
+    background-color: rgba(20, 22, 24, 0.6);
+}
+.craft-swatch { border-radius: 4px; }
+.craft-swatch--icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    margin-right: 10px;
+    align-items: center;
+    justify-content: center;
+}
+.craft-swatch-icon {
+    width: 26px;
+    height: 26px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.craft-validation-box { border-radius: 12px; }
+.craft-inspect-btn {
+    border-radius: 22px;
+    background-color: rgb(52, 56, 62);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.craft-inspect-btn:hover { background-color: rgb(64, 68, 75); }
+.craft-execute-btn {
+    border-radius: 22px;
+    background-color: rgb(46, 170, 92);
+}
+.craft-execute-btn:hover { background-color: rgb(58, 188, 106); }
+.craft-execute-btn--blocked,
+.craft-execute-btn--blocked:hover {
+    background-color: rgb(58, 62, 68);
+    color: rgb(255, 150, 130);
+}
+
+.craft-stock-item {
+    border-radius: 14px;
+    background-color: rgb(40, 43, 48);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+.craft-stock-group-title { color: rgb(242, 194, 27); }
+
+.craft-inspector-panel {
+    border-radius: 20px;
+    background-color: rgba(30, 32, 35, 0.98);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+.craft-inspector-close-btn { border-radius: 22px; }
+
+.craft-footer {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+.craft-status-banner { border-radius: 12px; }
+.craft-leave-btn {
+    border-radius: 22px;
+    background-color: rgb(58, 62, 68);
+}
+.craft-leave-btn:hover { background-color: rgb(72, 77, 84); }
+
+/* Long names wrap instead of running under the quantity; actions never overflow the pane */
+.craft-io-left { flex-shrink: 1; flex-grow: 1; flex-basis: 0; min-width: 0; }
+.craft-io-name { flex-shrink: 1; min-width: 0; }
+.craft-detail-actions { min-width: 0; }
+.craft-inspect-btn { flex-shrink: 0; }
+.craft-execute-btn {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    white-space: normal;
+    font-size: 15px;
+}
+
+/* Card tiles: compact type so recipe text and footer fit the tile */
+.craft-card-tile .craft-proc-titlebar { font-size: 13px; padding: 3px 5px; }
+.craft-card-tile .craft-proc-flow { font-size: 13px; }
+.craft-card-tile .craft-proc-meta {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.craft-card-tile .craft-proc-tag,
+.craft-card-tile .craft-proc-lvl { font-size: 13px; }

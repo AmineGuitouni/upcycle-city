@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5105eb4e2ee9441b68d1a7b482bb426c, type: 3}
+  m_Name: Card_Refining_PaperCartonRepulp
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.CraftingCard
+  cardId: refining_paper_carton_repulp
+  displayName: Paper & Carton Repulp
+  description: Low-temp hydrapulping with de-inking agent.
+  category: 0
+  cardArtwork: {fileID: 21300000, guid: affcb9e1107114604b49a7da18fb6482, type: 3}
+  requiredMachineType: {fileID: 11400000, guid: 5189b2852ea77484b908d3343835bb8a, type: 2}
+  complexityLevel: 0
+  energyCost: 10
+  temperatureCelsius: 90
+  processingSeconds: 2.2
+  inputs:
+  - material: {fileID: 11400000, guid: e53978ebc10134c87b7e3b5d81ebd6fe, type: 2}
+    amount: 5
+  - material: {fileID: 11400000, guid: 05f0387fa505442119ce6a988164706a, type: 2}
+    amount: 0.2
+  outputs:
+  - material: {fileID: 11400000, guid: cd515988202fc42a3920793f8c8f04b4, type: 2}
+    amount: 4.7
+  outputPrefab: {fileID: 0}

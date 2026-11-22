@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UpcycleCity.Ecosystem;
@@ -21,6 +22,24 @@ namespace UpcycleCity.Audio
     {
         const string VolumePrefPrefix = "UpcycleCity.Audio.Vol.";
         const string MutePrefPrefix = "UpcycleCity.Audio.Mute.";
+
+        struct AmbienceDuckEntry
+        {
+            public object Owner;
+            public UnityEngine.Object UnityOwner;
+            public bool IsUnityObject;
+            public float Target;
+
+            public AmbienceDuckEntry(object owner, float target)
+            {
+                Owner = owner;
+                UnityOwner = owner as UnityEngine.Object;
+                IsUnityObject = UnityOwner != null;
+                Target = target;
+            }
+        }
+
+        static readonly List<AmbienceDuckEntry> AmbienceDucks = new List<AmbienceDuckEntry>(4);
 
         [Tooltip("Central library of SoundCues, music playlist, ambience, and voice-pool budgets.")]
         [SerializeField] SoundLibrary library;
@@ -58,7 +77,9 @@ namespace UpcycleCity.Audio
         // Ambient bed source
         AudioSource ambienceSource;
         float ambienceSmogMultiplier = 1f;
+        float ambienceDuckMultiplier = 1f;
         float ambienceFadeIn;
+        bool ambienceAllowedInScene;
 
         // Fallback AudioListener used only if a scene has none
         AudioListener fallbackListener;
@@ -67,6 +88,7 @@ namespace UpcycleCity.Audio
         static void ResetStatics()
         {
             Instance = null;
+            AmbienceDucks.Clear();
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -151,6 +173,8 @@ namespace UpcycleCity.Audio
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             EnsureAudioListenerExists();
+            if (autoPlayBackgroundAudio)
+                UpdateAmbienceForScene(scene.name);
         }
 
         void Update()
@@ -286,6 +310,119 @@ namespace UpcycleCity.Audio
             }
         }
 
+        // ---------------------------------------------------------------- Ambience Ducking (Ref-Counted)
+
+        /// <summary>
+        /// Pushes or updates an ambience ducking lease owned by <paramref name="owner"/>.
+        /// <para>
+        /// Designed for full-screen or indoor UI overlays (<see cref="ShopUI"/>, crafting UI, pause menu,
+        /// co-op lobby) to smoothly attenuate outdoor city ambience without coupling <see cref="SoundManager"/>
+        /// to specific UI singletons. Multiple concurrent owners are ref-counted independently and the
+        /// <b>lowest</b> active <paramref name="target"/> multiplier wins (e.g. 0.4 + 0.0 -> 0.0; once the
+        /// 0.0 owner pops, ambience smoothly recovers to 0.4, and to 1.0 when all owners have popped).
+        /// </para>
+        /// <para>
+        /// Safe to call when <see cref="SoundManager"/> has not bootstrapped yet, safe to call repeatedly
+        /// for the same <paramref name="owner"/> (updates its target in place without leaking a ref-count),
+        /// and automatically cleans up if a <see cref="UnityEngine.Object"/> owner is destroyed without popping.
+        /// Zero per-frame GC allocations.
+        /// </para>
+        /// </summary>
+        /// <param name="owner">Non-null lease owner (typically <c>this</c> on the UI controller).</param>
+        /// <param name="target">Target ambience volume multiplier in <c>[0, 1]</c> (<c>0</c> = silent).</param>
+        public static void PushAmbienceDuck(object owner, float target)
+        {
+            if (owner == null)
+                return;
+            if (owner is UnityEngine.Object unityObj && unityObj == null)
+                return;
+
+            float clamped = Mathf.Clamp01(target);
+            bool updated = false;
+            for (int i = AmbienceDucks.Count - 1; i >= 0; i--)
+            {
+                AmbienceDuckEntry entry = AmbienceDucks[i];
+                if (entry.IsUnityObject ? entry.UnityOwner == null : entry.Owner == null)
+                {
+                    AmbienceDucks.RemoveAt(i);
+                    continue;
+                }
+
+                if (ReferenceEquals(entry.Owner, owner))
+                {
+                    entry.Target = clamped;
+                    AmbienceDucks[i] = entry;
+                    updated = true;
+                }
+            }
+
+            if (!updated)
+                AmbienceDucks.Add(new AmbienceDuckEntry(owner, clamped));
+        }
+
+        /// <summary>
+        /// Releases the ambience ducking lease previously acquired by <paramref name="owner"/>.
+        /// Safe no-op if <paramref name="owner"/> is null, not currently active, or if <see cref="SoundManager"/>
+        /// is not present.
+        /// </summary>
+        public static void PopAmbienceDuck(object owner)
+        {
+            if (owner == null)
+                return;
+
+            for (int i = AmbienceDucks.Count - 1; i >= 0; i--)
+            {
+                AmbienceDuckEntry entry = AmbienceDucks[i];
+                if (ReferenceEquals(entry.Owner, owner)
+                    || (entry.IsUnityObject ? entry.UnityOwner == null : entry.Owner == null))
+                {
+                    AmbienceDucks.RemoveAt(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns the active target ambience multiplier across all live duck leases
+        /// (<c>1.0</c> when none are active; otherwise the lowest target). Prunes destroyed
+        /// <see cref="UnityEngine.Object"/> owners with zero GC allocations.
+        /// </summary>
+        public static float GetAmbienceDuckTarget()
+        {
+            float lowest = 1f;
+            for (int i = AmbienceDucks.Count - 1; i >= 0; i--)
+            {
+                AmbienceDuckEntry entry = AmbienceDucks[i];
+                if (entry.IsUnityObject ? entry.UnityOwner == null : entry.Owner == null)
+                {
+                    AmbienceDucks.RemoveAt(i);
+                    continue;
+                }
+
+                if (entry.Target < lowest)
+                    lowest = entry.Target;
+            }
+
+            return lowest;
+        }
+
+        /// <summary>Number of currently live ambience duck leases (automatically prunes destroyed Unity owners).</summary>
+        public static int ActiveAmbienceDuckCount
+        {
+            get
+            {
+                for (int i = AmbienceDucks.Count - 1; i >= 0; i--)
+                {
+                    AmbienceDuckEntry entry = AmbienceDucks[i];
+                    if (entry.IsUnityObject ? entry.UnityOwner == null : entry.Owner == null)
+                        AmbienceDucks.RemoveAt(i);
+                }
+                return AmbienceDucks.Count;
+            }
+        }
+
+        /// <summary>Clears all active ambience duck leases (useful in test teardown or full session resets).</summary>
+        public static void ClearAmbienceDucks() => AmbienceDucks.Clear();
+
         // ---------------------------------------------------------------- Internals
 
         SoundHandle PlayInternal(SoundId id, Vector3? pos, Transform follow, float volumeScale, float pitchScale)
@@ -345,20 +482,21 @@ namespace UpcycleCity.Audio
             return src;
         }
 
+        /// <summary>Returns whether outdoor city ambience should play in <paramref name="sceneName"/>.</summary>
+        public static bool ShouldPlayCityAmbienceForScene(SoundLibrary soundLibrary, string sceneName)
+        {
+            if (soundLibrary == null || soundLibrary.AmbienceLoop == null)
+                return false;
+            return soundLibrary.ShouldPlayAmbienceInScene(sceneName);
+        }
+
         void StartBackgroundAudio()
         {
             if (library == null)
                 return;
 
-            // Start ambient city bed
-            if (library.AmbienceLoop != null && ambienceSource != null)
-            {
-                ambienceSource.clip = library.AmbienceLoop;
-                ambienceSource.loop = true;
-                ambienceSource.volume = 0f;
-                ambienceSource.Play();
-                ambienceFadeIn = 0f;
-            }
+            // Only start outdoor city ambience in non-menu gameplay scenes
+            UpdateAmbienceForScene(SceneManager.GetActiveScene().name);
 
             // Start music playlist
             AudioClip[] tracks = library.MusicTracks;
@@ -366,6 +504,33 @@ namespace UpcycleCity.Audio
             {
                 BuildMusicOrder(tracks.Length);
                 AdvanceMusicTrack(fadeSeconds: 1.5f);
+            }
+        }
+
+        void UpdateAmbienceForScene(string sceneName)
+        {
+            ambienceAllowedInScene = ShouldPlayCityAmbienceForScene(library, sceneName);
+            if (ambienceSource == null)
+                return;
+
+            if (!ambienceAllowedInScene)
+            {
+                if (ambienceSource.isPlaying)
+                    ambienceSource.Stop();
+                ambienceSource.volume = 0f;
+                ambienceFadeIn = 0f;
+                return;
+            }
+
+            if (ambienceSource.clip != library.AmbienceLoop)
+                ambienceSource.clip = library.AmbienceLoop;
+
+            ambienceSource.loop = true;
+            if (!ambienceSource.isPlaying)
+            {
+                ambienceSource.volume = 0f;
+                ambienceFadeIn = 0f;
+                ambienceSource.Play();
             }
         }
 
@@ -475,7 +640,18 @@ namespace UpcycleCity.Audio
 
         void TickAmbience(float dt)
         {
-            if (library == null || ambienceSource == null || !ambienceSource.isPlaying)
+            if (library == null || ambienceSource == null)
+                return;
+
+            if (!ambienceAllowedInScene)
+            {
+                if (ambienceSource.isPlaying)
+                    ambienceSource.Stop();
+                ambienceSource.volume = 0f;
+                return;
+            }
+
+            if (!ambienceSource.isPlaying)
                 return;
 
             ambienceFadeIn = Mathf.Min(1f, ambienceFadeIn + dt * 0.5f);
@@ -490,10 +666,15 @@ namespace UpcycleCity.Audio
             }
             ambienceSmogMultiplier = Mathf.MoveTowards(ambienceSmogMultiplier, targetCleanMult, dt * 0.35f);
 
+            // Fade outdoor city ambience down while any UI/system holds a duck lease
+            float targetDuckMult = GetAmbienceDuckTarget();
+            ambienceDuckMultiplier = Mathf.MoveTowards(ambienceDuckMultiplier, targetDuckMult, dt * 2.5f);
+
             ambienceSource.volume = library.AmbienceBaseVolume
                 * GetEffectiveBusVolume(SoundCategory.Ambience)
                 * ambienceFadeIn
-                * ambienceSmogMultiplier;
+                * ambienceSmogMultiplier
+                * ambienceDuckMultiplier;
         }
 
         void EnsureAudioListenerExists()

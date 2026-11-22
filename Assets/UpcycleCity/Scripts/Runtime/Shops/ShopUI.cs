@@ -3,9 +3,11 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
+using UpcycleCity.Audio;
 using UpcycleCity.Inventory;
 using UpcycleCity.Interaction;
 using UpcycleCity.Player;
+using UpcycleCity.UI;
 using UpcycleCity.Waste;
 
 namespace UpcycleCity.Shops
@@ -72,8 +74,14 @@ namespace UpcycleCity.Shops
             Hide();
         }
 
+        void OnDisable()
+        {
+            SoundManager.PopAmbienceDuck(this);
+        }
+
         void OnDestroy()
         {
+            SoundManager.PopAmbienceDuck(this);
             if (Instance == this)
                 Instance = null;
             Unbind();
@@ -83,6 +91,8 @@ namespace UpcycleCity.Shops
         static void ResetStatics() => Instance = null;
 
         // ------------------------------------------------------------ building the tree
+
+        VisualElement shopIcon;
 
         void Build()
         {
@@ -106,6 +116,9 @@ namespace UpcycleCity.Shops
             accentBar = new VisualElement();
             accentBar.AddToClassList("shop-accent");
             header.Add(accentBar);
+            shopIcon = new VisualElement();
+            shopIcon.AddToClassList("shop-icon");
+            accentBar.Add(shopIcon);
             var titles = new VisualElement();
             titles.AddToClassList("shop-titles");
             header.Add(titles);
@@ -118,9 +131,7 @@ namespace UpcycleCity.Shops
             var coins = new VisualElement();
             coins.AddToClassList("shop-coins");
             header.Add(coins);
-            var coinIcon = new VisualElement();
-            coinIcon.AddToClassList("shop-coin-icon");
-            coins.Add(coinIcon);
+            coins.Add(CoinIcon());
             coinsLabel = new Label();
             coinsLabel.AddToClassList("shop-coins-label");
             coins.Add(coinsLabel);
@@ -145,7 +156,7 @@ namespace UpcycleCity.Shops
             status = new Label();
             status.AddToClassList("shop-status");
             footer.Add(status);
-            leaveButton = new Button(Close) { text = "Leave  (Esc)" };
+            leaveButton = new Button(Close) { text = "Leave" };
             leaveButton.AddToClassList("shop-leave");
             footer.Add(leaveButton);
         }
@@ -154,6 +165,8 @@ namespace UpcycleCity.Shops
         {
             ShopCatalog catalog = counter.Catalog;
             accentBar.style.backgroundColor = catalog.Accent;
+            Sprite shopSprite = IconLibrary.Active != null ? IconLibrary.Active.Get(ShopIconKey(catalog)) : null;
+            shopIcon.style.backgroundImage = shopSprite != null ? new StyleBackground(shopSprite) : new StyleBackground(StyleKeyword.None);
             title.text = catalog.ShopName.ToUpperInvariant();
             keeper.text = catalog.KeeperName;
             greeting.text = $"“{catalog.Greeting}”";
@@ -180,9 +193,19 @@ namespace UpcycleCity.Shops
             var card = new VisualElement();
             card.AddToClassList("shop-card");
 
-            var swatch = new Label(Initials(item.DisplayName));
+            Sprite itemIcon = IconLibrary.Active != null ? IconLibrary.Active.ForItem(item.ItemId) : null;
+            var swatch = new Label(itemIcon != null ? string.Empty : Initials(item.DisplayName));
             swatch.AddToClassList("shop-swatch");
-            swatch.style.backgroundColor = item.AccentColor;
+            Color tint = item.AccentColor;
+            tint.a = itemIcon != null ? 0.22f : 1f;
+            swatch.style.backgroundColor = tint;
+            if (itemIcon != null)
+            {
+                var img = new VisualElement();
+                img.AddToClassList("shop-item-icon");
+                img.style.backgroundImage = new StyleBackground(itemIcon);
+                swatch.Add(img);
+            }
             card.Add(swatch);
 
             var info = new VisualElement();
@@ -210,9 +233,7 @@ namespace UpcycleCity.Shops
             buy.Add(state);
             var button = new Button(() => Buy(offer));
             button.AddToClassList("shop-buy-button");
-            var icon = new VisualElement();
-            icon.AddToClassList("shop-coin-icon");
-            button.Add(icon);
+            button.Add(CoinIcon());
             var price = new Label(offer.price.ToString());
             price.AddToClassList("shop-price");
             button.Add(price);
@@ -235,6 +256,14 @@ namespace UpcycleCity.Shops
                 var chip = new VisualElement();
                 chip.AddToClassList("shop-sell-chip");
                 chip.style.backgroundColor = WasteStreamPalette.ColorFor(stream);
+                Sprite streamIcon = IconLibrary.Active != null ? IconLibrary.Active.ForStream(stream == WasteStream.BulkyUpcyclable ? "bulky" : stream.ToString()) : null;
+                if (streamIcon != null)
+                {
+                    var img = new VisualElement();
+                    img.AddToClassList("shop-sell-icon");
+                    img.style.backgroundImage = new StyleBackground(streamIcon);
+                    chip.Add(img);
+                }
                 row.Add(chip);
                 var name = new Label(WasteStreamPalette.LabelFor(stream));
                 name.AddToClassList("shop-sell-name");
@@ -269,6 +298,30 @@ namespace UpcycleCity.Shops
             return nearest;
         }
 
+        static VisualElement CoinIcon()
+        {
+            var icon = new VisualElement();
+            icon.AddToClassList("shop-coin-icon");
+            Sprite coin = IconLibrary.Active != null ? IconLibrary.Active.Get("ui_coin") : null;
+            if (coin != null)
+            {
+                icon.style.backgroundImage = new StyleBackground(coin);
+                icon.AddToClassList("shop-coin-icon--sprite");
+            }
+            return icon;
+        }
+
+        /// <summary>Icon key of a shop from its catalog asset (Shop_Cafe → shop_cafe …).</summary>
+        static string ShopIconKey(ShopCatalog catalog)
+        {
+            string n = catalog != null ? catalog.name.ToLowerInvariant() : string.Empty;
+            if (n.Contains("cafe")) return "shop_cafe";
+            if (n.Contains("grocery") || n.Contains("epicerie")) return "shop_epicerie";
+            if (n.Contains("tool") || n.Contains("quincaillerie")) return "shop_quincaillerie";
+            if (n.Contains("recup")) return "shop_recup";
+            return "ui_cart";
+        }
+
         static string Initials(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -282,6 +335,11 @@ namespace UpcycleCity.Shops
         static string EffectText(ItemDefinition item)
         {
             var sb = new StringBuilder();
+            if (item.UseBehavior is IMaterialStockCreditBehavior stockCredit && stockCredit.CreditOnPurchase)
+            {
+                Append(sb, $"Adds +{stockCredit.Amount:0.#} kg directly to Team Material Stock");
+                return sb.ToString();
+            }
             if (item.UseBehavior is TimedBoostItemBehavior boost)
             {
                 PlayerBoosts.Effect e = boost.Effect;
@@ -327,6 +385,10 @@ namespace UpcycleCity.Shops
 
             root.style.display = DisplayStyle.Flex;
             IsOpen = true;
+            float ambienceDuck = SoundManager.HasInstance && SoundManager.Instance.Library != null
+                ? SoundManager.Instance.Library.ShopOpenAmbienceDuck
+                : 0f;
+            SoundManager.PushAmbienceDuck(this, ambienceDuck);
             PlayerContext.Active?.Input?.SetInputMode(PlayerInputMode.UI);
             if (cards.Count > 0)
                 cards[0].button.Focus();
@@ -338,6 +400,7 @@ namespace UpcycleCity.Shops
         {
             if (!IsOpen)
                 return;
+            SoundManager.PopAmbienceDuck(this);
             Hide();
             Unbind();
             counter = null;
@@ -376,12 +439,15 @@ namespace UpcycleCity.Shops
                 return;
 
             ItemDefinition item = offer.item;
-            if (IsOwnedTool(item))
+            bool directToMaterialStock = item.UseBehavior is IMaterialStockCreditBehavior credit && credit.CreditOnPurchase;
+
+            if (!directToMaterialStock && IsOwnedTool(item))
             {
                 SetStatus($"You already have the {item.DisplayName}.", false);
+                EmitPurchaseFailed();
                 return;
             }
-            if (!inventory.CanAddItem(item, offer.quantity))
+            if (!directToMaterialStock && !inventory.CanAddItem(item, offer.quantity))
             {
                 Vector3 pos = counter != null ? counter.transform.position : transform.position;
                 SetStatus("Your hotbar is full — free a slot first.", false);
@@ -391,6 +457,7 @@ namespace UpcycleCity.Shops
             if (inventory.Coins < offer.price)
             {
                 SetStatus($"Not enough coins — the {item.DisplayName} costs {offer.price}.", false);
+                EmitPurchaseFailed();
                 return;
             }
 
@@ -411,6 +478,18 @@ namespace UpcycleCity.Shops
                         ? $"Not enough coins — the {item.DisplayName} costs {offer.price}."
                         : result.RejectionReason;
                     SetStatus(reason, false);
+                    EmitPurchaseFailed();
+                    Refresh();
+                    return;
+                }
+
+                if (directToMaterialStock)
+                {
+                    var stockCredit = (IMaterialStockCreditBehavior)item.UseBehavior;
+                    string msg = $"Bought {item.DisplayName} (+{stockCredit.Amount * offer.quantity:0.#} kg to Team Stock) · −{result.Price} Coins";
+                    SetStatus(msg, true);
+                    interactor?.NotifyFeedback(msg, item.AccentColor);
+                    PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ShopPurchase, shopPos, 1f, msg, item.AccentColor);
                     Refresh();
                     return;
                 }
@@ -429,9 +508,16 @@ namespace UpcycleCity.Shops
                 string message = $"Bought {item.DisplayName}{(added > 1 ? $" ×{added}" : string.Empty)} · −{result.Price} Coins";
                 SetStatus(message, true);
                 interactor?.NotifyFeedback(message, item.AccentColor);
-                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupItem, shopPos, 1f, message, item.AccentColor);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ShopPurchase, shopPos, 1f, message, item.AccentColor);
                 Refresh();
             });
+        }
+
+        /// <summary>Buyer-local error cue for a refused purchase (never a coin sound).</summary>
+        void EmitPurchaseFailed()
+        {
+            Vector3 pos = counter != null ? counter.transform.position : transform.position;
+            PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ShopPurchaseFailed, pos, 1f, null, Color.red);
         }
 
         bool IsOwnedTool(ItemDefinition item) => item.MaxStack <= 1 && inventory != null && inventory.HasItem(item);
@@ -452,12 +538,24 @@ namespace UpcycleCity.Shops
             coinsLabel.text = $"{coins}";
             foreach ((ShopCatalog.Offer offer, Button button, Label state) in cards)
             {
-                bool owned = IsOwnedTool(offer.item);
+                bool directToStock = offer.item.UseBehavior is IMaterialStockCreditBehavior credit && credit.CreditOnPurchase;
+                bool owned = !directToStock && IsOwnedTool(offer.item);
                 bool affordable = coins >= offer.price;
                 button.SetEnabled(!owned && affordable);
                 button.EnableInClassList("shop-buy-button--short", !owned && !affordable);
-                int count = inventory != null ? inventory.CountOf(offer.item) : 0;
-                state.text = owned ? "OWNED" : count > 0 ? $"In bag: {count}" : affordable ? string.Empty : $"Need {offer.price - coins} more";
+                if (directToStock)
+                {
+                    var stockCredit = (IMaterialStockCreditBehavior)offer.item.UseBehavior;
+                    float currentStock = Crafting.TeamMaterialStock.Instance != null
+                        ? Crafting.TeamMaterialStock.Instance.GetAmount(stockCredit.MaterialId)
+                        : 0f;
+                    state.text = affordable ? $"Team Stock: {currentStock:0.#} kg" : $"Need {offer.price - coins} more";
+                }
+                else
+                {
+                    int count = inventory != null ? inventory.CountOf(offer.item) : 0;
+                    state.text = owned ? "OWNED" : count > 0 ? $"In bag: {count}" : affordable ? string.Empty : $"Need {offer.price - coins} more";
+                }
             }
         }
 

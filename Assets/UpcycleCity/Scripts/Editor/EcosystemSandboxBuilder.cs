@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 using UpcycleCity.Core;
+using UpcycleCity.Crafting;
 using UpcycleCity.Crowd;
 using UpcycleCity.Ecosystem;
 using UpcycleCity.Interaction;
@@ -116,6 +117,11 @@ namespace UpcycleCity.Editor
             CityDistrict square = CreateDistrict("District_Square", "Place du 14 Janvier", new Vector3(0f, 0f, SquareZ), 26f, 12f, 1.2f, 0.82f);
             CityDistrict factory = CreateDistrict("District_FactoryYard", "Factory Yard", new Vector3(48f, 0f, -17f), 20f, 18f, 0.9f, 0.92f);
 
+            // 5b. City pollution grid over every district: cells leak pollution to their neighbours (PollutionGrid)
+            var gridGo = new GameObject("PollutionGrid");
+            gridGo.transform.SetParent(systemsRoot.transform, false);
+            gridGo.AddComponent<PollutionGrid>().FitToZones(12f);
+
             // 6. Buildings and shops
             var buildingsRoot = new GameObject("Buildings");
             Dictionary<string, GameObject> placed = BuildStreetRows(buildingsRoot.transform);
@@ -138,19 +144,32 @@ namespace UpcycleCity.Editor
 
             // 11. Sorting drop-off on the promenade, just ahead of the player
             BuildSortingHub();
+            BinSearchSetup.EnsureLootTable();
+            BinSearchSetup.EnsureOrganicMaterial();
+            BinSearchSetup.EnsureCompostBin(scene);
 
-            // 12. Seed trash attributed to real causes
+            // 12. Seed deterministic starter trash attributed to real causes (matching the curated 23-item Bourguiba layout)
             var seededTrashRoot = new GameObject("Seeded_CauseTrash");
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-1.5f, 0.6f, -38f), 4, 3.4f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-17.8f, 0.6f, -26f), 3, 1.6f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.ShopOverflow, new Vector3(16.8f, 0.6f, -48f), 4, 1.8f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(1.5f, 0.6f, 6f), 3, 3.6f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-9f, 0.6f, SquareZ - 14f), 4, 2.6f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.UrbanDecay, new Vector3(-27f, 0.7f, -17f), 2, 1.8f);
-            SeedCauseTrash(catalog, seededTrashRoot.transform, WasteSourceKind.FactoryScrap, new Vector3(42f, 0.6f, -17f), 3, 3.0f);
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-1.5f, 0.6f, -38f), 3.4f,
+                "Kaskrout Wrap", "Kaskrout Wrap", "Water Bottle", "Glibettes Cone");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-17.8f, 0.6f, -26f), 1.6f,
+                "Espresso Cup", "Tuna Tin", "Espresso Cup");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.ShopOverflow, new Vector3(16.8f, 0.6f, -48f), 1.8f,
+                "Blue Bag", "Espresso Cup", "Espresso Cup", "Harissa Tin");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(1.5f, 0.6f, 6f), 3.6f,
+                "Paper Coffee Cup", "Water Bottle", "Newspaper");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.Citizen, new Vector3(-9f, 0.6f, SquareZ - 14f), 2.6f,
+                "Crushed Bottle", "Espresso Cup", "Water Bottle", "Newspaper");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.UrbanDecay, new Vector3(-27f, 0.7f, -17f), 1.8f,
+                "Broken TV", "Old Tyre");
+            SeedDeterministicTrash(catalog, seededTrashRoot.transform, WasteSourceKind.FactoryScrap, new Vector3(33.5f, 0.6f, -19.0f), 2.0f,
+                "Crushed Can", "Shipping Carton", "Shipping Carton");
 
             // 13. Player, at the Bab Bhar end of the promenade facing the Clock Tower
             PlacePlayer();
+
+            // 14. Nav mesh the citizens route over and step around things on
+            CrowdNavMeshTool.BakeInScene(scene);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildSettings(ScenePath);
@@ -234,6 +253,27 @@ namespace UpcycleCity.Editor
             shopUiGo.AddComponent<ShopUI>().Configure(
                 AssetDatabase.LoadAssetAtPath<PanelSettings>($"{UiDir}/UpcycleCityPanelSettings.asset"),
                 AssetDatabase.LoadAssetAtPath<StyleSheet>($"{UiDir}/Shop.uss"));
+
+            CraftingContentBuilder.Content craftingContent = CraftingContentBuilder.EnsureAll(overwriteExistingTuning: false);
+            var stockGo = new GameObject("TeamMaterialStock");
+            stockGo.transform.SetParent(root);
+            stockGo.AddComponent<TeamMaterialStock>().Configure(
+                craftingContent.database,
+                craftingContent.starterKit,
+                applyKitOnStart: false,
+                initialEnergy: 40,
+                energyCap: 500,
+                enableDebugActions: false);
+
+            var craftUiGo = new GameObject("CraftingUI");
+            craftUiGo.transform.SetParent(root);
+            craftUiGo.AddComponent<CraftingUI>().Configure(
+                craftingContent.uiConfig != null && craftingContent.uiConfig.PanelSettings != null
+                    ? craftingContent.uiConfig.PanelSettings
+                    : AssetDatabase.LoadAssetAtPath<PanelSettings>($"{UiDir}/UpcycleCityPanelSettings.asset"),
+                AssetDatabase.LoadAssetAtPath<StyleSheet>($"{UiDir}/Crafting.uss"),
+                debugButtons: false);
+
             var eventSystem = new GameObject("EventSystem");
             eventSystem.transform.SetParent(root);
             eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
@@ -681,6 +721,57 @@ namespace UpcycleCity.Editor
 
             // Tall enough to tower over the avenue's roofs, so its smoke tells the story from the street
             CreateFactorySmokestack(yard, new Vector3(54f, 0f, -14f), district, catalog, beacon, smoke);
+
+            // Manual Upcycle Workshop Bay along the open courtyard between the factory hall and warehouse
+            BuildFactoryCraftingBay(yard);
+        }
+
+        static void BuildFactoryCraftingBay(Transform yard)
+        {
+            CraftingContentBuilder.Content crafting = CraftingContentBuilder.EnsureAll(overwriteExistingTuning: false);
+            var bay = new GameObject("Upcycle_Workshop_Bay").transform;
+            bay.SetParent(yard, false);
+
+            // Row along the open east apron of the Factory Yard (clear of factory_hall/warehouse walls at X=45.4+, facing west toward Bourguiba Avenue)
+            PlaceCraftingPrefab(crafting.pulperPrefab, "Factory_ManualPulper", "bourguiba_pulper", bay, new Vector3(43.2f, 0.02f, -9.8f), -90f);
+            PlaceCraftingPrefab(crafting.plasticMelterPrefab, "Factory_PlasticMelter", "bourguiba_plastic_melter", bay, new Vector3(43.2f, 0.02f, -13.0f), -90f);
+            PlaceCraftingPrefab(crafting.crucibleFurnacePrefab, "Factory_CrucibleFurnace", "bourguiba_crucible_furnace", bay, new Vector3(43.2f, 0.02f, -16.2f), -90f);
+            PlaceCraftingPrefab(crafting.tyreStripperPrefab, "Factory_TyreStripper", "bourguiba_tyre_stripper", bay, new Vector3(43.2f, 0.02f, -19.4f), -90f);
+            PlaceCraftingPrefab(crafting.workbenchPrefab, "Factory_UpcycleWorkbench", "bourguiba_workbench", bay, new Vector3(43.2f, 0.02f, -22.6f), -90f);
+            // Pedal Energy Generator across the open courtyard so players can crank NRG right next to the workshop line
+            PlaceCraftingPrefab(crafting.pedalGeneratorPrefab, "Factory_PedalGenerator", "bourguiba_pedal_generator", bay, new Vector3(38.0f, 0.02f, -14.6f), 90f);
+        }
+
+        static void PlaceCraftingPrefab(GameObject prefab, string instanceName, string placementId, Transform parent, Vector3 pos, float yaw)
+        {
+            if (prefab == null)
+                return;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.name = instanceName;
+            go.transform.SetParent(parent, true);
+            go.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
+
+            CraftingMachine machine = go.GetComponent<CraftingMachine>();
+            if (machine != null)
+            {
+                using (var so = new SerializedObject(machine))
+                {
+                    so.FindProperty("placementId").stringValue = placementId;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                PrefabUtility.RecordPrefabInstancePropertyModifications(machine);
+            }
+
+            ManualEnergyGenerator generator = go.GetComponent<ManualEnergyGenerator>();
+            if (generator != null)
+            {
+                using (var so = new SerializedObject(generator))
+                {
+                    so.FindProperty("placementId").stringValue = placementId;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                PrefabUtility.RecordPrefabInstancePropertyModifications(generator);
+            }
         }
 
         // ------------------------------------------------------------ citizens
@@ -703,8 +794,9 @@ namespace UpcycleCity.Editor
                 ring.Add(new Vector3(Mathf.Sin(a) * 12.8f, y, SquareZ + Mathf.Cos(a) * 12.8f));
             }
             CrowdPath squareLoop = Path(root, "Path_SquareRing", true, ring.ToArray());
+            // Kept on the west yard apron (X=29.5..35.0), cleanly clear of the Pedal Generator (X=38) and machine row (X=43.2)
             CrowdPath factoryLoop = Path(root, "Path_FactoryYard", true,
-                new Vector3(36f, 0f, -26f), new Vector3(36f, 0f, -8f), new Vector3(45f, 0f, -8f), new Vector3(45f, 0f, -26f));
+                new Vector3(29.5f, 0f, -24.5f), new Vector3(29.5f, 0f, -8.5f), new Vector3(35.0f, 0f, -8.5f), new Vector3(35.0f, 0f, -24.5f));
 
             var walkers = new GameObject("Spawner_AvenueCitizens");
             walkers.transform.SetParent(root, false);
@@ -819,6 +911,7 @@ namespace UpcycleCity.Editor
 
                 // Urban decay (bulky)
                 MakeCatalogEntry("Broken Café Chair", WasteStream.BulkyUpcyclable, WasteSourceFlags.UrbanDecay, $"{tn}/chair_monobloc_broken.fbx", 1.0f, 2.2f, 16, 3.0f, bulky: true, carrySpeed: 0.78f, holdOffset: 0.45f),
+                MakeCatalogEntry("Wooden Pallet", WasteStream.BulkyUpcyclable, WasteSourceFlags.FactoryScrap | WasteSourceFlags.UrbanDecay, $"{ArtCity}/pallet.fbx", 0.9f, 2.4f, 16, 5.5f, bulky: true, carrySpeed: 0.76f, holdOffset: 0.45f),
                 MakeCatalogEntry("Old Tyre", WasteStream.BulkyUpcyclable, WasteSourceFlags.UrbanDecay, $"{ArtLitter}/tyre.fbx", 1.0f, 2.6f, 18, 7.5f, bulky: true, carrySpeed: 0.72f, holdOffset: 0.42f),
                 MakeCatalogEntry("Broken TV", WasteStream.BulkyUpcyclable, WasteSourceFlags.UrbanDecay, $"{ArtLitter}/tv.fbx", 0.95f, 2.8f, 22, 8.5f, bulky: true, carrySpeed: 0.68f, holdOffset: 0.48f),
             };
@@ -1062,16 +1155,41 @@ namespace UpcycleCity.Editor
             go.tag = GameTags.SortingCrate;
         }
 
-        static void SeedCauseTrash(WasteCatalog catalog, Transform parent, WasteSourceKind sourceKind, Vector3 center, int count, float spreadRadius)
+        static void SeedDeterministicTrash(
+            WasteCatalog catalog,
+            Transform parent,
+            WasteSourceKind sourceKind,
+            Vector3 center,
+            float spreadRadius,
+            params string[] entryDisplayNames)
         {
-            if (catalog == null)
+            if (catalog == null || entryDisplayNames == null || entryDisplayNames.Length == 0)
                 return;
+
+            int count = entryDisplayNames.Length;
             for (int i = 0; i < count; i++)
             {
                 float angle = (i / (float)Mathf.Max(1, count)) * Mathf.PI * 2f + 0.4f;
                 float dist = Mathf.Lerp(0.6f, spreadRadius, (i % 3 + 1) / 3f);
-                catalog.SpawnTrash(sourceKind, center + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist), Vector3.zero, parent);
+                Vector3 pos = center + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
+
+                WasteCatalog.Entry entry = FindCatalogEntryByName(catalog, entryDisplayNames[i]) ?? catalog.PickEntry(sourceKind);
+                if (entry != null)
+                    WasteCatalog.SpawnEntryLocal(entry, sourceKind, pos, Vector3.zero, parent);
             }
+        }
+
+        static WasteCatalog.Entry FindCatalogEntryByName(WasteCatalog catalog, string displayName)
+        {
+            if (catalog == null || string.IsNullOrEmpty(displayName))
+                return null;
+            for (int i = 0; i < catalog.Entries.Count; i++)
+            {
+                WasteCatalog.Entry e = catalog.Entries[i];
+                if (e != null && string.Equals(e.displayName, displayName, System.StringComparison.OrdinalIgnoreCase))
+                    return e;
+            }
+            return null;
         }
 
         static void ConfigureCrowdSpawner(CrowdSpawner spawner, CrowdCharacterLibrary library, CrowdPath[] paths, int count, bool masked,

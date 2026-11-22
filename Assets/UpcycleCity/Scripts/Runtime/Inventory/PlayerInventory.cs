@@ -13,7 +13,7 @@ namespace UpcycleCity.Inventory
     public sealed class PlayerInventory : MonoBehaviour
     {
         [Header("Currency")]
-        [SerializeField, Min(0)] int startingCoins = 25;
+        [SerializeField, Min(0)] int startingCoins = 0;
 
         [Header("Hotbar")]
         [SerializeField, Range(4, 10)] int slotCount = 6;
@@ -152,12 +152,12 @@ namespace UpcycleCity.Inventory
             if (totalAdded <= 0)
                 return false;
 
+            // silent only mutes pickup feedback; state listeners (HUD, equipped-tool sync) must always hear it,
+            // e.g. a first tool landing in the already-selected empty slot changes the equipped item
             if (!silent)
-            {
                 ItemAdded?.Invoke(item, totalAdded);
-                Changed?.Invoke();
-                SelectedSlotChanged?.Invoke(selectedIndex, slots[selectedIndex]);
-            }
+            Changed?.Invoke();
+            SelectedSlotChanged?.Invoke(selectedIndex, slots[selectedIndex]);
 
             return remaining == 0;
         }
@@ -287,7 +287,7 @@ namespace UpcycleCity.Inventory
             Changed?.Invoke();
         }
 
-        public void SetStartingItems(ItemDefinition[] items, int initialCoins = 25)
+        public void SetStartingItems(ItemDefinition[] items, int initialCoins = 0)
         {
             startingItems = items ?? Array.Empty<ItemDefinition>();
             startingCoins = Mathf.Max(0, initialCoins);

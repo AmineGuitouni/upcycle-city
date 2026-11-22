@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1f26b3105af54bc09b804058af40c20, type: 3}
+  m_Name: Mat_CleanedPulp
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.MaterialDefinition
+  materialId: cleaned_pulp
+  displayName: Cleaned Pulp
+  description: De-inked, washed paper pulp for eco-packaging and composite boards.
+  category: 2
+  unit: 0
+  accentColor: {r: 0.353, g: 0.659, b: 0.882, a: 1}
+  icon: {fileID: 21300000, guid: eab52ed672ed842108bb845db7a7854d, type: 3}
+  acceptsTrashDeposits: 0
+  sourceWasteStream: 0
+  sourceTrashArchetypeIds: []
+  depositYieldPerTrashItem: 1

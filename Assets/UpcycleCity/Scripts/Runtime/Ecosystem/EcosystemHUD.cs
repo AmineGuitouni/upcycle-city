@@ -9,7 +9,7 @@ namespace UpcycleCity.Ecosystem
     /// Live Phase 2 Ecosystem telemetry dashboard showing City Cleanliness, Resident Satisfaction,
     /// per-district pollution bars, real cause-attributed trash counts (Citizens / Bins / Factory / Decay),
     /// active source statuses, and a smog-exposure alert when standing in heavy pollution.
-    /// Positioned cleanly on the right side below the coins badge so it never overlaps PlayerGymHUD.
+    /// Developer overlay: hidden unless F1 is pressed in the Editor / a development build (see <see cref="UI.DevHud"/>).
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Ecosystem/Ecosystem HUD")]
@@ -87,8 +87,14 @@ namespace UpcycleCity.Ecosystem
             stylesReady = true;
         }
 
+        void Update() => UI.DevHud.Poll();
+
         void OnGUI()
         {
+            // Developer dashboard only (F1 in Editor / dev builds). Players see the clean UI.GameHud,
+            // which also draws the citizen reaction cues and the smog chip.
+            if (!UI.DevHud.DebugVisible)
+                return;
             CityEcosystemManager eco = CityEcosystemManager.Active;
             if (eco == null)
                 return;
@@ -99,9 +105,7 @@ namespace UpcycleCity.Ecosystem
 
             EnsureStyles();
 
-            DrawCitizenReactionCues();
             DrawEcosystemDashboard(eco);
-            DrawSmogWarningBanner(eco);
         }
 
         void DrawCitizenReactionCues()

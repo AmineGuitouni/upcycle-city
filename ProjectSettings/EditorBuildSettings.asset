@@ -9,13 +9,19 @@ EditorBuildSettings:
     path: Assets/UpcycleCity/Scenes/Intro.unity
     guid: 71cb334e61f97b9c894ce1b05b03ce5e
   - enabled: 1
+    path: Assets/UpcycleCity/Scenes/MainMenu.unity
+    guid: fa795447665f94aa6ba148f0a9fa7a45
+  - enabled: 1
     path: Assets/UpcycleCity/Scenes/CharacterCreator.unity
     guid: 13694c84c1df34083a809c580ecfb7a3
+  - enabled: 1
+    path: Assets/UpcycleCity/Scenes/EcosystemSandbox.unity
+    guid: 90c2c32078b354759a74a15c78227fac
   - enabled: 1
     path: Assets/UpcycleCity/Scenes/PlayerGym.unity
     guid: 7bd2970d2cbe04b0781e192afaae2529
   - enabled: 1
-    path: Assets/UpcycleCity/Scenes/EcosystemSandbox.unity
-    guid: 90c2c32078b354759a74a15c78227fac
+    path: Assets/UpcycleCity/Scenes/CraftingWorkshop.unity
+    guid: 56dfa108be0ea4edfad13e3fd0acc206
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

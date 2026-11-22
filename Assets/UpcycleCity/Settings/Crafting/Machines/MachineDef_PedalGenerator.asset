@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b242f100ab8874e14ab11d5141188bc4, type: 3}
+  m_Name: MachineDef_PedalGenerator
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.MachineDefinition
+  machineId: machine_pedal_generator
+  displayName: Pedal Energy Generator
+  description: Stationary bicycle dynamo that generates shared team NRG for workshop machines.
+  machineType: {fileID: 11400000, guid: 38e7962626dc94dcaadd0d4680a075f2, type: 2}
+  accentColor: {r: 0.184, g: 0.561, b: 0.541, a: 1}
+  icon: {fileID: 0}
+  defaultLevel: 0
+  maxLevel: 1
+  acceptedCardCategories: 03000000i
+  interactRange: 6.5
+  upgradeCosts:
+  - targetLevel: 1
+    coins: 20
+    materials:
+    - material: {fileID: 11400000, guid: f38f0c18689f141b78edd717fbf17187, type: 2}
+      amount: 1.5
+  acceptedHopperStreams: 
+  acceptedHopperMaterials: []
+  purchasePrice: 50
+  machinePrefab: {fileID: 5959949732493105941, guid: 156c7f123c7fb41118e1468a0a2f8cbf, type: 3}
+  placementFootprint: {x: 2, y: 2}

@@ -148,7 +148,13 @@ namespace UpcycleCity.Shops
             if (emitLocalFeedback)
             {
                 interactor?.NotifyFeedback(message, colour);
-                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupCoins, transform.position, 1f, message, colour);
+                PlayerContext.ActiveFeedback?.Emit(
+                    PlayerFeedbackEvent.SellTrash,
+                    transform.position,
+                    1f,
+                    message,
+                    colour,
+                    FeedbackSignal.EncodeMaterial(item.Stream, item.IsBulky));
             }
 
             ItemBought?.Invoke(this, item, price);

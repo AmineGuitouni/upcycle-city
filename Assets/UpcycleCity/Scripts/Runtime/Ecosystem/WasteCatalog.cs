@@ -31,6 +31,8 @@ namespace UpcycleCity.Ecosystem
         [Serializable]
         public sealed class Entry
         {
+            [Tooltip("Stable machine-readable waste archetype ID (e.g. 'old_tyre', 'wooden_pallet'). Used for crafting/material mapping instead of display text.")]
+            public string archetypeId = string.Empty;
             public string displayName = "Plastic Bottle";
             public WasteStream stream = WasteStream.Plastic;
             public WasteSourceFlags allowedSources = WasteSourceFlags.All;
@@ -42,6 +44,9 @@ namespace UpcycleCity.Ecosystem
             public bool isBulky;
             [Range(0.4f, 1f)] public float carrySpeedMultiplier = 1f;
             [Range(0f, 1.2f)] public float holdDistanceOffset;
+
+            public string ResolvedArchetypeId =>
+                string.IsNullOrWhiteSpace(archetypeId) ? DeriveArchetypeId(displayName) : archetypeId.Trim();
         }
 
         [SerializeField] List<Entry> entries = new List<Entry>();
@@ -53,6 +58,53 @@ namespace UpcycleCity.Ecosystem
         public void SetEntries(List<Entry> newEntries)
         {
             entries = newEntries ?? new List<Entry>();
+            EnsureArchetypeIds();
+        }
+
+        public void EnsureArchetypeIds()
+        {
+            if (entries == null)
+                return;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                Entry e = entries[i];
+                if (e != null && string.IsNullOrWhiteSpace(e.archetypeId))
+                    e.archetypeId = DeriveArchetypeId(e.displayName);
+            }
+        }
+
+        void OnValidate()
+        {
+            EnsureArchetypeIds();
+        }
+
+        public static string DeriveArchetypeId(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName))
+                return "litter";
+
+            string normalized = displayName.Trim().Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(normalized.Length);
+            bool lastUnderscore = false;
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                char c = normalized[i];
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.NonSpacingMark)
+                    continue;
+                if (char.IsLetterOrDigit(c))
+                {
+                    sb.Append(char.ToLowerInvariant(c));
+                    lastUnderscore = false;
+                }
+                else if (!lastUnderscore && sb.Length > 0)
+                {
+                    sb.Append('_');
+                    lastUnderscore = true;
+                }
+            }
+            while (sb.Length > 0 && sb[sb.Length - 1] == '_')
+                sb.Length--;
+            return sb.Length > 0 ? sb.ToString() : "litter";
         }
 
         public static WasteSourceFlags ToFlag(WasteSourceKind kind)
@@ -201,8 +253,9 @@ namespace UpcycleCity.Ecosystem
             rb.linearDamping = 0.25f;
             rb.angularDamping = 0.5f;
 
+            string itemArchetypeId = entry != null ? entry.ResolvedArchetypeId : string.Empty;
             TrashItem trash = go.AddComponent<TrashItem>();
-            trash.Configure(itemName, stream, sourceKind, weight, coinValue, bulky, carrySpeed, holdOffset);
+            trash.Configure(itemName, stream, sourceKind, weight, coinValue, bulky, carrySpeed, holdOffset, itemArchetypeId);
 
             go.AddComponent<FocusHighlight>();
             GameLayers.SetLayerRecursively(go, GameLayers.Grabbable);

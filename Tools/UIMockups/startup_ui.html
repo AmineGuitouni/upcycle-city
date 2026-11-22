@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upcycle City — Unity Prototype Startup UI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font matching Unity Prototype HUD -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for crisp HUD icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <style>
+        /* =====================================================================
+           UNITY PROTOTYPE DESIGN SYSTEM
+           ===================================================================== */
+        :root {
+            --terracotta: #C8643B;
+            --terracotta-dark: #A14B27;
+            --hud-bg: rgba(24, 26, 28, 0.88);
+            --hud-panel: rgba(34, 37, 40, 0.94);
+            --hud-border: rgba(255, 255, 255, 0.12);
+            --emerald-active: #28965A;
+            --emerald-bright: #2ECC71;
+            --gold-coin: #F1C40F;
+            --bin-paper: #2980B9;
+            --bin-plastic: #E67E22;
+            --bin-glass: #27AE60;
+            --bin-cans: #C0392B;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #111315;
+            color: #F8FAFC;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Semi-transparent dark rounded HUD panel */
+        .unity-hud-panel {
+            background: var(--hud-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--hud-border);
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Terracotta Pill Badge */
+        .terracotta-pill {
+            background-color: var(--terracotta);
+            box-shadow: 0 4px 14px rgba(200, 100, 59, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        /* Tactile button feedback */
+        .unity-btn {
+            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .unity-btn:hover {
+            transform: translateY(-1.5px);
+        }
+        .unity-btn:active {
+            transform: translateY(2px) scale(0.98);
+        }
+
+        /* Large Orange Circular PLAY Action Button with Bold White Text */
+        .circular-play-btn {
+            background: linear-gradient(145deg, #F97316, #EA580C);
+            border: 4px solid #FFFFFF;
+            box-shadow: 0 10px 30px rgba(234, 88, 12, 0.65), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .circular-play-btn:hover {
+            transform: scale(1.07);
+            background: linear-gradient(145deg, #FB923C, #F97316);
+            box-shadow: 0 14px 36px rgba(249, 115, 22, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.45);
+        }
+        .circular-play-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Custom Range Slider */
+        input[type="range"].unity-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.16);
+            height: 5px;
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"].unity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s ease;
+        }
+        input[type="range"].unity-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #FFFFFF;
+        }
+
+        /* Camera Zoom Transition on PLAY */
+        .scene-camera {
+            transition: transform 1.25s cubic-bezier(0.22, 1, 0.36, 1), filter 1.25s ease;
+            transform-origin: 48% 58%;
+        }
+        .scene-camera.zoom-into-garage {
+            transform: scale(1.42) translate(2%, -3%);
+        }
+
+        /* Fullscreen Helper */
+        .device-frame.is-fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+            border: none !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 99px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <!-- Top Demo Utility Bar (Outside 16:9 Mobile Viewport) -->
+    <div class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-2 mb-2.5 px-1 text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#C8643B]/20 border border-[#C8643B]/50 text-[#f3a683] font-semibold">
+                <i class="fa-solid fa-gamepad"></i> Unity Mobile Landscape Prototype (16:9)
+            </span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleFullscreenFrame()" id="fullscreen-btn" class="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-slate-200 border border-neutral-700 font-medium flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-expand"></i> <span>Fullscreen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MAIN 16:9 MOBILE LANDSCAPE VIEWPORT (UNITY SCREEN SPACE OVERLAY)
+         ===================================================================== -->
+    <main id="game-viewport" class="device-frame relative w-full max-w-6xl aspect-video min-h-[480px] max-h-[640px] rounded-2xl overflow-hidden border-[3px] border-neutral-800 shadow-[0_28px_80px_rgba(0,0,0,0.85)] bg-[#8e857b] select-none">
+
+        <!-- =================================================================
+             1. LOW-POLY UPCYCLE GARAGE STREET SCENE (HTML5 CANVAS)
+             ================================================================= -->
+        <div id="scene-wrapper" class="scene-camera absolute inset-0 w-full h-full">
+            <canvas id="garage-scene-canvas" class="w-full h-full block"></canvas>
+        </div>
+
+        <!-- Subtle Vignette for Crisp White Title Legibility -->
+        <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/50 via-black/15 to-black/30"></div>
+
+        <!-- =================================================================
+             2. UNITY HUD LAYER (SAFE-AREA PADDED)
+             ================================================================= -->
+        <div class="relative z-20 w-full h-full flex flex-col justify-between p-3.5 sm:p-5">
+
+            <!-- TOP HUD BAR -->
+            <header class="flex flex-wrap items-center justify-between gap-2">
+                <!-- Top-Left: Level Progress Indicator (Starts Smoggy by default, cleans as level increases) -->
+                <div class="unity-hud-panel px-3 py-1.5 flex items-center gap-2.5 text-xs">
+                    <span id="level-badge" class="px-2 py-0.5 rounded-md bg-[#C8643B] text-white font-extrabold tracking-wide uppercase">
+                        LVL 1
+                    </span>
+                    <span id="stage-status-name" class="font-bold text-neutral-200">Smoggy Garage</span>
+                    <button onclick="increaseLevel()" title="Increase Level to clean the environment" class="px-2 py-0.5 rounded bg-white/10 hover:bg-[#28965A] text-white font-bold text-[11px] transition flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-arrow-up text-[10px]"></i> Level +1
+                    </button>
+                </div>
+
+                <!-- Top-Right: Cleanliness/Air Meter & Coin Counter -->
+                <div class="flex items-center gap-2">
+                    <!-- Air & Cleanliness Status Pill -->
+                    <div class="unity-hud-panel px-3 py-1.5 flex items-center gap-3 text-xs">
+                        <div class="flex items-center gap-1.5" title="Street Cleanliness & Air Quality">
+                            <i id="hud-eco-icon" class="fa-solid fa-smog text-[#E67E22]"></i>
+                            <span class="text-neutral-400 font-semibold hidden sm:inline">Air & Clean:</span>
+                            <span id="hud-eco-val" class="font-extrabold text-white">28%</span>
+                        </div>
+                        <div class="w-px h-3.5 bg-white/15"></div>
+                        <!-- 4 Recycling Bin Indicators -->
+                        <div class="hidden md:flex items-center gap-1" title="4 Sorting Streams: Paper, Plastic, Glass, Cans">
+                            <span class="w-2.5 h-2.5 rounded-sm bg-[#2980B9]"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-[#E67E22]"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-[#27AE60]"></span>
+                            <span class="w-2.5 h-2.5 rounded-sm bg-[#C0392B]"></span>
+                        </div>
+                    </div>
+
+                    <!-- Coin Counter -->
+                    <div class="unity-hud-panel px-3.5 py-1.5 flex items-center gap-2 shadow-lg">
+                        <span class="w-5 h-5 rounded-full bg-[#F1C40F] border-2 border-[#d4ac0d] flex items-center justify-center text-[10px] font-black text-neutral-900 shadow-inner">
+                            $
+                        </span>
+                        <span id="coin-counter" class="font-extrabold text-sm sm:text-base text-white tracking-tight">183</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- =================================================================
+                 CENTER AREA: LEFT CHARACTER CUSTOMIZER + RIGHT TITLE LOCKUP
+                 ================================================================= -->
+            <div class="relative flex-1 flex items-center my-1">
+
+                <!-- LEFT DRAWER: CUSTOMIZE APPEARANCE PANEL -->
+                <aside id="appearance-drawer" class="unity-hud-panel w-[270px] sm:w-[300px] max-h-full overflow-y-auto flex flex-col justify-between transition-all duration-300 z-30">
+                    <div>
+                        <!-- Header Tabs: Hide | Body | Gear -->
+                        <div class="grid grid-cols-3 border-b border-white/10 text-xs font-bold">
+                            <button onclick="toggleAppearanceDrawer(false)" class="py-2.5 px-2 text-neutral-400 hover:text-white hover:bg-white/5 transition text-center cursor-pointer">
+                                Hide
+                            </button>
+                            <button onclick="switchCustomizerTab('body')" id="tab-btn-body" class="py-2.5 px-2 text-white bg-black/30 border-b-2 border-[#F1C40F] text-center cursor-pointer">
+                                Body
+                            </button>
+                            <button onclick="switchCustomizerTab('gear')" id="tab-btn-gear" class="py-2.5 px-2 text-[#2ECC71] hover:bg-white/5 transition text-center cursor-pointer">
+                                Gear
+                            </button>
+                        </div>
+
+                        <!-- Drawer Title -->
+                        <div class="px-3.5 pt-2.5 pb-1 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xs font-extrabold text-white tracking-wide">Customize Appearance</h3>
+                                <p class="text-[10px] text-neutral-400">Who's cleaning up the city today?</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB 1: BODY (Sex, Skin Tone, Outfit Colour) -->
+                        <div id="customizer-body-tab" class="px-3.5 py-2 space-y-2.5">
+                            <!-- Sex Selector -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-neutral-200 mb-1">Sex</label>
+                                <div class="grid grid-cols-2 gap-1.5">
+                                    <button onclick="setSex('male')" id="sex-male" class="py-1.5 rounded-[7px] text-xs font-bold bg-[#28965A] text-white transition cursor-pointer">
+                                        Male
+                                    </button>
+                                    <button onclick="setSex('female')" id="sex-female" class="py-1.5 rounded-[7px] text-xs font-bold bg-[#484C52] text-neutral-200 hover:bg-[#565b63] transition cursor-pointer">
+                                        Female
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Skin Tone Swatches -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-neutral-200 mb-1">Skin Tone</label>
+                                <div id="skin-swatches" class="grid grid-cols-9 gap-1">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Outfit Colour Swatches -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-[11px] font-bold text-neutral-200">Outfit Colour</label>
+                                    <span id="outfit-name-label" class="text-[10px] text-neutral-400 font-medium">High-Vis Orange</span>
+                                </div>
+                                <div id="outfit-swatches" class="grid grid-cols-9 gap-1">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: GEAR (Headgear Beanie / Cap / None & Scarf Accent) -->
+                        <div id="customizer-gear-tab" class="hidden px-3.5 py-2 space-y-2.5">
+                            <div>
+                                <label class="block text-[11px] font-bold text-neutral-200 mb-1">Headgear</label>
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <button onclick="setHeadgear('beanie')" id="gear-beanie" class="gear-btn py-1.5 rounded-[7px] text-[11px] font-bold bg-[#28965A] text-white cursor-pointer">
+                                        Beanie
+                                    </button>
+                                    <button onclick="setHeadgear('cap')" id="gear-cap" class="gear-btn py-1.5 rounded-[7px] text-[11px] font-bold bg-[#484C52] text-neutral-200 cursor-pointer">
+                                        Cap
+                                    </button>
+                                    <button onclick="setHeadgear('none')" id="gear-none" class="gear-btn py-1.5 rounded-[7px] text-[11px] font-bold bg-[#484C52] text-neutral-200 cursor-pointer">
+                                        None
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-neutral-200 mb-1">Beanie / Scarf Accent</label>
+                                <div id="accent-swatches" class="grid grid-cols-6 gap-1.5">
+                                    <!-- Populated via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Rotation Slider + "Surprise me!" Button -->
+                    <div class="p-3 pt-1.5 border-t border-white/10 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-rotate text-[10px] text-neutral-400"></i>
+                            <input type="range" id="char-rotate-slider" min="-100" max="100" value="22" oninput="updateCharacterRotation(this.value)" class="unity-slider w-full">
+                        </div>
+                        <button onclick="randomizeCharacter()" class="unity-btn w-full py-1.5 rounded-[7px] bg-[#3A3E44] hover:bg-[#474c54] text-white font-bold text-xs border border-white/10 cursor-pointer">
+                            Surprise me!
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- CENTER / RIGHT TITLE LOCKUP & MENU BUTTONS -->
+                <div class="flex-1 flex flex-col items-center md:items-end justify-center text-center md:text-right px-2 sm:px-6 pointer-events-none">
+                    <div class="pointer-events-auto max-w-md flex flex-col items-center md:items-end">
+
+                        <!-- Main Title Lockup -->
+                        <h1 class="font-black text-4xl sm:text-5xl lg:text-[54px] text-white tracking-[0.06em] uppercase leading-none drop-shadow-[0_4px_18px_rgba(0,0,0,0.65)]">
+                            UPCYCLE CITY
+                        </h1>
+
+                        <!-- Terracotta Stage Pill -->
+                        <div class="mt-2.5 terracotta-pill px-4 py-1.5 rounded-full inline-flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                            <span id="center-stage-label" class="text-white font-extrabold text-xs sm:text-sm tracking-wider uppercase">
+                                STAGE 1 • THE GARAGE
+                            </span>
+                        </div>
+
+                        <!-- Subtitle -->
+                        <p class="mt-2 text-sm sm:text-base font-medium text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                            Clean up the city, one bag at a time
+                        </p>
+
+                        <!-- Action Buttons Stack (APPEARANCE & RECIPES top row, SETTINGS directly underneath) -->
+                        <div class="mt-4 flex flex-col gap-2 w-full max-w-[270px]">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="toggleAppearanceDrawer()" id="toggle-appearance-btn" class="unity-btn unity-hud-panel py-2.5 px-3 text-xs font-bold text-white hover:border-[#2ECC71] flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-user-pen text-[#2ECC71]"></i>
+                                    <span>APPEARANCE</span>
+                                </button>
+                                <button onclick="openModal('recipes-modal')" class="unity-btn unity-hud-panel py-2.5 px-3 text-xs font-bold text-white hover:border-[#F1C40F] flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-recycle text-[#F1C40F]"></i>
+                                    <span>RECIPES</span>
+                                </button>
+                            </div>
+
+                            <!-- Settings placed directly under Appearance & Recipes -->
+                            <button onclick="openModal('settings-modal')" class="unity-btn unity-hud-panel w-full py-2.5 px-4 text-xs font-bold text-white hover:border-white/40 flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-gear text-neutral-300"></i>
+                                <span>SETTINGS</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================================================================
+                 BOTTOM HUD BAR: LEFT UPGRADE PREVIEW + RIGHT BIG ORANGE PLAY BUTTON
+                 ================================================================= -->
+            <footer class="flex items-end justify-between gap-3">
+                <!-- Bottom-Left: Next Upgrades Preview Card -->
+                <div class="unity-hud-panel px-3.5 py-2 hidden sm:flex items-center gap-4 text-xs">
+                    <div>
+                        <div class="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400">Next Upgrades</div>
+                        <div class="font-bold text-white flex items-center gap-1.5 mt-0.5">
+                            <i class="fa-solid fa-conveyor-belt text-[#F1C40F]"></i>
+                            <span>Conveyor Belt</span>
+                            <span class="text-[#F1C40F] font-extrabold ml-1">300</span>
+                        </div>
+                    </div>
+                    <div class="w-px h-6 bg-white/10"></div>
+                    <div>
+                        <div class="text-[9px] font-extrabold uppercase tracking-wider text-neutral-400">Clean Power</div>
+                        <div class="font-bold text-white flex items-center gap-1.5 mt-0.5">
+                            <i class="fa-solid fa-solar-panel text-[#2ECC71]"></i>
+                            <span>Solar Panel</span>
+                            <span class="text-[#F1C40F] font-extrabold ml-1">400</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spacer on small screens -->
+                <div class="sm:hidden"></div>
+
+                <!-- Bottom-Right: Larger Orange Circular PLAY Button with Bold White Letters -->
+                <div class="flex items-center">
+                    <button onclick="startGarageSession()" class="circular-play-btn w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center text-white cursor-pointer" title="Play Upcycle City">
+                        <i class="fa-solid fa-play text-2xl sm:text-3xl text-white mb-0.5 ml-1 drop-shadow"></i>
+                        <span class="text-sm sm:text-base font-black text-white tracking-widest uppercase drop-shadow">PLAY</span>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- =================================================================
+             MODAL 1: SORTING & RECIPES
+             ================================================================= -->
+        <div id="recipes-modal" class="hidden absolute inset-0 z-40 bg-black/75 backdrop-blur-sm p-4 flex items-center justify-center">
+            <div class="unity-hud-panel w-full max-w-3xl max-h-full flex flex-col overflow-hidden border border-white/15">
+                <div class="px-5 py-3.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="terracotta-pill px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase">Garage Guide</span>
+                        <h2 class="font-extrabold text-base sm:text-lg text-white">Sorting Purity & Upcycling Recipes</h2>
+                    </div>
+                    <button onclick="closeModal('recipes-modal')" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-[#C0392B] text-white flex items-center justify-center transition cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+                    <!-- 4 Sorting Crates Row -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-extrabold uppercase tracking-wider text-neutral-300">1. Garage Sorting Crates & Purity Multiplier</span>
+                            <span class="px-2 py-0.5 rounded bg-[#28965A]/30 border border-[#2ECC71]/50 text-[#2ECC71] font-extrabold">PURITY: 100%</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <div class="p-3 rounded-xl bg-[#2980B9]/20 border-2 border-[#2980B9]">
+                                <div class="font-black text-white text-sm flex items-center justify-between">
+                                    <span>PAPER</span>
+                                    <i class="fa-solid fa-box text-[#2980B9]"></i>
+                                </div>
+                                <p class="text-[11px] text-neutral-300 mt-1">Cardboard boxes, flyers → <strong>Cardboard Bale</strong></p>
+                            </div>
+                            <div class="p-3 rounded-xl bg-[#E67E22]/20 border-2 border-[#E67E22]">
+                                <div class="font-black text-white text-sm flex items-center justify-between">
+                                    <span>PLASTIC</span>
+                                    <i class="fa-solid fa-bottle-water text-[#E67E22]"></i>
+                                </div>
+                                <p class="text-[11px] text-neutral-300 mt-1">PET #1, HDPE #2 jugs → <strong>Flakes & Planters</strong></p>
+                            </div>
+                            <div class="p-3 rounded-xl bg-[#27AE60]/20 border-2 border-[#27AE60]">
+                                <div class="font-black text-white text-sm flex items-center justify-between">
+                                    <span>GLASS</span>
+                                    <i class="fa-solid fa-wine-bottle text-[#27AE60]"></i>
+                                </div>
+                                <p class="text-[11px] text-neutral-300 mt-1">Clear & amber bottles → <strong>Cullet & Tiles</strong></p>
+                            </div>
+                            <div class="p-3 rounded-xl bg-[#C0392B]/20 border-2 border-[#C0392B]">
+                                <div class="font-black text-white text-sm flex items-center justify-between">
+                                    <span>CANS</span>
+                                    <i class="fa-solid fa-can-food text-[#C0392B]"></i>
+                                </div>
+                                <p class="text-[11px] text-neutral-300 mt-1">Aluminum & tin cans → <strong>Crushed Can</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Featured Recipes -->
+                    <div>
+                        <div class="font-extrabold uppercase tracking-wider text-neutral-300 mb-2">2. Starter & Workshop Crafting Recipes</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="p-3.5 rounded-xl bg-black/35 border border-white/10 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[10px] font-bold uppercase text-[#2ECC71]">Garage Craft</span>
+                                    <h4 class="font-extrabold text-sm text-white">Teal Pallet Bench</h4>
+                                    <p class="text-[11px] text-neutral-300 mt-0.5">2× Wooden Pallet + 1× Teal Paint</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] text-neutral-400 block">Sells for</span>
+                                    <span class="font-black text-base text-[#F1C40F]">45 Coins</span>
+                                </div>
+                            </div>
+
+                            <div class="p-3.5 rounded-xl bg-black/35 border border-white/10 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[10px] font-bold uppercase text-[#E67E22]">Workshop Polymer Science</span>
+                                    <h4 class="font-extrabold text-sm text-white">Compatibilized Eco-Bench</h4>
+                                    <p class="text-[11px] text-neutral-300 mt-0.5">PET + HDPE Mix + Compatibilizer</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] text-neutral-400 block">Sells for</span>
+                                    <span class="font-black text-base text-[#F1C40F]">120 Coins</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================
+             MODAL 2: SETTINGS (AUDIO & GRAPHICS)
+             ================================================================= -->
+        <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-black/75 backdrop-blur-sm p-4 flex items-center justify-center">
+            <div class="unity-hud-panel w-full max-w-md overflow-hidden border border-white/15">
+                <div class="px-5 py-3.5 bg-black/40 border-b border-white/10 flex items-center justify-between">
+                    <h2 class="font-extrabold text-base text-white flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-[#2ECC71]"></i> Settings
+                    </h2>
+                    <button onclick="closeModal('settings-modal')" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-[#C0392B] text-white flex items-center justify-center transition cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="p-5 space-y-4 text-xs">
+                    <div>
+                        <div class="flex justify-between font-bold mb-1">
+                            <span>Ambient City & Garage Audio</span>
+                            <span id="sfx-label" class="text-[#2ECC71]">85%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="85" oninput="document.getElementById('sfx-label').textContent = this.value + '%'" class="unity-slider w-full">
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1.5">Mobile Low-Poly Shadow Quality</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="selectQuality(this)" class="qual-btn py-2 rounded-lg bg-[#3A3E44] text-neutral-300 font-bold cursor-pointer">Low</button>
+                            <button onclick="selectQuality(this)" class="qual-btn py-2 rounded-lg bg-[#28965A] text-white font-bold cursor-pointer">Medium (60fps)</button>
+                            <button onclick="selectQuality(this)" class="qual-btn py-2 rounded-lg bg-[#3A3E44] text-neutral-300 font-bold cursor-pointer">High</button>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('settings-modal')" class="unity-btn w-full py-2.5 rounded-xl bg-[#28965A] text-white font-extrabold text-xs uppercase tracking-wider cursor-pointer">
+                        Apply & Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================
+             CAMERA ZOOM TRANSITION FEEDBACK OVERLAY ("LOADING GARAGE...")
+             ================================================================= -->
+        <div id="loading-garage-hud" class="hidden absolute inset-0 z-50 bg-black/55 backdrop-blur-[3px] flex flex-col items-center justify-center p-6 text-center">
+            <div class="unity-hud-panel px-7 py-6 max-w-sm w-full space-y-3 border border-white/20">
+                <div class="terracotta-pill px-3 py-1 rounded-full inline-block text-[11px] font-extrabold uppercase tracking-wider">
+                    LOADING STAGE
+                </div>
+                <h2 class="font-black text-2xl text-white tracking-wide">Loading Garage...</h2>
+                <p id="loading-tip" class="text-xs text-neutral-300">
+                    Tip: Drop litter into the matching Paper, Plastic, Glass, and Cans crates to keep Purity at 100%!
+                </p>
+                <div class="w-full h-2.5 bg-black/50 rounded-full overflow-hidden border border-white/10">
+                    <div id="garage-progress-bar" class="h-full bg-[#F1C40F] w-0 transition-all duration-150"></div>
+                </div>
+                <button onclick="cancelGarageLaunch()" class="text-[11px] text-neutral-400 hover:text-white underline pt-1 cursor-pointer">
+                    Return to Startup Screen
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- =========================================================================
+         INTERACTIVE 3D-STYLED LOW-POLY SCENE & CUSTOMIZER ENGINE
+         ========================================================================= -->
+    <script>
+        // 1. CHARACTER APPEARANCE STATE
+        const skinTones = [
+            '#F9DFCE', '#F0C5A8', '#E2AE88', '#D1966C', '#BC7E52',
+            '#A3673E', '#89522F', '#6E3F22', '#522E18', '#3B2010'
+        ];
+
+        const outfitColors = [
+            { name: 'High-Vis Orange', coat: '#E66829', pants: '#34495E', boots: '#5D4037' },
+            { name: 'Olive Coat',      coat: '#6B6349', pants: '#585B60', boots: '#6E503B' },
+            { name: 'Moss Green',      coat: '#556854', pants: '#4A4E54', boots: '#5D4037' },
+            { name: 'Slate Blue',      coat: '#515D6B', pants: '#585B60', boots: '#6E503B' },
+            { name: 'Rust Brown',      coat: '#7C4838', pants: '#585B60', boots: '#6E503B' },
+            { name: 'Charcoal',        coat: '#484B50', pants: '#3A3D42', boots: '#4E342E' },
+            { name: 'Sand Khaki',      coat: '#8E8462', pants: '#52565C', boots: '#6E503B' },
+            { name: 'Plum Dusk',       coat: '#635372', pants: '#4C5057', boots: '#5D4037' },
+            { name: 'Garage Teal',     coat: '#346975', pants: '#49525A', boots: '#5D4037' }
+        ];
+
+        const accentColors = ['#D95B43', '#28965A', '#F1C40F', '#2980B9', '#E2E8F0', '#334155'];
+
+        const character = {
+            sex: 'male',
+            skinIndex: 1,
+            outfitIndex: 0,
+            headgear: 'beanie',
+            accentColor: '#D95B43',
+            rotation: 0.35
+        };
+
+        // 2. LEVEL-DRIVEN ENVIRONMENT PROGRESSION (DEFAULT: LEVEL 1 SMOGGY -> CLEANER AS LEVEL INCREASES)
+        let currentLevel = 1;
+        const maxLevel = 10;
+        let smokeParticles = [];
+        let animTime = 0;
+
+        /**
+         * Interpolates between two hex colors by a normalized factor (0 to 1).
+         */
+        function lerpHexColor(a, b, amount) {
+            try {
+                const ah = parseInt(a.replace(/#/g, ''), 16),
+                      ar = ah >> 16, ag = (ah >> 8) & 0xff, ab = ah & 0xff,
+                      bh = parseInt(b.replace(/#/g, ''), 16),
+                      br = bh >> 16, bg = (bh >> 8) & 0xff, bb = bh & 0xff,
+                      rr = ar + amount * (br - ar),
+                      rg = ag + amount * (bg - ag),
+                      rb = ab + amount * (bb - ab);
+                return '#' + (((1 << 24) + (Math.round(rr) << 16) + (Math.round(rg) << 8) + Math.round(rb)).toString(16).slice(1));
+            } catch (err) {
+                return a;
+            }
+        }
+
+        /**
+         * Computes environmental parameters based on currentLevel.
+         * Level 1 starts smoggy and dirty, progressing cleanly toward Level 10.
+         */
+        function getEnvironmentConfig() {
+            const t = Math.min(1, Math.max(0, (currentLevel - 1) / (maxLevel - 1)));
+            const ecoPct = Math.round(28 + t * 68);
+
+            let statusTitle = 'Smoggy Garage';
+            let stagePill = `STAGE ${currentLevel} • THE GARAGE`;
+            let iconClass = 'fa-solid fa-smog text-[#E67E22]';
+
+            if (t >= 0.75) {
+                statusTitle = 'Green City';
+                stagePill = `STAGE ${currentLevel} • GREEN CITY`;
+                iconClass = 'fa-solid fa-leaf text-[#2ECC71]';
+            } else if (t >= 0.35) {
+                statusTitle = 'Clean Workshop';
+                stagePill = `STAGE ${currentLevel} • CLEAN WORKSHOP`;
+                iconClass = 'fa-solid fa-wind text-[#F1C40F]';
+            }
+
+            return {
+                t,
+                skyTop: lerpHexColor('#8A8177', '#3B8AC4', t),
+                skyHorizon: lerpHexColor('#CBBBA6', '#B8E4F0', t),
+                hazeAlpha: Math.max(0, 0.36 * (1 - t)),
+                smokeRate: Math.max(0.05, 1.0 * (1 - t)),
+                litterRatio: Math.max(0, 1 - t * 1.4),
+                treesLush: t >= 0.35,
+                extraTrees: t >= 0.7,
+                solarOnRoof: t >= 0.4,
+                grassColor: lerpHexColor('#7D8456', '#4E8D47', t),
+                ecoVal: `${ecoPct}%`,
+                ecoIcon: iconClass,
+                statusTitle,
+                stagePill
+            };
+        }
+
+        function updateLevelUI() {
+            const cfg = getEnvironmentConfig();
+            document.getElementById('level-badge').textContent = `LVL ${currentLevel}`;
+            document.getElementById('stage-status-name').textContent = cfg.statusTitle;
+            document.getElementById('center-stage-label').textContent = cfg.stagePill;
+            document.getElementById('hud-eco-val').textContent = cfg.ecoVal;
+            document.getElementById('hud-eco-icon').className = cfg.ecoIcon;
+        }
+
+        function increaseLevel() {
+            currentLevel = currentLevel < maxLevel ? currentLevel + 1 : 1;
+            updateLevelUI();
+        }
+
+        // 3. INITIALIZE CUSTOMIZER UI SWATCHES
+        function initCustomizerUI() {
+            const skinContainer = document.getElementById('skin-swatches');
+            skinContainer.innerHTML = '';
+            skinTones.forEach((hex, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `aspect-square rounded-[4px] transition cursor-pointer ${idx === character.skinIndex ? 'ring-2 ring-white scale-105' : 'opacity-90 hover:opacity-100'}`;
+                btn.style.backgroundColor = hex;
+                btn.onclick = () => {
+                    character.skinIndex = idx;
+                    initCustomizerUI();
+                };
+                skinContainer.appendChild(btn);
+            });
+
+            const outfitContainer = document.getElementById('outfit-swatches');
+            outfitContainer.innerHTML = '';
+            outfitColors.forEach((item, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `aspect-square rounded-[4px] transition cursor-pointer ${idx === character.outfitIndex ? 'ring-2 ring-white scale-105' : 'opacity-90 hover:opacity-100'}`;
+                btn.style.backgroundColor = item.coat;
+                btn.title = item.name;
+                btn.onclick = () => {
+                    character.outfitIndex = idx;
+                    document.getElementById('outfit-name-label').textContent = item.name;
+                    initCustomizerUI();
+                };
+                outfitContainer.appendChild(btn);
+            });
+
+            const accentContainer = document.getElementById('accent-swatches');
+            accentContainer.innerHTML = '';
+            accentColors.forEach(hex => {
+                const btn = document.createElement('button');
+                btn.className = `h-6 rounded-[5px] transition cursor-pointer ${hex === character.accentColor ? 'ring-2 ring-white' : ''}`;
+                btn.style.backgroundColor = hex;
+                btn.onclick = () => {
+                    character.accentColor = hex;
+                    initCustomizerUI();
+                };
+                accentContainer.appendChild(btn);
+            });
+        }
+
+        function setSex(sex) {
+            character.sex = sex;
+            document.getElementById('sex-male').className = sex === 'male'
+                ? 'py-1.5 rounded-[7px] text-xs font-bold bg-[#28965A] text-white transition cursor-pointer'
+                : 'py-1.5 rounded-[7px] text-xs font-bold bg-[#484C52] text-neutral-200 hover:bg-[#565b63] transition cursor-pointer';
+            document.getElementById('sex-female').className = sex === 'female'
+                ? 'py-1.5 rounded-[7px] text-xs font-bold bg-[#28965A] text-white transition cursor-pointer'
+                : 'py-1.5 rounded-[7px] text-xs font-bold bg-[#484C52] text-neutral-200 hover:bg-[#565b63] transition cursor-pointer';
+        }
+
+        function setHeadgear(type) {
+            character.headgear = type;
+            ['beanie', 'cap', 'none'].forEach(g => {
+                document.getElementById(`gear-${g}`).className = g === type
+                    ? 'gear-btn py-1.5 rounded-[7px] text-[11px] font-bold bg-[#28965A] text-white cursor-pointer'
+                    : 'gear-btn py-1.5 rounded-[7px] text-[11px] font-bold bg-[#484C52] text-neutral-200 cursor-pointer';
+            });
+        }
+
+        function switchCustomizerTab(tab) {
+            const isBody = tab === 'body';
+            document.getElementById('customizer-body-tab').classList.toggle('hidden', !isBody);
+            document.getElementById('customizer-gear-tab').classList.toggle('hidden', isBody);
+            document.getElementById('tab-btn-body').className = isBody
+                ? 'py-2.5 px-2 text-white bg-black/30 border-b-2 border-[#F1C40F] text-center cursor-pointer'
+                : 'py-2.5 px-2 text-neutral-400 hover:text-white text-center cursor-pointer';
+            document.getElementById('tab-btn-gear').className = !isBody
+                ? 'py-2.5 px-2 text-[#2ECC71] bg-black/30 border-b-2 border-[#F1C40F] text-center cursor-pointer'
+                : 'py-2.5 px-2 text-[#2ECC71] hover:bg-white/5 text-center cursor-pointer';
+        }
+
+        function updateCharacterRotation(val) {
+            character.rotation = (parseFloat(val) / 100) * 1.4;
+        }
+
+        function randomizeCharacter() {
+            setSex(Math.random() > 0.5 ? 'male' : 'female');
+            character.skinIndex = Math.floor(Math.random() * skinTones.length);
+            character.outfitIndex = Math.floor(Math.random() * outfitColors.length);
+            document.getElementById('outfit-name-label').textContent = outfitColors[character.outfitIndex].name;
+            const gears = ['beanie', 'cap', 'none'];
+            setHeadgear(gears[Math.floor(Math.random() * gears.length)]);
+            character.accentColor = accentColors[Math.floor(Math.random() * accentColors.length)];
+            initCustomizerUI();
+        }
+
+        function toggleAppearanceDrawer(forceState) {
+            const drawer = document.getElementById('appearance-drawer');
+            if (typeof forceState === 'boolean') {
+                drawer.classList.toggle('hidden', !forceState);
+            } else {
+                drawer.classList.toggle('hidden');
+            }
+        }
+
+        // 4. HTML5 CANVAS LOW-POLY UPCYCLE GARAGE & CHARACTER RENDERER
+        const canvas = document.getElementById('garage-scene-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeSceneCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function spawnSmoke(cfg) {
+            if (Math.random() < cfg.smokeRate * 0.35) {
+                const stackX = Math.random() > 0.5 ? 0.145 : 0.185;
+                smokeParticles.push({
+                    nx: stackX,
+                    ny: 0.21,
+                    r: 6 + Math.random() * 6,
+                    vx: 0.00045 + Math.random() * 0.0003,
+                    vy: -0.00035 - Math.random() * 0.00025,
+                    alpha: 0.42 * cfg.smokeRate
+                });
+            }
+        }
+
+        function drawGarageScene() {
+            try {
+                const w = canvas.parentElement.clientWidth;
+                const h = canvas.parentElement.clientHeight;
+                const cfg = getEnvironmentConfig();
+                animTime += 0.025;
+
+                ctx.clearRect(0, 0, w, h);
+
+                // A. SKY GRADIENT
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.65);
+                skyGrad.addColorStop(0, cfg.skyTop);
+                skyGrad.addColorStop(1, cfg.skyHorizon);
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // B. DISTANT CITY BUILDINGS & TWIN SMOKESTACKS
+                drawBackgroundCity(w, h, cfg);
+
+                // C. SIDEWALK, ROAD & CURB
+                drawStreetCorner(w, h, cfg);
+
+                // D. UPCYCLE GARAGE BUILDING
+                drawUpcycleGarage(w, h, cfg);
+
+                // E. SCATTERED COLLECTIBLE LITTER ON SIDEWALK
+                if (cfg.litterRatio > 0) {
+                    drawSidewalkLitter(w, h, cfg.litterRatio);
+                }
+
+                // F. LIVE LOW-POLY CHARACTER ON SIDEWALK
+                drawLowPolyCharacter(w * 0.43, h * 0.78, Math.min(w, h) * 0.25);
+
+                // G. ATMOSPHERIC SMOG HAZE OVERLAY
+                if (cfg.hazeAlpha > 0) {
+                    ctx.fillStyle = `rgba(182, 169, 152, ${cfg.hazeAlpha})`;
+                    ctx.fillRect(0, 0, w, h * 0.65);
+                }
+            } catch (err) {
+                // Keep render loop resilient
+            }
+
+            requestAnimationFrame(drawGarageScene);
+        }
+
+        function drawBackgroundCity(w, h, cfg) {
+            const horizonY = h * 0.54;
+
+            const stacks = [w * 0.145, w * 0.185];
+            stacks.forEach((sx, idx) => {
+                const topY = h * (idx === 0 ? 0.21 : 0.24);
+                const baseW = 14;
+                const topW = 8;
+                ctx.fillStyle = '#9E9A95';
+                ctx.beginPath();
+                ctx.moveTo(sx - baseW / 2, horizonY);
+                ctx.lineTo(sx - topW / 2, topY);
+                ctx.lineTo(sx + topW / 2, topY);
+                ctx.lineTo(sx + baseW / 2, horizonY);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#C0392B';
+                ctx.fillRect(sx - topW / 2 - 0.5, topY + 6, topW + 1, 7);
+                ctx.fillRect(sx - topW / 2 - 1, topY + 20, topW + 2, 7);
+            });
+
+            spawnSmoke(cfg);
+            smokeParticles.forEach((p, i) => {
+                p.nx += p.vx;
+                p.ny += p.vy;
+                p.r += 0.18;
+                p.alpha -= 0.0022;
+                if (p.alpha <= 0) {
+                    smokeParticles.splice(i, 1);
+                    return;
+                }
+                ctx.fillStyle = `rgba(120, 114, 108, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.nx * w, p.ny * h, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            const buildings = [
+                { x: 0.02, y: 0.36, bw: 0.11, bh: 0.20, c: '#8B857E' },
+                { x: 0.22, y: 0.39, bw: 0.13, bh: 0.17, c: '#968F86' },
+                { x: 0.55, y: 0.35, bw: 0.16, bh: 0.21, c: '#868079' },
+                { x: 0.72, y: 0.31, bw: 0.15, bh: 0.25, c: '#7D7872' },
+                { x: 0.88, y: 0.38, bw: 0.13, bh: 0.18, c: '#8C857D' }
+            ];
+
+            buildings.forEach(b => {
+                ctx.fillStyle = b.c;
+                ctx.fillRect(b.x * w, b.y * h, b.bw * w, b.bh * h);
+                ctx.fillStyle = 'rgba(45, 52, 58, 0.35)';
+                for (let wy = b.y * h + 10; wy < (b.y + b.bh) * h - 12; wy += 16) {
+                    for (let wx = b.x * w + 10; wx < (b.x + b.bw) * w - 12; wx += 18) {
+                        ctx.fillRect(wx, wy, 9, 10);
+                    }
+                }
+            });
+        }
+
+        function drawStreetCorner(w, h, cfg) {
+            ctx.fillStyle = '#4B5056';
+            ctx.beginPath();
+            ctx.moveTo(0, h * 0.54);
+            ctx.lineTo(w * 0.36, h * 0.54);
+            ctx.lineTo(w * 0.62, h);
+            ctx.lineTo(0, h);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = '#D4AC0D';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.24, h * 0.54);
+            ctx.lineTo(w * 0.54, h);
+            ctx.stroke();
+
+            ctx.fillStyle = '#B8B4AE';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.24, h * 0.54);
+            ctx.lineTo(w, h * 0.54);
+            ctx.lineTo(w, h);
+            ctx.lineTo(w * 0.54, h);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(90, 88, 84, 0.28)';
+            ctx.lineWidth = 1.5;
+            for (let i = 1; i <= 6; i++) {
+                const y = h * 0.54 + (h * 0.46 * (i / 6));
+                ctx.beginPath();
+                ctx.moveTo(w * 0.24, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = cfg.grassColor;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.66, h * 0.54);
+            ctx.lineTo(w, h * 0.54);
+            ctx.lineTo(w, h * 0.88);
+            ctx.lineTo(w * 0.78, h * 0.88);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawUpcycleGarage(w, h, cfg) {
+            const gx = w * 0.36;
+            const gy = h * 0.37;
+            const gw = w * 0.25;
+            const gh = h * 0.23;
+
+            // Chain-Link Fence Yard
+            ctx.strokeStyle = '#6C757D';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(gx - w * 0.11, gy + gh * 0.22, w * 0.11, gh * 0.78);
+            ctx.fillStyle = 'rgba(108, 117, 125, 0.14)';
+            ctx.fillRect(gx - w * 0.11, gy + gh * 0.22, w * 0.11, gh * 0.78);
+
+            // Concrete Block Garage Body
+            ctx.fillStyle = '#D5D2CC';
+            ctx.fillRect(gx, gy, gw, gh);
+            ctx.fillStyle = '#B8B4AC';
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx - 22, gy + 14);
+            ctx.lineTo(gx - 22, gy + gh);
+            ctx.lineTo(gx, gy + gh);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dark Green Roof Trim
+            ctx.fillStyle = '#24523A';
+            ctx.fillRect(gx - 4, gy - 8, gw + 8, 10);
+
+            // Rooftop Solar Panels as level increases
+            if (cfg.solarOnRoof) {
+                ctx.fillStyle = '#1B4F72';
+                ctx.strokeStyle = '#85C1E9';
+                ctx.lineWidth = 1.5;
+                ctx.fillRect(gx + 14, gy - 20, 44, 12);
+                ctx.strokeRect(gx + 14, gy - 20, 44, 12);
+                ctx.fillRect(gx + 66, gy - 20, 44, 12);
+                ctx.strokeRect(gx + 66, gy - 20, 44, 12);
+            }
+
+            // "UPCYCLE GARAGE" Signboard
+            ctx.fillStyle = '#F8F9FA';
+            ctx.fillRect(gx + gw * 0.18, gy + 8, gw * 0.56, 15);
+            ctx.fillStyle = '#1E293B';
+            ctx.font = '800 9px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('UPCYCLE GARAGE', gx + gw * 0.46, gy + 18.5);
+
+            // Open Garage Bay Interior
+            const bayX = gx + gw * 0.14;
+            const bayY = gy + 28;
+            const bayW = gw * 0.62;
+            const bayH = gh - 28;
+            ctx.fillStyle = '#3B352E';
+            ctx.fillRect(bayX, bayY, bayW, bayH);
+
+            const bayGlow = ctx.createLinearGradient(bayX, bayY, bayX, bayY + bayH);
+            bayGlow.addColorStop(0, 'rgba(241, 196, 15, 0.25)');
+            bayGlow.addColorStop(1, 'rgba(241, 196, 15, 0.04)');
+            ctx.fillStyle = bayGlow;
+            ctx.fillRect(bayX, bayY, bayW, bayH);
+
+            const binColors = ['#2980B9', '#E67E22', '#27AE60', '#C0392B'];
+            binColors.forEach((bc, idx) => {
+                ctx.fillStyle = bc;
+                ctx.fillRect(bayX + 10 + idx * 18, bayY + bayH - 14, 14, 12);
+            });
+
+            // Green Wheelbarrow
+            const wbX = gx + gw * 0.22;
+            const wbY = gy + gh + 14;
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.moveTo(wbX, wbY);
+            ctx.lineTo(wbX + 24, wbY);
+            ctx.lineTo(wbX + 19, wbY + 11);
+            ctx.lineTo(wbX + 4, wbY + 11);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#1E293B';
+            ctx.beginPath();
+            ctx.arc(wbX + 22, wbY + 12, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Teal Bicycle with Basket
+            const bkX = gx + gw * 0.86;
+            const bkY = gy + gh + 16;
+            ctx.strokeStyle = '#1F8A9C';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(bkX, bkY, 9, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(bkX + 26, bkY, 9, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(bkX, bkY);
+            ctx.lineTo(bkX + 12, bkY - 11);
+            ctx.lineTo(bkX + 23, bkY - 11);
+            ctx.lineTo(bkX + 26, bkY);
+            ctx.stroke();
+            ctx.fillStyle = '#D4A359';
+            ctx.fillRect(bkX + 22, bkY - 18, 8, 7);
+
+            // Teal Pallet Bench
+            const pbX = gx + gw * 1.02;
+            const pbY = gy + gh + 18;
+            ctx.fillStyle = '#2A9D8F';
+            ctx.fillRect(pbX, pbY - 18, 42, 16);
+            ctx.fillStyle = '#21867A';
+            ctx.fillRect(pbX - 3, pbY - 4, 46, 12);
+            ctx.fillStyle = '#F4D03F';
+            ctx.fillRect(pbX + 5, pbY - 13, 14, 11);
+            ctx.fillStyle = '#EC7063';
+            ctx.fillRect(pbX + 21, pbY - 13, 14, 11);
+
+            // Painted Tire Planters
+            ctx.fillStyle = '#EC7063';
+            ctx.beginPath();
+            ctx.ellipse(gx + gw * 0.72, gy + gh + 24, 10, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2ECC71';
+            ctx.beginPath();
+            ctx.arc(gx + gw * 0.72, gy + gh + 20, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // A-Frame Chalkboard Sign
+            const sbX = gx - 16;
+            const sbY = gy + gh + 22;
+            ctx.fillStyle = '#A67C52';
+            ctx.fillRect(sbX, sbY, 14, 18);
+            ctx.fillStyle = '#212529';
+            ctx.fillRect(sbX + 2, sbY + 2, 10, 12);
+
+            // Roadside Trees
+            drawLowPolyTree(w * 0.84, h * 0.56, cfg.treesLush ? '#27AE60' : '#7E8C54');
+            if (cfg.extraTrees) {
+                drawLowPolyTree(w * 0.93, h * 0.62, '#2ECC71');
+            }
+        }
+
+        function drawLowPolyTree(tx, ty, leafColor) {
+            ctx.fillStyle = '#6E472B';
+            ctx.fillRect(tx - 4, ty - 28, 8, 28);
+            ctx.fillStyle = leafColor;
+            ctx.beginPath();
+            ctx.moveTo(tx, ty - 68);
+            ctx.lineTo(tx - 24, ty - 26);
+            ctx.lineTo(tx + 24, ty - 26);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawSidewalkLitter(w, h, ratio) {
+            const items = [
+                { x: 0.52, y: 0.78, c: '#2980B9', r: 3 },
+                { x: 0.56, y: 0.84, c: '#E67E22', r: 2.5 },
+                { x: 0.61, y: 0.72, c: '#C0392B', r: 3 },
+                { x: 0.48, y: 0.88, c: '#F1C40F', r: 2.8 },
+                { x: 0.68, y: 0.82, c: '#2980B9', r: 3.2 }
+            ];
+            const visibleCount = Math.ceil(items.length * ratio);
+            items.slice(0, visibleCount).forEach(it => {
+                ctx.fillStyle = it.c;
+                ctx.beginPath();
+                ctx.roundRect(it.x * w, it.y * h, it.r * 2.2, it.r * 1.3, 2);
+                ctx.fill();
+            });
+        }
+
+        // 5. STYLIZED LOW-POLY CHARACTER RENDERER
+        function drawLowPolyCharacter(cx, groundY, scale) {
+            const skin = skinTones[character.skinIndex];
+            const outfit = outfitColors[character.outfitIndex];
+            const bob = Math.sin(animTime * 1.8) * 2;
+            const turn = Math.sin(character.rotation) * 10;
+
+            ctx.save();
+            ctx.translate(cx, groundY);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, scale * 0.24, scale * 0.06, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = outfit.boots;
+            ctx.beginPath();
+            ctx.roundRect(-scale * 0.13 + turn * 0.2, -scale * 0.08, scale * 0.11, scale * 0.08, 4);
+            ctx.roundRect(scale * 0.02 + turn * 0.2, -scale * 0.08, scale * 0.11, scale * 0.08, 4);
+            ctx.fill();
+
+            ctx.fillStyle = outfit.pants;
+            ctx.fillRect(-scale * 0.11, -scale * 0.44, scale * 0.095, scale * 0.37);
+            ctx.fillRect(scale * 0.015, -scale * 0.44, scale * 0.095, scale * 0.37);
+
+            ctx.fillStyle = '#D8C7A8';
+            ctx.beginPath();
+            ctx.roundRect(-scale * 0.13, -scale * 0.78 + bob, scale * 0.26, scale * 0.36, 8);
+            ctx.fill();
+
+            ctx.fillStyle = outfit.coat;
+            ctx.beginPath();
+            ctx.roundRect(-scale * 0.15, -scale * 0.79 + bob, scale * 0.12, scale * 0.48, 5);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(scale * 0.03, -scale * 0.79 + bob, scale * 0.12, scale * 0.48, 5);
+            ctx.fill();
+
+            if (character.outfitIndex === 0) {
+                ctx.fillStyle = '#E2E8F0';
+                ctx.fillRect(-scale * 0.145, -scale * 0.56 + bob, scale * 0.11, 4);
+                ctx.fillRect(scale * 0.035, -scale * 0.56 + bob, scale * 0.11, 4);
+            }
+
+            ctx.fillStyle = outfit.coat;
+            ctx.beginPath();
+            ctx.roundRect(-scale * 0.20, -scale * 0.76 + bob, scale * 0.06, scale * 0.32, 5);
+            ctx.roundRect(scale * 0.14, -scale * 0.76 + bob, scale * 0.06, scale * 0.32, 5);
+            ctx.fill();
+
+            ctx.fillStyle = skin;
+            ctx.beginPath();
+            ctx.arc(-scale * 0.17, -scale * 0.42 + bob, scale * 0.032, 0, Math.PI * 2);
+            ctx.arc(scale * 0.17, -scale * 0.42 + bob, scale * 0.032, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = character.accentColor;
+            ctx.beginPath();
+            ctx.roundRect(-scale * 0.09, -scale * 0.82 + bob, scale * 0.18, scale * 0.055, 4);
+            ctx.fill();
+            ctx.fillRect(scale * 0.03 + turn * 0.25, -scale * 0.78 + bob, scale * 0.04, scale * 0.14);
+
+            const headY = -scale * 0.94 + bob;
+            const headR = scale * 0.12;
+            ctx.fillStyle = skin;
+            ctx.beginPath();
+            ctx.arc(0, headY, headR, 0, Math.PI * 2);
+            ctx.fill();
+
+            const eyeOffsetX = turn * 0.45;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(-headR * 0.32 + eyeOffsetX, headY - 2, headR * 0.24, 0, Math.PI * 2);
+            ctx.arc(headR * 0.32 + eyeOffsetX, headY - 2, headR * 0.24, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#2C221E';
+            ctx.beginPath();
+            ctx.arc(-headR * 0.28 + eyeOffsetX * 1.15, headY - 2, headR * 0.11, 0, Math.PI * 2);
+            ctx.arc(headR * 0.36 + eyeOffsetX * 1.15, headY - 2, headR * 0.11, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = character.sex === 'male' ? '#94A3B8' : '#7C4A3A';
+            ctx.lineWidth = character.sex === 'male' ? 3 : 2;
+            ctx.beginPath();
+            ctx.arc(eyeOffsetX, headY + headR * 0.42, headR * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.stroke();
+
+            if (character.headgear === 'beanie') {
+                ctx.fillStyle = character.accentColor;
+                ctx.beginPath();
+                ctx.arc(0, headY - headR * 0.15, headR * 1.03, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, headY - headR * 1.25, headR * 0.32, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (character.headgear === 'cap') {
+                ctx.fillStyle = character.accentColor;
+                ctx.beginPath();
+                ctx.arc(0, headY - headR * 0.15, headR * 1.02, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(-headR * 0.6 + eyeOffsetX, headY - headR * 0.22, headR * 1.5, 4);
+            }
+
+            ctx.restore();
+        }
+
+        // 6. MODALS & CAMERA ZOOM TRANSITION INTO GARAGE
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function selectQuality(btn) {
+            document.querySelectorAll('.qual-btn').forEach(b => {
+                b.className = 'qual-btn py-2 rounded-lg bg-[#3A3E44] text-neutral-300 font-bold cursor-pointer';
+            });
+            btn.className = 'qual-btn py-2 rounded-lg bg-[#28965A] text-white font-bold cursor-pointer';
+        }
+
+        let garageLoadTimer = null;
+
+        function startGarageSession() {
+            const scene = document.getElementById('scene-wrapper');
+            const overlay = document.getElementById('loading-garage-hud');
+            const bar = document.getElementById('garage-progress-bar');
+
+            scene.classList.add('zoom-into-garage');
+            overlay.classList.remove('hidden');
+            bar.style.width = '0%';
+
+            let pct = 0;
+            clearInterval(garageLoadTimer);
+            garageLoadTimer = setInterval(() => {
+                pct += 14;
+                if (pct >= 100) {
+                    pct = 100;
+                    clearInterval(garageLoadTimer);
+                    document.getElementById('loading-tip').textContent = 'Garage Ready! Click "Return to Startup Screen" to keep testing.';
+                }
+                bar.style.width = pct + '%';
+            }, 180);
+        }
+
+        function cancelGarageLaunch() {
+            clearInterval(garageLoadTimer);
+            document.getElementById('scene-wrapper').classList.remove('zoom-into-garage');
+            document.getElementById('loading-garage-hud').classList.add('hidden');
+        }
+
+        function toggleFullscreenFrame() {
+            const frame = document.getElementById('game-viewport');
+            const btn = document.getElementById('fullscreen-btn');
+            frame.classList.toggle('is-fullscreen');
+            const isFull = frame.classList.contains('is-fullscreen');
+            btn.innerHTML = isFull
+                ? '<i class="fa-solid fa-compress"></i> <span>Exit Fullscreen</span>'
+                : '<i class="fa-solid fa-expand"></i> <span>Fullscreen</span>';
+            setTimeout(resizeSceneCanvas, 60);
+        }
+
+        // Boot on Window Load
+        window.onload = function () {
+            initCustomizerUI();
+            resizeSceneCanvas();
+            updateLevelUI();
+            drawGarageScene();
+        };
+
+        window.addEventListener('resize', resizeSceneCanvas);
+    </script>
+</body>
+</html>

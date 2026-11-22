@@ -8,8 +8,10 @@ namespace UpcycleCity.Ecosystem
     /// <summary>
     /// A named spatial city district bound to a <see cref="PollutionZone"/>.
     /// Aggregates real physical trash weight + active <see cref="IPollutionSource"/> air emissions
-    /// inside its radius, drives live building grime &amp; foliage shaders via <see cref="PollutionZone"/>,
-    /// and computes Resident Satisfaction which feeds back into citizen littering rates.
+    /// inside its radius and computes Resident Satisfaction which feeds back into citizen littering rates.
+    /// When the scene has a <see cref="PollutionGrid"/>, the grid drives the shaders and the district's pollution is
+    /// the average of its cells (so pollution leaking in from a neighbouring district counts); its zone is muted.
+    /// Without a grid, the district drives the building grime &amp; foliage shaders through its <see cref="PollutionZone"/>.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PollutionZone))]
@@ -146,14 +148,22 @@ namespace UpcycleCity.Ecosystem
             cleanBins = Mathf.Max(0, state.i1 & 0xFFFF);
             mitigatedSources = state.flags;
 
-            if (zone != null)
-            {
-                zone.Weight = 1f;
-                if (!Mathf.Approximately(zone.Pollution, currentPollution))
-                    zone.Pollution = currentPollution;
-            }
+            SyncZone();
 
             StateChanged?.Invoke(this);
+        }
+
+        /// <summary>Mirrors the district into its zone, or mutes the zone when a pollution grid drives the shaders.</summary>
+        void SyncZone()
+        {
+            if (zone == null)
+                return;
+
+            float weight = PollutionGrid.Active != null ? 0f : 1f;
+            if (!Mathf.Approximately(zone.Weight, weight))
+                zone.Weight = weight;
+            if (!Mathf.Approximately(zone.Pollution, currentPollution))
+                zone.Pollution = currentPollution;
         }
 
         public bool ContainsPoint(Vector3 worldPos)
@@ -263,8 +273,13 @@ namespace UpcycleCity.Ecosystem
                 }
             }
 
+            PollutionGrid grid = PollutionGrid.Active;
             float totalLoad = trashPollutionLoad + backgroundLitterLoad + airPollutionLoad;
-            targetPollution = Mathf.Clamp01(totalLoad / Mathf.Max(1f, Capacity));
+            targetPollution = grid != null
+                ? grid.AverageInCircle(transform.position, Radius)   // already smoothed and leaked by the grid
+                : Mathf.Clamp01(totalLoad / Mathf.Max(1f, Capacity));
+            if (grid != null)
+                currentPollution = targetPollution;
 
             // Resident satisfaction reflects cleanliness (65%), clean bin availability (20%), and air quality (15%)
             float cleanlinessScore = 1f - currentPollution;
@@ -288,12 +303,7 @@ namespace UpcycleCity.Ecosystem
                 satisfactionBonus = Mathf.MoveTowards(satisfactionBonus, 0f, 0.025f * dt);
             }
 
-            if (zone != null)
-            {
-                zone.Weight = 1f;
-                if (!Mathf.Approximately(zone.Pollution, currentPollution))
-                    zone.Pollution = currentPollution;
-            }
+            SyncZone();
 
             // Milestone toast when a district flips to clean
             if (!wasCleanNotified && currentPollution <= 0.22f && Time.time > 3f)

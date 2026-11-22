@@ -154,6 +154,9 @@ namespace UpcycleCity.Core
         /// <summary>True when an online co-op session is active.</summary>
         bool IsMultiplayer { get; }
 
+        /// <summary>Shared authoritative clock in seconds (NetworkManager.ServerTime.Time in co-op, Time.unscaledTimeAsDouble in solo).</summary>
+        double ServerTime { get; }
+
         /// <summary>Current active city event title (empty when no event is active).</summary>
         string ActiveEventTitle { get; }
 
@@ -163,8 +166,34 @@ namespace UpcycleCity.Core
         /// <summary>Severity level of the active city event (0 = none, 1 = normal, 2+ = urgent).</summary>
         byte ActiveEventSeverity { get; }
 
+        /// <summary>Current shared team coin balance (local inventory coins in solo, SharedTeamWallet in co-op).</summary>
+        int TeamCoins { get; }
+
+        /// <summary>Host-only (or solo) helper to spend shared team coins (used by authoritative machine upgrades).</summary>
+        bool TrySpendTeamCoins(int amount);
+
+        /// <summary>Host-only (or solo) helper to credit shared team coins (e.g. starter kit or refund).</summary>
+        void CreditTeamCoins(int amount);
+
+        /// <summary>Host-only hint to push any dirty <see cref="ISyncedStateProvider"/> deltas immediately to co-op clients.</summary>
+        void FlushSyncedStates();
+
+        /// <summary>
+        /// Sends a targeted player feedback toast/event to <paramref name="targetClientId"/> via the existing
+        /// authority feedback channel (local feedback in solo or when targeting the host; targeted ClientRpc in co-op).
+        /// </summary>
+        void SendTargetedFeedback(
+            ulong targetClientId,
+            string message,
+            Color color,
+            PlayerFeedbackEvent feedbackEvent,
+            Vector3 worldPos);
+
         /// <summary>Requests sorting <paramref name="item"/> into <paramref name="crate"/>.</summary>
         void RequestSortTrash(SortingCrate crate, TrashItem item, PlayerInteractor interactor);
+
+        /// <summary>Requests depositing <paramref name="item"/> into a crafting machine hopper (<paramref name="hopper"/>).</summary>
+        void RequestDepositTrash(ITrashHopper hopper, TrashItem item, PlayerInteractor interactor);
 
         /// <summary>Requests selling <paramref name="item"/> at <paramref name="buyBack"/>.</summary>
         void RequestSellTrash(RecyclingBuyBack buyBack, TrashItem item, PlayerInteractor interactor);
@@ -214,6 +243,19 @@ namespace UpcycleCity.Core
             Transform parent = null);
 
         /// <summary>
+        /// Host-only (or local solo) prefab spawning with a pre-spawn callback invoked AFTER instantiation and
+        /// BEFORE <c>NetworkObject.Spawn</c>. Use this to assign a stable placement ID via
+        /// <see cref="IMachineIdentityReceiver.ApplyPlacementId"/> so clients receive the final ID on first spawn
+        /// without double registration or referencing <c>UpcycleCity.Networking</c>.
+        /// </summary>
+        GameObject SpawnNetworkedPrefab(
+            GameObject prefab,
+            Vector3 worldPosition,
+            Quaternion rotation,
+            Action<GameObject> beforeSpawn,
+            Transform parent = null);
+
+        /// <summary>
         /// Host-only (or local solo) object despawning. Calling this on a non-host client logs an error and returns false.
         /// </summary>
         bool DespawnNetworkedObject(GameObject instance);
@@ -233,12 +275,56 @@ namespace UpcycleCity.Core
         string activeEventTitle = string.Empty;
         double activeEventEndTime;
         byte activeEventSeverity;
+        PlayerInventory localWalletOverride;
+
+        public void SetLocalWalletOverride(PlayerInventory inventory) => localWalletOverride = inventory;
+
+        PlayerInventory ResolveLocalWallet() => localWalletOverride != null ? localWalletOverride : PlayerContext.ActiveInventory;
 
         public bool IsAuthoritative => true;
         public bool IsMultiplayer => false;
+        public double ServerTime => Time.unscaledTimeAsDouble;
         public string ActiveEventTitle => ActiveEventTimeRemaining > 0f ? activeEventTitle : string.Empty;
         public float ActiveEventTimeRemaining => activeEventEndTime > 0d ? Mathf.Max(0f, (float)(activeEventEndTime - Time.unscaledTimeAsDouble)) : 0f;
         public byte ActiveEventSeverity => ActiveEventTimeRemaining > 0f ? activeEventSeverity : (byte)0;
+        public int TeamCoins
+        {
+            get
+            {
+                PlayerInventory inv = ResolveLocalWallet();
+                return inv != null ? inv.Coins : 0;
+            }
+        }
+
+        public bool TrySpendTeamCoins(int amount)
+        {
+            if (amount <= 0)
+                return true;
+            PlayerInventory inv = ResolveLocalWallet();
+            return inv != null && inv.TrySpendCoins(amount);
+        }
+
+        public void CreditTeamCoins(int amount)
+        {
+            if (amount <= 0)
+                return;
+            ResolveLocalWallet()?.AddCoins(amount);
+        }
+
+        public void FlushSyncedStates() { }
+
+        public void SendTargetedFeedback(
+            ulong targetClientId,
+            string message,
+            Color color,
+            PlayerFeedbackEvent feedbackEvent,
+            Vector3 worldPos)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+            PlayerContext.ActiveInteractor?.NotifyFeedback(message, color);
+            PlayerContext.ActiveFeedback?.Emit(feedbackEvent, worldPos, 1f, message, color);
+        }
 
         public void RequestSortTrash(SortingCrate crate, TrashItem item, PlayerInteractor interactor)
         {
@@ -247,6 +333,13 @@ namespace UpcycleCity.Core
             PlayerInteractor resolved = interactor ?? PlayerContext.ActiveInteractor;
             PlayerInventory inventory = resolved != null ? resolved.Inventory : PlayerContext.ActiveInventory;
             crate.ExecuteAuthoritativeSort(item, inventory, resolved);
+        }
+
+        public void RequestDepositTrash(ITrashHopper hopper, TrashItem item, PlayerInteractor interactor)
+        {
+            if (hopper == null || item == null)
+                return;
+            hopper.ExecuteAuthoritativeDeposit(item, interactor ?? PlayerContext.ActiveInteractor, out _, out _, emitLocalFeedback: true);
         }
 
         public void RequestSellTrash(RecyclingBuyBack buyBack, TrashItem item, PlayerInteractor interactor)
@@ -303,6 +396,9 @@ namespace UpcycleCity.Core
                 return;
             }
 
+            if (offer.item != null && offer.item.UseBehavior is IMaterialStockCreditBehavior stockCredit && stockCredit.CreditOnPurchase)
+                stockCredit.CreditAuthoritativeStock(offer.quantity, out _);
+
             onResult?.Invoke(new ShopPurchaseResult(true, request.ItemId, request.Quantity, price, inv.Coins));
         }
 
@@ -334,11 +430,21 @@ namespace UpcycleCity.Core
             GameObject prefab,
             Vector3 worldPosition,
             Quaternion rotation,
+            Transform parent = null) =>
+            SpawnNetworkedPrefab(prefab, worldPosition, rotation, beforeSpawn: null, parent: parent);
+
+        public GameObject SpawnNetworkedPrefab(
+            GameObject prefab,
+            Vector3 worldPosition,
+            Quaternion rotation,
+            Action<GameObject> beforeSpawn,
             Transform parent = null)
         {
             if (prefab == null)
                 return null;
-            return UnityEngine.Object.Instantiate(prefab, worldPosition, rotation, parent);
+            GameObject go = UnityEngine.Object.Instantiate(prefab, worldPosition, rotation, parent);
+            beforeSpawn?.Invoke(go);
+            return go;
         }
 
         public bool DespawnNetworkedObject(GameObject instance)
@@ -410,6 +516,15 @@ namespace UpcycleCity.Core
 
         /// <summary>Shortcut for <c>GameAuthority.Current.IsMultiplayer</c>.</summary>
         public static bool IsMultiplayer => Current.IsMultiplayer;
+
+        /// <summary>
+        /// Resolves this machine's co-op client ID. Installed by the networking layer while a session runs; gameplay code
+        /// reads <see cref="LocalClientId"/> to find its own per-player state (e.g. its Recycling Bag) without Netcode.
+        /// </summary>
+        public static Func<ulong> LocalClientIdResolver { get; set; }
+
+        /// <summary>This machine's client ID (0 in solo and on the host), matching <see cref="CustomGameActionContext.SenderClientId"/>.</summary>
+        public static ulong LocalClientId => LocalClientIdResolver != null ? LocalClientIdResolver() : 0UL;
 
         /// <summary>Installs an authority implementation (passing null restores <see cref="LocalGameAuthority.Instance"/>).</summary>
         public static void SetAuthority(IGameAuthority authority)
@@ -520,6 +635,7 @@ namespace UpcycleCity.Core
             LocalGameAuthority.Instance.ResetState();
             current = LocalGameAuthority.Instance;
             CustomHandlers.Clear();
+            LocalClientIdResolver = null;
         }
     }
 }

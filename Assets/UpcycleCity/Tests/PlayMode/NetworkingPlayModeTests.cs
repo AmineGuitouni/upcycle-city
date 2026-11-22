@@ -156,6 +156,80 @@ namespace UpcycleCity.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator HostAndClient_PollutionGrid_HostLeakReplicatesToClientAndClientNeverSimulates()
+        {
+            NetworkSettings settings = LoadNetworkSettings();
+            Assert.IsNotNull(settings, "NetworkSettings.asset must exist.");
+
+            ushort port = nextPort++;
+            yield return StartHostAndClient(settings, port);
+
+            var hostRegistry = new SyncedStateRegistryInstance();
+            var clientRegistry = new SyncedStateRegistryInstance();
+
+            GameObject repGo = UnityEngine.Object.Instantiate(settings.NetworkCityStatePrefab);
+            spawnedRoots.Add(repGo);
+            NetworkStateReplicator hostRep = repGo.GetComponent<NetworkStateReplicator>();
+            hostRep.Configure(settings.NetworkTrashPrefab, syncInterval: 0.1f, initialCoins: 25);
+            hostRep.SetStateRegistry(hostRegistry);
+            repGo.GetComponent<NetworkObject>().Spawn();
+
+            NetworkStateReplicator clientRep = null;
+            yield return WaitUntil(() =>
+            {
+                clientRep = FindSpawnedBehaviour<NetworkStateReplicator>(clientManager);
+                return clientRep != null && clientRep.IsSpawned;
+            }, 5f, "Client did not receive NetworkStateReplicator.");
+            clientRep.SetStateRegistry(clientRegistry);
+
+            // Same scene layout on both peers (the grids would be the same scene object in a real session)
+            UpcycleCity.Pollution.PollutionGrid hostGrid = CreateTestGrid("HostGrid", hostRegistry);
+            UpcycleCity.Pollution.PollutionGrid clientGrid = CreateTestGrid("ClientGrid", clientRegistry);
+            yield return null;
+
+            // Host-only: pollution at one cell, leaking out with a decaying amount
+            hostGrid.BeginDeposits();
+            hostGrid.Deposit(hostGrid.CellCentre(6, 6), 2.5f);
+            hostGrid.Simulate(0.25f, snapImmediate: true);
+            float hostCentre = hostGrid.GetLevel(6, 6);
+            float hostNeighbour = hostGrid.GetLevel(7, 6);
+            float hostFar = hostGrid.GetLevel(9, 6);
+            Assert.Greater(hostCentre, hostNeighbour);
+            Assert.Greater(hostNeighbour, hostFar);
+            Assert.Greater(hostFar, 0f);
+
+            const float Quantum = 1f / 255f + 1e-4f;
+            yield return WaitUntil(() =>
+                Mathf.Abs(clientGrid.GetLevel(6, 6) - hostCentre) <= Quantum
+                && Mathf.Abs(clientGrid.GetLevel(7, 6) - hostNeighbour) <= Quantum
+                && Mathf.Abs(clientGrid.GetLevel(9, 6) - hostFar) <= Quantum,
+                4f, "Host pollution grid cells (and their leak) did not replicate to the client.");
+
+            // Clean-up on the host clears the client too
+            for (int i = 0; i < 120; i++)
+            {
+                hostGrid.BeginDeposits();
+                hostGrid.Simulate(0.25f);
+            }
+            Assert.Less(hostGrid.GetLevel(6, 6), 0.01f);
+            yield return WaitUntil(() => clientGrid.GetLevel(6, 6) < 0.01f && clientGrid.GetLevel(7, 6) < 0.01f,
+                4f, "Host clean-up did not replicate to the client grid.");
+        }
+
+        UpcycleCity.Pollution.PollutionGrid CreateTestGrid(string name, SyncedStateRegistryInstance registry)
+        {
+            var go = new GameObject(name);
+            go.SetActive(false);
+            spawnedRoots.Add(go);
+            var grid = go.AddComponent<UpcycleCity.Pollution.PollutionGrid>();
+            grid.Configure(Vector2.zero, 4f, new Vector2Int(14, 10));
+            grid.ConfigureLeak(2.5f, 0.65f, rise: 0.25f, recovery: 0.14f, spreadRadius: 9f);
+            grid.SetStateRegistry(registry);
+            go.SetActive(true);
+            return grid;
+        }
+
+        [UnityTest]
         public IEnumerator HostAndClient_ShopSecurity_CatalogPriceResolutionAndNoRefundPath()
         {
             // Verify N4: no refund RPC or interface method exists
@@ -1010,19 +1084,18 @@ namespace UpcycleCity.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator CoopMenuController_LateJoinRejectionAndCancel_UpdatesMenuStateBannerAndHidesCreator()
+        public IEnumerator MainMenu_LateJoinRejectionAndCancel_UpdatesMenuStateAndBanner()
         {
-            SceneManager.LoadScene("CharacterCreator", LoadSceneMode.Single);
+            SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
             yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
+                SceneManager.GetActiveScene().name == "MainMenu"
                 && CoopSessionManager.Instance != null
-                && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null
-                && UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>() != null,
-                6f, "CharacterCreator scene, CoopSessionManager, CoopMenuController, or CharacterCreatorController did not load.");
+                && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
+                6f, "MainMenu scene, CoopSessionManager or CoopMenuController did not load.");
 
             CoopSessionManager sm = CoopSessionManager.Instance;
             CoopMenuController menu = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
-            CharacterCreatorController creator = UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>();
+            Assert.AreEqual("Title", menu.CurrentScreenName, "Main Menu must open on the title screen.");
             NetworkSettings settings = LoadNetworkSettings();
 
             // 1. Start a separate host NetworkManager that rejects connections with GAME_IN_PROGRESS
@@ -1047,15 +1120,13 @@ namespace UpcycleCity.Tests.PlayMode
             // 2. Open Join screen and submit Direct IP -> must enter Connecting (with Cancel), NEVER stuck on Lobby
             menu.OpenJoinInput(CoopTransportMode.Direct);
             Assert.AreEqual("JoinInput", menu.CurrentScreenName);
-            Assert.IsFalse(creator.IsCreatorPanelVisible, "Character Creator panel must be hidden while Join screen is open.");
 
             menu.SubmitJoin($"127.0.0.1:{port}", CoopTransportMode.Direct);
             Assert.AreEqual("Connecting", menu.CurrentScreenName,
-                "Join submission must show Connecting screen while awaiting approval, never jumping straight to Lobby.");
+                "Join submission must show Connecting screen while awaiting approval, never jumping straight to the Room.");
             Assert.IsTrue(menu.IsCancelButtonVisible, "Cancel button must be visible on Connecting screen.");
-            Assert.IsFalse(creator.IsCreatorPanelVisible);
 
-            // 3. Wait for rejection -> must transition to JoinInput with friendly error banner (NOT Lobby!)
+            // 3. Wait for rejection -> must transition to JoinInput with friendly error banner (NOT the Room!)
             yield return WaitUntil(() =>
                 sm.State == CoopSessionState.Offline
                 && menu.CurrentScreenName == "JoinInput"
@@ -1064,8 +1135,6 @@ namespace UpcycleCity.Tests.PlayMode
 
             Assert.That(menu.BannerText, Does.Contain("already in progress"),
                 $"Expected friendly 'already in progress' banner text, got: '{menu.BannerText}'");
-            Assert.IsFalse(creator.IsCreatorPanelVisible,
-                "Character Creator panel must remain hidden underneath JoinInput after rejection.");
 
             // 4. Test Cancel button during Connecting against a closed port
             hostManager.Shutdown();
@@ -1086,100 +1155,333 @@ namespace UpcycleCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator HostAndClient_CoopSessionManager_FullSessionFlowLateJoinRejectionAndLeaveToMenu()
         {
-            // 1. Load CharacterCreator menu scene with CoopSessionManager
-            SceneManager.LoadScene("CharacterCreator", LoadSceneMode.Single);
-            yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
-                && CoopSessionManager.Instance != null,
-                6f, "CharacterCreator scene or CoopSessionManager did not load.");
-
-            CoopSessionManager sm = CoopSessionManager.Instance;
-            ushort port = nextPort++;
-
-            // 2. Host Direct Co-op -> enters Lobby
-            Task<(bool success, string error)> hostTask = sm.HostCoopAsync(CoopTransportMode.Direct, "127.0.0.1", port);
-            yield return WaitUntil(() => hostTask.IsCompleted, 5f, "HostCoopAsync did not complete.");
-            Assert.IsTrue(hostTask.Result.success, $"HostCoopAsync failed: {hostTask.Result.error}");
-            Assert.AreEqual(CoopSessionState.Lobby, sm.State);
-
-            // 3. Start gameplay -> NGO SceneManager loads EcosystemSandbox and spawns NetworkStateReplicator
-            Assert.IsTrue(sm.StartCoopGameplay(), "StartCoopGameplay should start scene transition.");
-            yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "EcosystemSandbox"
-                && sm.State == CoopSessionState.InGame
-                && NetworkStateReplicator.Active != null
-                && NetworkStateReplicator.Active.IsSpawned,
-                10f, "Co-op session did not transition to EcosystemSandbox InGame with NetworkStateReplicator.");
-
-            // 4. Late-joining client MUST be rejected by connection approval with GAME_IN_PROGRESS
-            NetworkSettings settings = LoadNetworkSettings();
-            var lateGo = new GameObject("LateJoinClientNM");
-            spawnedRoots.Add(lateGo);
-            NetworkManager lateClient = lateGo.AddComponent<NetworkManager>();
-            UnityTransport lateUtp = lateGo.AddComponent<UnityTransport>();
-            lateUtp.SetConnectionData("127.0.0.1", port);
-            lateClient.NetworkConfig = new NetworkConfig
+            bool hadSavedLook = CharacterAppearanceStore.HasSaved;
+            CharacterAppearance savedLook = CharacterAppearanceStore.Current;
+            try
             {
-                NetworkTransport = lateUtp,
-                TickRate = settings.TickRate,
-                EnableSceneManagement = true,
-                ConnectionApproval = true,
-                PlayerPrefab = settings.NetworkPlayerPrefab,
-            };
-            if (settings.NetworkPrefabsList != null)
-                lateClient.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(settings.NetworkPrefabsList);
+                // 1. Main Menu owns the persistent CoopSessionManager
+                SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "MainMenu"
+                    && CoopSessionManager.Instance != null
+                    && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
+                    6f, "MainMenu scene or CoopSessionManager did not load.");
 
-            bool lateDisconnected = false;
-            string rawRejectReason = null;
-            lateClient.OnClientDisconnectCallback += _ =>
+                CoopSessionManager sm = CoopSessionManager.Instance;
+                CoopMenuController menu = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
+                NetworkSettings settings = LoadNetworkSettings();
+                ushort port = nextPort++;
+
+                // 2. Host Direct -> Room screen with the CHOOSE CHARACTERS button
+                Task<(bool success, string error)> hostTask = sm.HostCoopAsync(CoopTransportMode.Direct, "127.0.0.1", port);
+                yield return WaitUntil(() => hostTask.IsCompleted, 5f, "HostCoopAsync did not complete.");
+                Assert.IsTrue(hostTask.Result.success, $"HostCoopAsync failed: {hostTask.Result.error}");
+                Assert.AreEqual(CoopSessionState.Lobby, sm.State);
+                Assert.IsTrue(sm.IsInRoom);
+                Assert.AreEqual("Room", menu.CurrentScreenName);
+                Assert.IsTrue(menu.IsContinueButtonVisible, "Host must see CHOOSE CHARACTERS in the Room.");
+
+                // 3. Room -> Character Creation for everyone (NGO scene load, nobody spawned)
+                menu.ContinueToCharacters();
+                CoopCharacterLobbyPanel crew = sm.GetComponent<CoopCharacterLobbyPanel>();
+                Assert.IsNotNull(crew, "CoopCharacterLobbyPanel must live on the persistent CoopSessionManager.");
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == settings.CharacterSceneName
+                    && sm.IsInCharacterCreation
+                    && crew.IsVisible
+                    && UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>() != null,
+                    8f, "Host did not move the room into the Character Creator.");
+                Assert.AreEqual(CoopSessionState.Lobby, sm.State);
+                NetworkManager smNm = sm.GetComponent<NetworkManager>();
+                Assert.IsNull(FindSpawnedBehaviour<NetworkPlayerController>(smNm), "No player objects may spawn in the Character Creator.");
+
+                CharacterCreatorController creator = UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>();
+                Assert.AreEqual("Ready", creator.StartLabel, "In co-op the creator's Start button becomes Ready.");
+                Assert.IsFalse(sm.LocalPlayerReady);
+                Assert.IsFalse(sm.AllPlayersReady);
+                Assert.IsFalse(crew.IsStartButtonEnabled, "START must stay disabled until everyone is ready.");
+                Assert.IsFalse(sm.StartCoopGameplay(), "StartCoopGameplay must refuse while players are not ready.");
+
+                // 4. READY toggles; START unlocks once everyone (just the host here) is ready
+                crew.PressReady();
+                Assert.IsTrue(sm.LocalPlayerReady);
+                Assert.IsTrue(sm.AllPlayersReady);
+                Assert.IsTrue(crew.IsStartButtonEnabled);
+                Assert.AreEqual("CHANGE LOOK", crew.ReadyButtonText);
+                Assert.IsFalse(creator.IsCreatorPanelVisible, "Creator panel hides while ready.");
+
+                crew.PressReady();
+                Assert.IsFalse(sm.LocalPlayerReady, "Second press un-readies to edit the look again.");
+                Assert.IsFalse(crew.IsStartButtonEnabled);
+                Assert.IsTrue(creator.IsCreatorPanelVisible);
+
+                creator.Confirm(); // the creator's own Ready button routes to the same path
+                Assert.IsTrue(sm.LocalPlayerReady);
+
+                // 5. START -> gameplay scene, everyone spawns, team wallet starts at the single setting (0)
+                crew.PressStart();
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "EcosystemSandbox"
+                    && sm.State == CoopSessionState.InGame
+                    && NetworkStateReplicator.Active != null
+                    && NetworkStateReplicator.Active.IsSpawned
+                    && smNm.SpawnManager.GetPlayerNetworkObject(smNm.LocalClientId) != null,
+                    10f, "Co-op session did not transition to EcosystemSandbox InGame with the host player spawned.");
+                Assert.IsFalse(crew.IsVisible);
+                Assert.AreEqual(0, settings.StartingTeamCoins, "Runs start with 0 coins by default.");
+                Assert.AreEqual(settings.StartingTeamCoins, NetworkStateReplicator.Active.TeamCoins);
+                yield return null;
+                AssertStartsEmptyHanded(
+                    smNm.SpawnManager.GetPlayerNetworkObject(smNm.LocalClientId).GetComponent<NetworkPlayerController>().LocalController,
+                    "co-op host");
+
+                // 6. Late-joining client MUST be rejected by connection approval with GAME_IN_PROGRESS
+                var lateGo = new GameObject("LateJoinClientNM");
+                spawnedRoots.Add(lateGo);
+                NetworkManager lateClient = lateGo.AddComponent<NetworkManager>();
+                UnityTransport lateUtp = lateGo.AddComponent<UnityTransport>();
+                lateUtp.SetConnectionData("127.0.0.1", port);
+                lateClient.NetworkConfig = new NetworkConfig
+                {
+                    NetworkTransport = lateUtp,
+                    TickRate = settings.TickRate,
+                    EnableSceneManagement = true,
+                    ConnectionApproval = true,
+                    PlayerPrefab = settings.NetworkPlayerPrefab,
+                };
+                if (settings.NetworkPrefabsList != null)
+                    lateClient.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(settings.NetworkPrefabsList);
+
+                bool lateDisconnected = false;
+                string rawRejectReason = null;
+                lateClient.OnClientDisconnectCallback += _ =>
+                {
+                    lateDisconnected = true;
+                    rawRejectReason = lateClient.DisconnectReason;
+                };
+
+                Assert.IsTrue(lateClient.StartClient());
+                yield return WaitUntil(() => lateDisconnected, 6f, "Late-joining client was not rejected by host.");
+                Assert.IsFalse(lateClient.IsConnectedClient);
+                Assert.AreEqual(CoopSessionManager.DisconnectCodeGameInProgress, rawRejectReason,
+                    "Host connection approval must reject mid-game late joins with GAME_IN_PROGRESS.");
+
+                string friendly = CoopSessionManager.FormatFriendlyDisconnectReason(rawRejectReason, CoopSessionState.Connecting);
+                Assert.That(friendly, Does.Contain("already in progress"));
+
+                if (lateClient.IsListening)
+                    lateClient.Shutdown();
+                UnityEngine.Object.DestroyImmediate(lateGo);
+                spawnedRoots.Remove(lateGo);
+
+                // 7. LeaveSession shuts down, restores LocalGameAuthority and returns to the Main Menu title with the notice
+                sm.LeaveSession("Finished test session.");
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == settings.MenuSceneName
+                    && sm.State == CoopSessionState.Offline
+                    && ReferenceEquals(GameAuthority.Current, LocalGameAuthority.Instance)
+                    && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
+                    8f, "LeaveSession did not cleanly return to MainMenu and LocalGameAuthority.");
+                yield return null;
+
+                CoopMenuController menuAfterLeave = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
+                Assert.AreEqual("MainMenu", settings.MenuSceneName);
+                Assert.AreEqual("Title", menuAfterLeave.CurrentScreenName);
+                Assert.IsTrue(menuAfterLeave.IsBannerVisible);
+                Assert.AreEqual("Finished test session.", menuAfterLeave.BannerText);
+            }
+            finally
             {
-                lateDisconnected = true;
-                rawRejectReason = lateClient.DisconnectReason;
-            };
+                RestoreSavedLook(hadSavedLook, savedLook);
+            }
+        }
 
-            Assert.IsTrue(lateClient.StartClient());
-            yield return WaitUntil(() => lateDisconnected, 6f, "Late-joining client was not rejected by host.");
-            Assert.IsFalse(lateClient.IsConnectedClient);
-            Assert.AreEqual(CoopSessionManager.DisconnectCodeGameInProgress, rawRejectReason,
-                "Host connection approval must reject mid-game late joins with GAME_IN_PROGRESS.");
+        [UnityTest]
+        public IEnumerator HostAndClient_CharacterCreation_ClientReadyAppearanceReachesHostAndGatesStart()
+        {
+            try
+            {
+                SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "MainMenu" && CoopSessionManager.Instance != null,
+                    6f, "MainMenu scene or CoopSessionManager did not load.");
 
-            string friendly = CoopSessionManager.FormatFriendlyDisconnectReason(rawRejectReason, CoopSessionState.Connecting);
-            Assert.That(friendly, Does.Contain("already in progress"));
+                CoopSessionManager sm = CoopSessionManager.Instance;
+                NetworkSettings settings = LoadNetworkSettings();
+                ushort port = nextPort++;
 
-            if (lateClient.IsListening)
-                lateClient.Shutdown();
-            UnityEngine.Object.DestroyImmediate(lateGo);
-            spawnedRoots.Remove(lateGo);
+                Task<(bool success, string error)> hostTask = sm.HostCoopAsync(CoopTransportMode.Direct, "127.0.0.1", port);
+                yield return WaitUntil(() => hostTask.IsCompleted, 5f, "HostCoopAsync did not complete.");
+                Assert.IsTrue(hostTask.Result.success, hostTask.Result.error);
+                NetworkManager hostNm = sm.GetComponent<NetworkManager>();
 
-            // 5. LeaveSession cleanly shuts down, restores LocalGameAuthority, and returns to CharacterCreator WITHOUT menu/creator overlap
-            sm.LeaveSession("Finished test session.");
-            yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
-                && sm.State == CoopSessionState.Offline
-                && ReferenceEquals(GameAuthority.Current, LocalGameAuthority.Instance)
-                && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
-                8f, "LeaveSession did not cleanly return to CharacterCreator and LocalGameAuthority.");
-            yield return null;
+                // A real Netcode client speaking the lobby protocol (only one CoopSessionManager fits in a process)
+                clientManager = CreateNetworkManager("ReadyGateClientNM", settings, port, isServer: false);
+                clientManager.NetworkConfig.EnableSceneManagement = true;
+                clientManager.NetworkConfig.ConnectionApproval = true;
+                Assert.IsTrue(clientManager.StartClient());
+                yield return WaitUntil(() => clientManager.IsConnectedClient && hostNm.ConnectedClientsIds.Count == 2,
+                    6f, "Client did not connect to the room.");
+                clientManager.CustomMessagingManager.RegisterNamedMessageHandler(CoopSessionManager.MsgLobbyRoster, (_, __) => { });
+                ulong clientId = clientManager.LocalClientId;
 
-            CoopMenuController menuAfterLeave = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
-            CharacterCreatorController creatorAfterLeave = UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>();
-            Assert.AreEqual("ModeSelect", menuAfterLeave.CurrentScreenName);
-            Assert.IsTrue(menuAfterLeave.IsBannerVisible);
-            Assert.AreEqual("Finished test session.", menuAfterLeave.BannerText);
-            Assert.IsNotNull(creatorAfterLeave);
-            Assert.IsFalse(creatorAfterLeave.IsCreatorPanelVisible,
-                "CharacterCreator panel must stay hidden when ModeSelect opens after disconnect/leave (Nit 1).");
+                using (var hello = new FastBufferWriter(128, Unity.Collections.Allocator.Temp))
+                {
+                    hello.WriteValueSafe(new Unity.Collections.FixedString32Bytes("Maya"));
+                    hello.WriteValueSafe(NetworkCharacterAppearance.From(CharacterAppearance.Default));
+                    clientManager.CustomMessagingManager.SendNamedMessage(CoopSessionManager.MsgLobbyHello, NetworkManager.ServerClientId, hello);
+                }
+                yield return WaitUntil(() => FindRosterEntry(sm, clientId, out CoopLobbyPlayer p) && p.displayName.ToString() == "Maya",
+                    4f, "Client hello did not reach the host roster.");
+                Assert.IsTrue(sm.IsInRoom);
+
+                // Room -> Character Creation: both peers follow the NGO scene load
+                Assert.IsTrue(sm.GoToCharacterCreation());
+                yield return WaitUntil(() => sm.IsInCharacterCreation, 8f, "Room did not move into the Character Creator.");
+                yield return new WaitForSecondsRealtime(0.3f);
+                Assert.IsNull(FindSpawnedBehaviour<NetworkPlayerController>(hostNm), "Nobody spawns in the Character Creator.");
+
+                var hostLook = new CharacterAppearance { sex = CharacterSex.Male, skinTone = 2, outfitColor = 1, eyeStyle = 1, eyeColor = 2, hairStyle = 3, hairColor = 4, facialHair = 2 };
+                var clientLook = new CharacterAppearance { sex = CharacterSex.Female, skinTone = 6, outfitColor = 4, eyeStyle = 3, eyeColor = 1, hairStyle = 5, hairColor = 9, facialHair = 0 };
+
+                Assert.IsTrue(sm.SetLocalReady(true, hostLook));
+                Assert.AreEqual(1, sm.ReadyPlayerCount);
+                Assert.IsFalse(sm.AllPlayersReady, "Host alone ready must not unlock START while the client is choosing.");
+                Assert.IsFalse(sm.StartCoopGameplay(), "StartCoopGameplay must refuse until the client is ready.");
+
+                SendReady(clientManager, true, clientLook);
+                yield return WaitUntil(() => sm.AllPlayersReady, 4f, "Client READY did not reach the host.");
+                Assert.IsTrue(FindRosterEntry(sm, clientId, out CoopLobbyPlayer readyEntry));
+                Assert.IsTrue(readyEntry.IsReady);
+                Assert.AreEqual(clientLook, readyEntry.appearance.ToAppearance(), "The client's confirmed look must reach the host roster.");
+
+                SendReady(clientManager, false, clientLook);
+                yield return WaitUntil(() => !sm.AllPlayersReady, 4f, "Client un-ready did not reach the host.");
+                SendReady(clientManager, true, clientLook);
+                yield return WaitUntil(() => sm.AllPlayersReady, 4f, "Client re-ready did not reach the host.");
+
+                // Both peers are in one process here, so the owner-written look comes from the same store
+                CharacterAppearanceStore.SetSessionOverride(clientLook);
+                Assert.IsTrue(sm.StartCoopGameplay(), "START must work once every player is ready.");
+                NetworkPlayerController hostSideClient = null;
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == settings.CoopSceneName
+                    && sm.State == CoopSessionState.InGame
+                    && hostNm.SpawnManager.GetPlayerNetworkObject(clientId) != null
+                    && (hostSideClient = hostNm.SpawnManager.GetPlayerNetworkObject(clientId).GetComponent<NetworkPlayerController>()) != null
+                    && hostSideClient.IsSpawned,
+                    12f, "Gameplay did not start with the client's player spawned.");
+
+                yield return WaitUntil(() => hostSideClient.CurrentAppearance.Equals(clientLook), 4f,
+                    "Spawned client player does not show the chosen look.");
+                Assert.That(hostSideClient.DisplayLabel, Does.Contain("Maya"), "Spawned client must carry its lobby name.");
+                Assert.AreEqual(settings.StartingTeamCoins, NetworkStateReplicator.Active.TeamCoins, "Team wallet must start at NetworkSettings.StartingTeamCoins.");
+                NetworkStateReplicator clientRep = null;
+                yield return WaitUntil(() => (clientRep = FindSpawnedBehaviour<NetworkStateReplicator>(clientManager)) != null, 4f, "Client did not receive the city state.");
+                Assert.AreEqual(0, clientRep.TeamCoins, "Client must see a 0-coin team wallet at the start.");
+            }
+            finally
+            {
+                CharacterAppearanceStore.ClearSessionOverride();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OfflineSolo_MainMenuPlaySolo_CreatorStartLoadsAvenueWithNoCoinsOrTools()
+        {
+            bool hadSavedLook = CharacterAppearanceStore.HasSaved;
+            CharacterAppearance savedLook = CharacterAppearanceStore.Current;
+            try
+            {
+                SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "MainMenu"
+                    && CoopSessionManager.Instance != null
+                    && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
+                    6f, "MainMenu did not load.");
+
+                CoopSessionManager sm = CoopSessionManager.Instance;
+                UnityEngine.Object.FindAnyObjectByType<CoopMenuController>().PlaySolo();
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "CharacterCreator"
+                    && UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>() != null,
+                    6f, "PLAY SOLO did not open the Character Creator.");
+                yield return null;
+
+                Assert.AreEqual(CoopSessionState.Offline, sm.State);
+                Assert.IsFalse(sm.GetComponent<NetworkManager>().IsListening, "Solo must not start Netcode.");
+                Assert.IsFalse(sm.GetComponent<CoopCharacterLobbyPanel>().IsVisible, "The co-op crew card never shows in solo.");
+                CharacterCreatorController creator = UnityEngine.Object.FindAnyObjectByType<CharacterCreatorController>();
+                Assert.AreEqual("Start", creator.StartLabel);
+
+                creator.Confirm();
+                yield return WaitUntil(() =>
+                    SceneManager.GetActiveScene().name == "EcosystemSandbox"
+                    && PlayerContext.Active != null,
+                    15f, "Solo Start did not load the Avenue (EcosystemSandbox) with a player.");
+                yield return null;
+
+                Assert.IsTrue(ReferenceEquals(GameAuthority.Current, LocalGameAuthority.Instance));
+                Assert.IsNull(UnityEngine.Object.FindAnyObjectByType<NetworkPlayerController>());
+                AssertStartsEmptyHanded(PlayerContext.Active, "solo");
+                Assert.AreEqual(0, GameAuthority.Current.TeamCoins, "Solo wallet must start at 0 coins.");
+            }
+            finally
+            {
+                RestoreSavedLook(hadSavedLook, savedLook);
+            }
+        }
+
+        static void AssertStartsEmptyHanded(PlayerController player, string context)
+        {
+            Assert.IsNotNull(player, $"No player found ({context}).");
+            PlayerInventory inv = player.Inventory;
+            Assert.IsNotNull(inv, $"Player has no inventory ({context}).");
+            Assert.AreEqual(0, inv.Coins, $"Player must start with 0 coins ({context}).");
+            for (int i = 0; i < inv.SlotCount; i++)
+                Assert.IsNull(inv.GetSlot(i).Item, $"Hotbar slot {i} must start empty — no tools ({context}).");
+        }
+
+        static void SendReady(NetworkManager client, bool ready, CharacterAppearance look)
+        {
+            using var writer = new FastBufferWriter(64, Unity.Collections.Allocator.Temp);
+            writer.WriteValueSafe(ready ? (byte)1 : (byte)0);
+            writer.WriteValueSafe(NetworkCharacterAppearance.From(look));
+            client.CustomMessagingManager.SendNamedMessage(CoopSessionManager.MsgLobbyReady, NetworkManager.ServerClientId, writer);
+        }
+
+        static bool FindRosterEntry(CoopSessionManager sm, ulong clientId, out CoopLobbyPlayer entry)
+        {
+            IReadOnlyList<CoopLobbyPlayer> players = sm.LobbyPlayers;
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (players[i].clientId == clientId)
+                {
+                    entry = players[i];
+                    return true;
+                }
+            }
+            entry = default;
+            return false;
+        }
+
+        static void RestoreSavedLook(bool hadSaved, CharacterAppearance look)
+        {
+            if (hadSaved)
+                CharacterAppearanceStore.Save(look);
+            else
+                PlayerPrefs.DeleteKey("UpcycleCity.CharacterAppearance.v2");
         }
 
         [UnityTest]
         public IEnumerator CoopSessionManager_PauseAndResume_CopyCodeAndTimeout_KeepsAliveAndRecoversDeadSession()
         {
-            SceneManager.LoadScene("CharacterCreator", LoadSceneMode.Single);
+            SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
             yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
+                SceneManager.GetActiveScene().name == "MainMenu"
                 && CoopSessionManager.Instance != null
                 && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
-                6f, "CharacterCreator scene did not load.");
+                6f, "MainMenu scene did not load.");
 
             CoopSessionManager sm = CoopSessionManager.Instance;
             CoopMenuController menu = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
@@ -1198,9 +1500,9 @@ namespace UpcycleCity.Tests.PlayMode
             Assert.AreEqual(15000, hostUtp.DisconnectTimeoutMS, "UnityTransport.DisconnectTimeoutMS must match 15s NetworkSettings.");
             Assert.AreEqual(1000, hostUtp.HeartbeatTimeoutMS, "UnityTransport.HeartbeatTimeoutMS must be scaled to 1000ms.");
 
-            // Verify M1 Copy button in Lobby copies ShareableSessionCode to clipboard and shows "Copied!"
+            // Verify M1 Copy button in the Room copies ShareableSessionCode to clipboard and shows "Copied!"
             yield return null;
-            Assert.IsTrue(menu.IsCopyCodeButtonVisible, "Lobby Copy code button must be visible.");
+            Assert.IsTrue(menu.IsCopyCodeButtonVisible, "Room Copy code button must be visible.");
             Assert.AreEqual("Copy", menu.CopyCodeButtonText);
             Assert.IsTrue(menu.CopySessionCode());
             Assert.AreEqual($"127.0.0.1:{port}", GUIUtility.systemCopyBuffer);
@@ -1215,8 +1517,8 @@ namespace UpcycleCity.Tests.PlayMode
             yield return WaitUntil(() => hostNm.ConnectedClientsIds.Count == 2 && clientManager.IsConnectedClient,
                 6f, "Client did not connect before pause test.");
 
-            // Start gameplay -> EcosystemSandbox
-            Assert.IsTrue(sm.StartCoopGameplay());
+            // Start gameplay -> EcosystemSandbox (the raw test client never sends READY)
+            Assert.IsTrue(sm.StartCoopGameplay(requireAllReady: false));
             yield return WaitUntil(() =>
                 SceneManager.GetActiveScene().name == "EcosystemSandbox"
                 && sm.State == CoopSessionState.InGame
@@ -1253,21 +1555,21 @@ namespace UpcycleCity.Tests.PlayMode
             clientManager.Shutdown();
             yield return WaitUntil(() => hostNm.ConnectedClientsIds.Count == 1, 4f, "Client did not disconnect.");
 
-            // M1 Case 2: Session dies while paused -> OnApplicationPause(false) must route through LeaveSession to CharacterCreator with banner (never soft-locked!)
+            // M1 Case 2: Session dies while paused -> OnApplicationPause(false) must route through LeaveSession to MainMenu with banner (never soft-locked!)
             onPause.Invoke(sm, new object[] { true });
             hostNm.Shutdown();
             yield return WaitUntil(() => !hostNm.IsListening, 4f, "Host NetworkManager did not shut down.");
             onPause.Invoke(sm, new object[] { false });
 
             yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
+                SceneManager.GetActiveScene().name == "MainMenu"
                 && sm.State == CoopSessionState.Offline
                 && UnityEngine.Object.FindAnyObjectByType<CoopMenuController>() != null,
-                8f, "Dead session after resume did not return cleanly to CharacterCreator menu.");
+                8f, "Dead session after resume did not return cleanly to the MainMenu.");
             yield return null;
 
             CoopMenuController menuAfterDeadResume = UnityEngine.Object.FindAnyObjectByType<CoopMenuController>();
-            Assert.AreEqual("ModeSelect", menuAfterDeadResume.CurrentScreenName);
+            Assert.AreEqual("Title", menuAfterDeadResume.CurrentScreenName);
             Assert.IsTrue(menuAfterDeadResume.IsBannerVisible, "Menu banner must explain connection lost while in background.");
             Assert.That(menuAfterDeadResume.BannerText, Does.Contain("background").IgnoreCase);
 
@@ -1295,11 +1597,11 @@ namespace UpcycleCity.Tests.PlayMode
         [UnityTest]
         public IEnumerator CoopSessionManager_CancelDuringInFlightConnect_NeverStartsHostOrClient()
         {
-            SceneManager.LoadScene("CharacterCreator", LoadSceneMode.Single);
+            SceneManager.LoadScene("MainMenu", LoadSceneMode.Single);
             yield return WaitUntil(() =>
-                SceneManager.GetActiveScene().name == "CharacterCreator"
+                SceneManager.GetActiveScene().name == "MainMenu"
                 && CoopSessionManager.Instance != null,
-                6f, "CharacterCreator scene did not load.");
+                6f, "MainMenu scene did not load.");
 
             CoopSessionManager sm = CoopSessionManager.Instance;
             NetworkManager nm = sm.GetComponent<NetworkManager>();

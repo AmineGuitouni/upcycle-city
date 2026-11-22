@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5105eb4e2ee9441b68d1a7b482bb426c, type: 3}
+  m_Name: Card_Refining_AluminumCanReclaim
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.CraftingCard
+  cardId: refining_aluminum_can_reclaim
+  displayName: Aluminum Can Reclaim
+  description: High-heat smelting & flux skimming from crushed cans.
+  category: 0
+  cardArtwork: {fileID: 21300000, guid: 7ffb986285d4e40eea50f96421cc7cc1, type: 3}
+  requiredMachineType: {fileID: 11400000, guid: 69af0947a154e47cbb52bad727d2eeab, type: 2}
+  complexityLevel: 1
+  energyCost: 25
+  temperatureCelsius: 660
+  processingSeconds: 3.2
+  inputs:
+  - material: {fileID: 11400000, guid: 45e1d72ceecd84164813bfad72e80c13, type: 2}
+    amount: 4
+  - material: {fileID: 11400000, guid: 05f0387fa505442119ce6a988164706a, type: 2}
+    amount: 0.3
+  outputs:
+  - material: {fileID: 11400000, guid: f38f0c18689f141b78edd717fbf17187, type: 2}
+    amount: 3.4
+  outputPrefab: {fileID: 0}

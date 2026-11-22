@@ -21,6 +21,10 @@ namespace UpcycleCity.Pollution
         static readonly int SurfaceParamsId = Shader.PropertyToID("_PollutionSurfaceParams");
         static readonly int DissolveColorId = Shader.PropertyToID("_PollutionDissolveColor");
         static readonly int DissolveParamsId = Shader.PropertyToID("_PollutionDissolveParams");
+        static readonly int GridTexId = Shader.PropertyToID("_PollutionGridTex");
+        static readonly int GridRectId = Shader.PropertyToID("_PollutionGridRect");
+        static readonly int GridParamsId = Shader.PropertyToID("_PollutionGridParams");
+        static readonly int GridLookId = Shader.PropertyToID("_PollutionGridLook");
 
         static readonly Vector4[] ZoneShapes = new Vector4[MaxZones];
         static readonly Vector4[] ZoneSettings = new Vector4[MaxZones];
@@ -39,6 +43,25 @@ namespace UpcycleCity.Pollution
             Shader.SetGlobalVectorArray(ZonesId, ZoneShapes);
             Shader.SetGlobalVectorArray(ZoneSettingsId, ZoneSettings);
             Shader.SetGlobalFloat(ZoneCountId, count);
+        }
+
+        /// <summary>Binds the <see cref="PollutionGrid"/> texture and layout (see SamplePollutionGrid in Pollution.hlsl).</summary>
+        /// <param name="rect">xy world X/Z of the grid's minimum corner, zw 1 / world size.</param>
+        /// <param name="parameters">x weight (0 turns the grid off), y cells along X, z cells along Z, w edge fade (cells).</param>
+        /// <param name="look">x edge jitter (cells), y jitter noise scale (1/m).</param>
+        public static void SetGrid(Texture texture, Vector4 rect, Vector4 parameters, Vector4 look)
+        {
+            Shader.SetGlobalTexture(GridTexId, texture);
+            Shader.SetGlobalVector(GridRectId, rect);
+            Shader.SetGlobalVector(GridParamsId, parameters);
+            Shader.SetGlobalVector(GridLookId, look);
+        }
+
+        /// <summary>Turns the grid off: shaders fall back to the scene-wide level and zones.</summary>
+        public static void ClearGrid()
+        {
+            Shader.SetGlobalTexture(GridTexId, Texture2D.blackTexture);
+            Shader.SetGlobalVector(GridParamsId, Vector4.zero);
         }
 
         public static void SetSurfaceLook(PollutionProfile profile)

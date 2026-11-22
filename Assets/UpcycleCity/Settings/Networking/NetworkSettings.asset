@@ -15,9 +15,11 @@ MonoBehaviour:
   maxPlayers: 4
   tickRate: 30
   defaultTransportMode: 0
-  soloSceneName: 
+  soloSceneName: EcosystemSandbox
   coopSceneName: EcosystemSandbox
-  menuSceneName: CharacterCreator
+  menuSceneName: MainMenu
+  characterSceneName: CharacterCreator
+  startingTeamCoins: 0
   defaultDirectAddress: 127.0.0.1
   defaultDirectPort: 7777
   relayTimeoutSeconds: 12

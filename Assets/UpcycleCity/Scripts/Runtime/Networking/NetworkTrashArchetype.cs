@@ -66,7 +66,8 @@ namespace UpcycleCity.Networking
                             existing.Stream,
                             existing.Source,
                             existing.PollutionWeight,
-                            existing.BaseCoinValue);
+                            existing.BaseCoinValue,
+                            itemArchetypeId: existing.ArchetypeId);
                     }
                 }
             }
@@ -93,6 +94,7 @@ namespace UpcycleCity.Networking
                 return;
 
             string itemName = desc.displayName.IsEmpty ? "Litter" : desc.displayName.ToString();
+            string itemArchetypeId = desc.archetypeId.IsEmpty ? string.Empty : desc.archetypeId.ToString();
             WasteStream stream = (WasteStream)desc.stream;
             WasteSourceKind sourceKind = (WasteSourceKind)desc.sourceKind;
             bool bulky = desc.isBulky != 0;
@@ -105,7 +107,8 @@ namespace UpcycleCity.Networking
                 desc.baseCoinValue > 0 ? desc.baseCoinValue : 6,
                 bulky,
                 desc.carrySpeed > 0.1f ? desc.carrySpeed : 1f,
-                desc.holdOffset);
+                desc.holdOffset,
+                itemArchetypeId);
 
             if (rb != null)
                 rb.mass = Mathf.Max(0.15f, desc.mass > 0.1f ? desc.mass : 0.5f);

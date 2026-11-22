@@ -214,8 +214,6 @@ namespace UpcycleCity.Ecosystem
             if (IsMatchingTool(equipped))
             {
                 GameAuthority.Current.RequestRepairFactory(this, interactor);
-                if (!GameAuthority.IsMultiplayer)
-                    PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ToolUse, transform.position, 1f, DisplayName, new Color(0.18f, 0.72f, 0.42f));
             }
             else
             {
@@ -257,7 +255,10 @@ namespace UpcycleCity.Ecosystem
 
             message = $"Scrubber Repaired! {DisplayName} emissions slashed · +{payout} Coins";
             if (emitLocalFeedback)
+            {
                 interactor?.NotifyFeedback(message, color);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.FactoryRepaired, transform.position, 1f, message, color);
+            }
             return true;
         }
 

@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: WasteCatalog
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Ecosystem.WasteCatalog
   entries:
-  - displayName: Water Bottle
+  - archetypeId: water_bottle
+    displayName: Water Bottle
     stream: 1
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: a9922f9dbde77456cb870bdd3e1cab27, type: 3}
@@ -24,7 +25,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Crushed Bottle
+  - archetypeId: crushed_bottle
+    displayName: Crushed Bottle
     stream: 1
     allowedSources: 1
     visualPrefab: {fileID: 919132149155446097, guid: 4e4e7a649aff343ae9cd9ee089276d4b, type: 3}
@@ -35,7 +37,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Espresso Cup
+  - archetypeId: espresso_cup
+    displayName: Espresso Cup
     stream: 1
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: 7e2a449e351844462a5febc3b16e9830, type: 3}
@@ -46,7 +49,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Paper Coffee Cup
+  - archetypeId: paper_coffee_cup
+    displayName: Paper Coffee Cup
     stream: 0
     allowedSources: 1
     visualPrefab: {fileID: 919132149155446097, guid: 07954621c3afb4517a961ae2e7c24d34, type: 3}
@@ -57,7 +61,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Kaskrout Wrap
+  - archetypeId: kaskrout_wrap
+    displayName: Kaskrout Wrap
     stream: 0
     allowedSources: 1
     visualPrefab: {fileID: 919132149155446097, guid: d7f2b4a6a78064d22a4a34cb588bd610, type: 3}
@@ -68,7 +73,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Glibettes Cone
+  - archetypeId: glibettes_cone
+    displayName: Glibettes Cone
     stream: 0
     allowedSources: 1
     visualPrefab: {fileID: 919132149155446097, guid: aa015f04ef15848c489fe193be24375a, type: 3}
@@ -79,7 +85,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Tuna Tin
+  - archetypeId: tuna_tin
+    displayName: Tuna Tin
     stream: 3
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: b893fd28368f54fac8da6a5deb66d47e, type: 3}
@@ -90,7 +97,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Harissa Tin
+  - archetypeId: harissa_tin
+    displayName: Harissa Tin
     stream: 3
     allowedSources: 2
     visualPrefab: {fileID: 919132149155446097, guid: e3f47cfb49c4e4c66b71ea37c9ac373f, type: 3}
@@ -101,7 +109,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Soda Can
+  - archetypeId: soda_can
+    displayName: Soda Can
     stream: 3
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: 0872ec1d1b3df469b8415878fc0e458d, type: 3}
@@ -112,7 +121,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Newspaper
+  - archetypeId: newspaper
+    displayName: Newspaper
     stream: 0
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: 01ca8b20d546d48adbda7400d58a9916, type: 3}
@@ -123,7 +133,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Rubbish Bag
+  - archetypeId: rubbish_bag
+    displayName: Rubbish Bag
     stream: 1
     allowedSources: 2
     visualPrefab: {fileID: 919132149155446097, guid: 445297c1567264ef3b2f2932452b7107, type: 3}
@@ -134,7 +145,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Blue Bag
+  - archetypeId: blue_bag
+    displayName: Blue Bag
     stream: 1
     allowedSources: 2
     visualPrefab: {fileID: 919132149155446097, guid: dd451a9f461324c598fce7d04292c155, type: 3}
@@ -145,7 +157,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Pizza Box
+  - archetypeId: pizza_box
+    displayName: Pizza Box
     stream: 0
     allowedSources: 2
     visualPrefab: {fileID: 919132149155446097, guid: 6b96bb2bfaf004defa0c77b4fa153b37, type: 3}
@@ -156,7 +169,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Green Glass Bottle
+  - archetypeId: green_glass_bottle
+    displayName: Green Glass Bottle
     stream: 2
     allowedSources: 3
     visualPrefab: {fileID: 919132149155446097, guid: 35775fe8c852f4b0fab202116c8f1432, type: 3}
@@ -167,7 +181,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Brown Glass Bottle
+  - archetypeId: brown_glass_bottle
+    displayName: Brown Glass Bottle
     stream: 2
     allowedSources: 2
     visualPrefab: {fileID: 919132149155446097, guid: 2c5d42b5d95da4299aa756e3878cc884, type: 3}
@@ -178,7 +193,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Crushed Can
+  - archetypeId: crushed_can
+    displayName: Crushed Can
     stream: 3
     allowedSources: 4
     visualPrefab: {fileID: 919132149155446097, guid: 1aa30e2341b714518800c419793f0b12, type: 3}
@@ -189,7 +205,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Scrap Pipe
+  - archetypeId: scrap_pipe
+    displayName: Scrap Pipe
     stream: 3
     allowedSources: 4
     visualPrefab: {fileID: 919132149155446097, guid: c3724448d950843458fb7f733be32724, type: 3}
@@ -200,7 +217,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Shipping Carton
+  - archetypeId: shipping_carton
+    displayName: Shipping Carton
     stream: 0
     allowedSources: 6
     visualPrefab: {fileID: 919132149155446097, guid: 68df324d3482b4ae488414214426fbec, type: 3}
@@ -211,7 +229,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: Industrial Bottle
+  - archetypeId: industrial_bottle
+    displayName: Industrial Bottle
     stream: 2
     allowedSources: 4
     visualPrefab: {fileID: 919132149155446097, guid: 6f0477b08760d40058e4bfe97de92120, type: 3}
@@ -222,7 +241,8 @@ MonoBehaviour:
     isBulky: 0
     carrySpeedMultiplier: 1
     holdDistanceOffset: 0
-  - displayName: "Broken Caf\xE9 Chair"
+  - archetypeId: broken_cafe_chair
+    displayName: "Broken Caf\xE9 Chair"
     stream: 4
     allowedSources: 8
     visualPrefab: {fileID: 919132149155446097, guid: 8f85fa0990b574895834cebfc3205701, type: 3}
@@ -233,7 +253,20 @@ MonoBehaviour:
     isBulky: 1
     carrySpeedMultiplier: 0.78
     holdDistanceOffset: 0.45
-  - displayName: Old Tyre
+  - archetypeId: wooden_pallet
+    displayName: Wooden Pallet
+    stream: 4
+    allowedSources: 12
+    visualPrefab: {fileID: 919132149155446097, guid: 72b36936e512042e4808e96eeb8984aa, type: 3}
+    visualScale: 0.9
+    pollutionWeight: 2.4
+    baseCoinValue: 16
+    mass: 5.5
+    isBulky: 1
+    carrySpeedMultiplier: 0.76
+    holdDistanceOffset: 0.45
+  - archetypeId: old_tyre
+    displayName: Old Tyre
     stream: 4
     allowedSources: 8
     visualPrefab: {fileID: 919132149155446097, guid: 457148acf8ba140f0bcc14ba5a111434, type: 3}
@@ -244,7 +277,8 @@ MonoBehaviour:
     isBulky: 1
     carrySpeedMultiplier: 0.72
     holdDistanceOffset: 0.42
-  - displayName: Broken TV
+  - archetypeId: broken_tv
+    displayName: Broken TV
     stream: 4
     allowedSources: 8
     visualPrefab: {fileID: 919132149155446097, guid: ba85a971e1eb34fbb80d765b42a1ae08, type: 3}

@@ -4,6 +4,7 @@
     "references": [
         "UpcycleCity.Runtime",
         "UpcycleCity.Networking",
+        "UpcycleCity.Editor",
         "Unity.Collections",
         "Unity.Netcode.Runtime",
         "UnityEngine.TestRunner",

@@ -15,6 +15,7 @@ namespace UpcycleCity.Networking
         public short catalogIndex;
         public byte stream;
         public byte sourceKind;
+        public FixedString64Bytes archetypeId;
         public FixedString64Bytes displayName;
         public float pollutionWeight;
         public int baseCoinValue;
@@ -28,6 +29,7 @@ namespace UpcycleCity.Networking
             serializer.SerializeValue(ref catalogIndex);
             serializer.SerializeValue(ref stream);
             serializer.SerializeValue(ref sourceKind);
+            serializer.SerializeValue(ref archetypeId);
             serializer.SerializeValue(ref displayName);
             serializer.SerializeValue(ref pollutionWeight);
             serializer.SerializeValue(ref baseCoinValue);
@@ -41,6 +43,7 @@ namespace UpcycleCity.Networking
             catalogIndex == o.catalogIndex
             && stream == o.stream
             && sourceKind == o.sourceKind
+            && archetypeId.Equals(o.archetypeId)
             && displayName.Equals(o.displayName)
             && Math.Abs(pollutionWeight - o.pollutionWeight) < 0.0001f
             && baseCoinValue == o.baseCoinValue
@@ -52,7 +55,7 @@ namespace UpcycleCity.Networking
         public override bool Equals(object obj) => obj is NetworkTrashDescriptor o && Equals(o);
 
         public override int GetHashCode() =>
-            HashCode.Combine(catalogIndex, stream, sourceKind, displayName.GetHashCode(), baseCoinValue, isBulky);
+            HashCode.Combine(catalogIndex, stream, sourceKind, archetypeId.GetHashCode(), displayName.GetHashCode(), baseCoinValue, isBulky);
 
         public static NetworkTrashDescriptor CreateFallback(
             string name,
@@ -64,13 +67,15 @@ namespace UpcycleCity.Networking
             bool bulky = false,
             float carrySpeedMult = 1f,
             float holdDistanceOffset = 0f,
-            short entryIndex = -1)
+            short entryIndex = -1,
+            string itemArchetypeId = "")
         {
             return new NetworkTrashDescriptor
             {
                 catalogIndex = entryIndex,
                 stream = (byte)wasteStream,
                 sourceKind = (byte)kind,
+                archetypeId = new FixedString64Bytes(itemArchetypeId ?? string.Empty),
                 displayName = new FixedString64Bytes(string.IsNullOrWhiteSpace(name) ? "Litter" : name),
                 pollutionWeight = weight > 0.05f ? weight : 1f,
                 baseCoinValue = coinValue > 0 ? coinValue : 6,

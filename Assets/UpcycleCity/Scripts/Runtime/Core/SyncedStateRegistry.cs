@@ -67,6 +67,9 @@ namespace UpcycleCity.Core
         /// <summary>Raised when a provider registers or unregisters so an active replicator can refresh immediately.</summary>
         public event Action Changed;
 
+        /// <summary>Raised when a provider is unregistered and its key hash is no longer owned by any active provider.</summary>
+        public event Action<uint> ProviderUnregistered;
+
         /// <summary>Read-only list of currently active state providers in this registry.</summary>
         public IReadOnlyList<ISyncedStateProvider> AllProviders => providers;
 
@@ -98,21 +101,32 @@ namespace UpcycleCity.Core
             Changed?.Invoke();
         }
 
-        /// <summary>Unregisters a provider when disabled or destroyed.</summary>
-        public void Unregister(ISyncedStateProvider provider)
+        /// <summary>Unregisters a provider when disabled, destroyed, or before its <see cref="ISyncedStateProvider.SyncKey"/> changes.</summary>
+        public void Unregister(ISyncedStateProvider provider, string previousSyncKey = null)
         {
             if (provider == null)
                 return;
 
-            if (!string.IsNullOrWhiteSpace(provider.SyncKey))
+            bool removedHash = false;
+            uint removedKeyHash = 0u;
+            string key = string.IsNullOrWhiteSpace(previousSyncKey) ? provider.SyncKey : previousSyncKey;
+            if (!string.IsNullOrWhiteSpace(key))
             {
-                uint hash = SyncedStateRegistry.ComputeKeyHash(provider.SyncKey);
+                uint hash = SyncedStateRegistry.ComputeKeyHash(key);
                 if (byHash.TryGetValue(hash, out ISyncedStateProvider existing) && ReferenceEquals(existing, provider))
+                {
                     byHash.Remove(hash);
+                    removedHash = true;
+                    removedKeyHash = hash;
+                }
             }
 
             if (providers.Remove(provider))
+            {
+                if (removedHash)
+                    ProviderUnregistered?.Invoke(removedKeyHash);
                 Changed?.Invoke();
+            }
         }
 
         /// <summary>Looks up a registered provider by its deterministic key hash.</summary>
@@ -142,6 +156,7 @@ namespace UpcycleCity.Core
             providers.Clear();
             byHash.Clear();
             Changed = null;
+            ProviderUnregistered = null;
         }
     }
 
@@ -169,8 +184,9 @@ namespace UpcycleCity.Core
         /// <summary>Registers a provider by deterministic FNV-1a hash of its <see cref="ISyncedStateProvider.SyncKey"/>.</summary>
         public static void Register(ISyncedStateProvider provider) => DefaultInstance.Register(provider);
 
-        /// <summary>Unregisters a provider when disabled or destroyed.</summary>
-        public static void Unregister(ISyncedStateProvider provider) => DefaultInstance.Unregister(provider);
+        /// <summary>Unregisters a provider when disabled, destroyed, or before its key changes.</summary>
+        public static void Unregister(ISyncedStateProvider provider, string previousSyncKey = null) =>
+            DefaultInstance.Unregister(provider, previousSyncKey);
 
         /// <summary>Looks up a registered provider by its deterministic key hash.</summary>
         public static bool TryGet(uint keyHash, out ISyncedStateProvider provider) => DefaultInstance.TryGet(keyHash, out provider);

@@ -74,5 +74,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: UpcycleCity.Networking::UpcycleCity.Networking.NetworkStateReplicator
   ShowTopMostFoldoutHeaderGroup: 1
   syncIntervalSeconds: 0.25
-  startingTeamCoins: 25
+  startingTeamCoins: 0
   networkTrashPrefab: {fileID: 3021161385148546387, guid: 18bad6cfecd7149bf919c8c7dc5d153d, type: 3}

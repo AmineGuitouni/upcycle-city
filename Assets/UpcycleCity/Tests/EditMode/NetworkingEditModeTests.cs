@@ -115,12 +115,12 @@ namespace UpcycleCity.Tests.EditMode
         }
 
         [Test]
-        public void NetworkSettings_DefaultSoloSceneIsEmptyAndDisconnectTimeoutDefaultsTo15Seconds()
+        public void NetworkSettings_DefaultSoloSceneIsAvenueAndDisconnectTimeoutDefaultsTo15Seconds()
         {
             var fresh = ScriptableObject.CreateInstance<NetworkSettings>();
             try
             {
-                Assert.IsEmpty(fresh.SoloSceneName, "Default NetworkSettings.SoloSceneName should be empty so Play Solo defers to CharacterCreatorController.GameplayScene.");
+                Assert.AreEqual("EcosystemSandbox", fresh.SoloSceneName, "Solo players start on the Avenue (EcosystemSandbox) after the Character Creator.");
                 Assert.AreEqual(15f, fresh.DisconnectTimeoutSeconds, 0.01f, "Default DisconnectTimeoutSeconds should be 15s (faster than UTP's 30s default).");
             }
             finally
@@ -130,7 +130,7 @@ namespace UpcycleCity.Tests.EditMode
 
             var settingsAsset = AssetDatabase.LoadAssetAtPath<NetworkSettings>("Assets/UpcycleCity/Settings/Networking/NetworkSettings.asset");
             Assert.IsNotNull(settingsAsset);
-            Assert.IsEmpty(settingsAsset.SoloSceneName, "NetworkSettings.asset should leave soloSceneName empty by default so solo loads PlayerGym.");
+            Assert.AreEqual("EcosystemSandbox", settingsAsset.SoloSceneName, "NetworkSettings.asset: solo loads the Avenue (EcosystemSandbox).");
             Assert.AreEqual(15f, settingsAsset.DisconnectTimeoutSeconds, 0.01f, "NetworkSettings.asset should persist 15s DisconnectTimeoutSeconds.");
         }
 

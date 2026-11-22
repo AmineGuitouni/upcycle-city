@@ -12,15 +12,13 @@ namespace UpcycleCity.Editor
     /// <summary>
     /// Builds the Character Creator scene and its assets. Safe to re-run: it asks before replacing the scene,
     /// offers to save open changes first, and only fills empty fields of the parts library, so palette and
-    /// style tweaks made in the Inspector are kept. The creator becomes the first scene of the build, and
-    /// its Start button loads the Player Gym.
+    /// style tweaks made in the Inspector are kept. The creator follows the Main Menu in the build, and its
+    /// Start button loads the Avenue (EcosystemSandbox); in co-op the session turns Start into READY.
     /// </summary>
     static class CharacterCreatorBuilder
     {
         const string ScenePath = "Assets/UpcycleCity/Scenes/CharacterCreator.unity";
-        const string GameplayScenePath = "Assets/UpcycleCity/Scenes/PlayerGym.unity";
-        // The intro cinematic (IntroSceneBuilder) plays before the creator when it has been built
-        const string IntroScenePath = "Assets/UpcycleCity/Scenes/Intro.unity";
+        const string GameplayScenePath = "Assets/UpcycleCity/Scenes/EcosystemSandbox.unity";
         const string PartsFolder = "Assets/UpcycleCity/Art/UpcycleProps/Character";
         const string LibraryPath = "Assets/UpcycleCity/Settings/Character/CharacterPartsLibrary.asset";
         const string UiFolder = "Assets/UpcycleCity/UI";
@@ -70,7 +68,7 @@ namespace UpcycleCity.Editor
             BuildStage(library, panel, styleSheet);
             EditorSceneManager.SaveScene(scene, ScenePath);
             UpdateBuildScenes();
-            Debug.Log($"[Upcycle City] Built {ScenePath}. Press Play: Start loads the Player Gym.");
+            Debug.Log($"[Upcycle City] Built {ScenePath}. Press Play: Start loads the Avenue (EcosystemSandbox).");
         }
 
         [MenuItem("Upcycle City/Character/Refresh Parts Library Styles", priority = 21)]
@@ -254,10 +252,10 @@ namespace UpcycleCity.Editor
                 so.FindProperty("creatorCamera").objectReferenceValue = cam;
                 so.FindProperty("styleSheet").objectReferenceValue = styleSheet;
                 so.FindProperty("gameplayScene").stringValue = Path.GetFileNameWithoutExtension(GameplayScenePath);
+                so.FindProperty("menuScene").stringValue = "MainMenu";
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
-
-            CoopMultiplayerSetup.WireCoopIntoActiveCreatorScene();
+            // No co-op objects here: the persistent CoopSessionManager comes from the Main Menu scene
         }
 
         static Light AddLight(string name, LightType type, Vector3 position, Vector3 target, float intensity, Color color)
@@ -273,28 +271,7 @@ namespace UpcycleCity.Editor
             return light;
         }
 
-        /// <summary>
-        /// Creator first (right after the intro cinematic, when it exists), then the Player Gym; drops entries
-        /// whose scene file no longer exists.
-        /// </summary>
-        static void UpdateBuildScenes()
-        {
-            var scenes = new List<EditorBuildSettingsScene>();
-            bool hasIntro = File.Exists(IntroScenePath);
-            if (hasIntro)
-                scenes.Add(new EditorBuildSettingsScene(IntroScenePath, true));
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
-            bool hasGameplay = false;
-            foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
-            {
-                if (s.path == ScenePath || s.path == IntroScenePath || !File.Exists(s.path))
-                    continue;
-                hasGameplay |= s.path == GameplayScenePath;
-                scenes.Add(s);
-            }
-            if (!hasGameplay)
-                scenes.Insert(hasIntro ? 2 : 1, new EditorBuildSettingsScene(GameplayScenePath, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
-        }
+        /// <summary>Intro, Main Menu, Character Creator, Avenue, then the dev scenes (see <see cref="MainMenuBuilder"/>).</summary>
+        static void UpdateBuildScenes() => MainMenuBuilder.ApplyBuildSceneOrder();
     }
 }

@@ -40,8 +40,12 @@ namespace UpcycleCity.Networking
     [AddComponentMenu("Upcycle City/Networking/Co-op Session Manager")]
     public sealed class CoopSessionManager : MonoBehaviour
     {
-        const string MsgLobbyHello = "UpcycleCity.LobbyHello";
-        const string MsgLobbyRoster = "UpcycleCity.LobbyRoster";
+        /// <summary>Client → host named message: <c>FixedString32Bytes</c> name + <see cref="NetworkCharacterAppearance"/>.</summary>
+        public const string MsgLobbyHello = "UpcycleCity.LobbyHello";
+        /// <summary>Host → all named message: <c>int</c> count + <see cref="CoopLobbyPlayer"/> entries.</summary>
+        public const string MsgLobbyRoster = "UpcycleCity.LobbyRoster";
+        /// <summary>Client → host named message: <c>byte</c> ready + confirmed <see cref="NetworkCharacterAppearance"/>.</summary>
+        public const string MsgLobbyReady = "UpcycleCity.LobbyReady";
         const string PlayerNamePrefsKey = "UpcycleCity.CoopPlayerName.v1";
 
         /// <summary>Connection approval reason code returned when a client tries to join a game already in progress.</summary>
@@ -85,6 +89,7 @@ namespace UpcycleCity.Networking
         bool sceneHooksBound;
         bool messagingRegistered;
         bool autoStartWhenClientJoins;
+        bool localReady;
 
         public static CoopSessionManager Instance => instance;
 
@@ -101,6 +106,57 @@ namespace UpcycleCity.Networking
         public string ShareableSessionCode => activeTransportMode == CoopTransportMode.Relay ? joinCode : activeEndpointLabel;
 
         public int MaxPlayers => settings != null ? settings.MaxPlayers : 4;
+
+        string MenuScene => settings != null ? settings.MenuSceneName : "MainMenu";
+        string CharacterScene => settings != null ? settings.CharacterSceneName : "CharacterCreator";
+
+        /// <summary>
+        /// True while connected in the pre-game Room (the <see cref="NetworkSettings.MenuSceneName"/> scene):
+        /// join code, player list, host can move everyone on to Character Creation.
+        /// </summary>
+        public bool IsInRoom => state == CoopSessionState.Lobby && !IsInCharacterCreation;
+
+        /// <summary>
+        /// True while the co-op party is in the Character Creator scene: everyone customises their look and
+        /// presses READY; the host starts the run once <see cref="AllPlayersReady"/>.
+        /// </summary>
+        public bool IsInCharacterCreation =>
+            state == CoopSessionState.Lobby && SceneManager.GetActiveScene().name == CharacterScene;
+
+        /// <summary>Whether the local player has pressed READY in the co-op Character Creator.</summary>
+        public bool LocalPlayerReady => localReady;
+
+        /// <summary>Number of roster entries marked ready.</summary>
+        public int ReadyPlayerCount
+        {
+            get
+            {
+                int ready = 0;
+                for (int i = 0; i < lobbyPlayers.Count; i++)
+                {
+                    if (lobbyPlayers[i].IsReady)
+                        ready++;
+                }
+                return ready;
+            }
+        }
+
+        /// <summary>
+        /// True when every connected player has a roster entry marked ready. On the host this also checks
+        /// the roster covers every Netcode connection, so a player whose hello has not arrived yet blocks Start.
+        /// </summary>
+        public bool AllPlayersReady
+        {
+            get
+            {
+                if (lobbyPlayers.Count == 0)
+                    return false;
+                if (networkManager != null && networkManager.IsServer && networkManager.IsListening
+                    && lobbyPlayers.Count < networkManager.ConnectedClientsIds.Count)
+                    return false;
+                return ReadyPlayerCount == lobbyPlayers.Count;
+            }
+        }
         public IReadOnlyList<CoopLobbyPlayer> LobbyPlayers => lobbyPlayers;
         public int ConnectedPlayerCount => lobbyPlayers.Count > 0
             ? lobbyPlayers.Count
@@ -433,24 +489,40 @@ namespace UpcycleCity.Networking
         // ---------------------------------------------------------------- Public Session API
 
         /// <summary>
-        /// Loads solo gameplay offline with zero networking started.
-        /// Uses <see cref="NetworkSettings.SoloSceneName"/> if explicitly configured; otherwise loads
-        /// <paramref name="sceneOverride"/> (from <c>CharacterCreatorController.GameplayScene</c>) or <c>PlayerGym</c>.
+        /// Main Menu → PLAY SOLO: makes sure no networking runs and loads the Character Creator
+        /// (<see cref="NetworkSettings.CharacterSceneName"/>) offline. Confirming the look there calls
+        /// <see cref="StartSoloGameplay"/>.
         /// </summary>
-        public void PlaySolo(string sceneOverride = null)
+        public void PlaySolo()
+        {
+            GoOffline();
+            SceneManager.LoadScene(CharacterScene, LoadSceneMode.Single);
+        }
+
+        /// <summary>
+        /// Loads solo gameplay offline with zero networking started: <see cref="NetworkSettings.SoloSceneName"/>
+        /// (default <c>EcosystemSandbox</c>), else <paramref name="sceneOverride"/>, else <c>EcosystemSandbox</c>.
+        /// </summary>
+        public void StartSoloGameplay(string sceneOverride = null)
+        {
+            GoOffline();
+            string configuredSolo = settings != null ? settings.SoloSceneName : string.Empty;
+            string target = !string.IsNullOrWhiteSpace(configuredSolo)
+                ? configuredSolo
+                : (!string.IsNullOrWhiteSpace(sceneOverride) ? sceneOverride : "EcosystemSandbox");
+            SceneManager.LoadScene(target, LoadSceneMode.Single);
+        }
+
+        void GoOffline()
         {
             intentionallyLeaving = true;
             CancelActiveConnectAttempt();
             sawReplicatorInGame = false;
+            localReady = false;
             ShutdownNetworkQuietly();
             GameAuthority.ResetToLocal();
+            lobbyPlayers.Clear();
             SetState(CoopSessionState.Offline);
-
-            string configuredSolo = settings != null ? settings.SoloSceneName : string.Empty;
-            string target = !string.IsNullOrWhiteSpace(configuredSolo)
-                ? configuredSolo
-                : (!string.IsNullOrWhiteSpace(sceneOverride) ? sceneOverride : "PlayerGym");
-            SceneManager.LoadScene(target, LoadSceneMode.Single);
         }
 
         /// <summary>Hosts a co-op session via Relay (join code) or Direct IP:port.</summary>
@@ -472,6 +544,7 @@ namespace UpcycleCity.Networking
             EnsureNetworkManager();
             activeTransportMode = mode;
             joinCode = string.Empty;
+            localReady = false;
             lobbyPlayers.Clear();
             SetState(CoopSessionState.Connecting);
 
@@ -569,6 +642,7 @@ namespace UpcycleCity.Networking
             EnsureNetworkManager();
             activeTransportMode = mode;
             joinCode = string.Empty;
+            localReady = false;
             lobbyPlayers.Clear();
             SetState(CoopSessionState.Connecting);
 
@@ -656,13 +730,72 @@ namespace UpcycleCity.Networking
             return (true, string.Empty);
         }
 
-        /// <summary>Host-only: starts the co-op run and loads <c>EcosystemSandbox</c> for every connected player via NGO SceneManager.</summary>
-        public bool StartCoopGameplay()
+        /// <summary>
+        /// Host-only, Room → Character Creation: loads <see cref="NetworkSettings.CharacterSceneName"/> for every
+        /// connected player via NGO scene management. No player objects are spawned there; everyone's ready flag
+        /// is cleared so each player confirms the look they pick in the creator.
+        /// </summary>
+        public bool GoToCharacterCreation()
+        {
+            if (networkManager == null || !networkManager.IsHost || state != CoopSessionState.Lobby)
+                return false;
+            if (IsInCharacterCreation)
+                return true;
+
+            ClearAllReadyFlags();
+            SceneEventProgressStatus status = networkManager.SceneManager.LoadScene(CharacterScene, LoadSceneMode.Single);
+            if (status != SceneEventProgressStatus.Started)
+            {
+                ErrorOccurred?.Invoke($"Failed to load scene '{CharacterScene}' ({status}).");
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Marks the local player ready (or not) in the co-op Character Creator and sends the confirmed
+        /// <paramref name="look"/> to the host, which stores it in the roster and uses it to spawn this player.
+        /// The host applies its own entry directly. Returns false when not in a co-op lobby.
+        /// </summary>
+        public bool SetLocalReady(bool ready, CharacterAppearance look)
+        {
+            if (state != CoopSessionState.Lobby || networkManager == null || !networkManager.IsListening)
+                return false;
+
+            localReady = ready;
+            var appearance = NetworkCharacterAppearance.From(look);
+            if (networkManager.IsServer)
+            {
+                SetLobbyPlayerReady(networkManager.LocalClientId, ready, appearance);
+                BroadcastLobbyRoster();
+                return true;
+            }
+
+            if (networkManager.CustomMessagingManager == null)
+                return false;
+            using var writer = new FastBufferWriter(64, Allocator.Temp);
+            writer.WriteValueSafe(ready ? (byte)1 : (byte)0);
+            writer.WriteValueSafe(appearance);
+            networkManager.CustomMessagingManager.SendNamedMessage(MsgLobbyReady, NetworkManager.ServerClientId, writer);
+            return true;
+        }
+
+        /// <summary>
+        /// Host-only: starts the co-op run and loads <see cref="NetworkSettings.CoopSceneName"/> for every connected
+        /// player via NGO SceneManager. By default every player must be ready (<see cref="AllPlayersReady"/>);
+        /// tests and the <c>-coop-autostart</c> flag pass <paramref name="requireAllReady"/> = false.
+        /// </summary>
+        public bool StartCoopGameplay(bool requireAllReady = true)
         {
             if (networkManager == null || !networkManager.IsHost)
                 return false;
             if (state != CoopSessionState.Lobby)
                 return false;
+            if (requireAllReady && !AllPlayersReady)
+            {
+                ErrorOccurred?.Invoke("Waiting for every player to press READY.");
+                return false;
+            }
 
             SetState(CoopSessionState.LoadingGame);
             string targetScene = settings != null ? settings.CoopSceneName : "EcosystemSandbox";
@@ -731,6 +864,7 @@ namespace UpcycleCity.Networking
 
             GameAuthority.ResetToLocal();
             lobbyPlayers.Clear();
+            localReady = false;
             joinCode = string.Empty;
             activeEndpointLabel = string.Empty;
             SetState(CoopSessionState.Offline);
@@ -739,7 +873,7 @@ namespace UpcycleCity.Networking
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
 
-            string menuScene = settings != null ? settings.MenuSceneName : "CharacterCreator";
+            string menuScene = MenuScene;
             if (SceneManager.GetActiveScene().name != menuScene)
                 SceneManager.LoadScene(menuScene, LoadSceneMode.Single);
         }
@@ -1071,6 +1205,12 @@ namespace UpcycleCity.Networking
                 hud = gameObject.AddComponent<CoopInGameHud>();
             if (settings != null)
                 hud.Configure(settings.PanelSettings, settings.CoopMenuStyleSheet);
+
+            CoopCharacterLobbyPanel lobbyPanel = GetComponent<CoopCharacterLobbyPanel>();
+            if (lobbyPanel == null)
+                lobbyPanel = gameObject.AddComponent<CoopCharacterLobbyPanel>();
+            if (settings != null)
+                lobbyPanel.Configure(settings.PanelSettings, settings.CoopMenuStyleSheet);
         }
 
         void ApplyNetworkConfig()
@@ -1165,7 +1305,7 @@ namespace UpcycleCity.Networking
 
         void OnConnectionApproval(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
-            // Never auto-spawn player rigs inside CharacterCreator lobby; we spawn players when gameplay scene loads
+            // Never auto-spawn player rigs in the Room / Character Creator; players spawn when the gameplay scene loads
             response.CreatePlayerObject = false;
 
             bool isHostSelf = request.ClientNetworkId == networkManager.LocalClientId && networkManager.IsHost;
@@ -1206,7 +1346,7 @@ namespace UpcycleCity.Networking
                     BroadcastLobbyRoster();
 
                     if (autoStartWhenClientJoins && state == CoopSessionState.Lobby)
-                        StartCoopGameplay();
+                        StartCoopGameplay(requireAllReady: false);
                 }
             }
             else if (clientId == networkManager.LocalClientId)
@@ -1293,6 +1433,7 @@ namespace UpcycleCity.Networking
                 return;
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(MsgLobbyHello, OnLobbyHelloReceived);
             networkManager.CustomMessagingManager.RegisterNamedMessageHandler(MsgLobbyRoster, OnLobbyRosterReceived);
+            networkManager.CustomMessagingManager.RegisterNamedMessageHandler(MsgLobbyReady, OnLobbyReadyReceived);
             messagingRegistered = true;
         }
 
@@ -1302,6 +1443,7 @@ namespace UpcycleCity.Networking
                 return;
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(MsgLobbyHello);
             networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(MsgLobbyRoster);
+            networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(MsgLobbyReady);
             messagingRegistered = false;
         }
 
@@ -1326,6 +1468,43 @@ namespace UpcycleCity.Networking
             reader.ReadValueSafe(out FixedString32Bytes playerName);
             reader.ReadValueSafe(out NetworkCharacterAppearance appearance);
             AddOrUpdateLobbyPlayer(senderClientId, playerName.ToString(), appearance, isHost: false);
+            BroadcastLobbyRoster();
+        }
+
+        void OnLobbyReadyReceived(ulong senderClientId, FastBufferReader reader)
+        {
+            if (!networkManager.IsServer || state != CoopSessionState.Lobby)
+                return;
+
+            reader.ReadValueSafe(out byte ready);
+            reader.ReadValueSafe(out NetworkCharacterAppearance appearance);
+            SetLobbyPlayerReady(senderClientId, ready != 0, appearance);
+            BroadcastLobbyRoster();
+        }
+
+        void SetLobbyPlayerReady(ulong clientId, bool ready, NetworkCharacterAppearance appearance)
+        {
+            for (int i = 0; i < lobbyPlayers.Count; i++)
+            {
+                if (lobbyPlayers[i].clientId != clientId)
+                    continue;
+                CoopLobbyPlayer entry = lobbyPlayers[i];
+                entry.isReady = ready ? (byte)1 : (byte)0;
+                entry.appearance = appearance;
+                lobbyPlayers[i] = entry;
+                return;
+            }
+        }
+
+        void ClearAllReadyFlags()
+        {
+            localReady = false;
+            for (int i = 0; i < lobbyPlayers.Count; i++)
+            {
+                CoopLobbyPlayer entry = lobbyPlayers[i];
+                entry.isReady = 0;
+                lobbyPlayers[i] = entry;
+            }
             BroadcastLobbyRoster();
         }
 
@@ -1355,6 +1534,8 @@ namespace UpcycleCity.Networking
             {
                 reader.ReadValueSafe(out CoopLobbyPlayer entry);
                 lobbyPlayers.Add(entry);
+                if (entry.clientId == networkManager.LocalClientId)
+                    localReady = entry.IsReady;
             }
             LobbyChanged?.Invoke();
         }
@@ -1411,8 +1592,12 @@ namespace UpcycleCity.Networking
             List<ulong> clientsCompleted,
             List<ulong> clientsTimedOut)
         {
-            if (sceneName == (settings != null ? settings.MenuSceneName : "CharacterCreator"))
+            // Room (menu) and Character Creator are lobby scenes: nobody spawns there
+            if (sceneName == MenuScene || sceneName == CharacterScene)
+            {
+                LobbyChanged?.Invoke();
                 return;
+            }
 
             // Remove pre-placed offline Player.prefab so NGO-spawned NetworkPlayer instances are the only players
             Vector3 spawnBase = new Vector3(0.5f, 0.25f, -64f);
@@ -1458,7 +1643,7 @@ namespace UpcycleCity.Networking
             GameObject go = Instantiate(prefab);
             NetworkStateReplicator replicator = go.GetComponent<NetworkStateReplicator>();
             if (replicator != null && settings != null)
-                replicator.Configure(settings.NetworkTrashPrefab, settings.StateSyncIntervalSeconds, 25);
+                replicator.Configure(settings.NetworkTrashPrefab, settings.StateSyncIntervalSeconds, settings.StartingTeamCoins);
 
             NetworkObject netObj = go.GetComponent<NetworkObject>();
             netObj.Spawn(destroyWithScene: true);

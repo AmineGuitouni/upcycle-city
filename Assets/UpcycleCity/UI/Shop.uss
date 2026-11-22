@@ -293,3 +293,152 @@
     border-width: 2px;
     border-color: rgb(242, 194, 27);
 }
+
+/* ---------------------------------------------------------------- kit restyle + icons (IconLibrary)
+   Overrides the base rules above (UpcycleCityPanelSettings, 1920x1080 reference): charcoal rounded window,
+   tinted icon tiles, green buy pills with the coin icon, phone-readable type. */
+.shop-backdrop { background-color: rgba(8, 10, 12, 0.55); }
+.shop-window {
+    width: 1120px;
+    max-width: 92%;
+    max-height: 90%;
+    background-color: rgba(30, 32, 35, 0.97);
+    border-radius: 28px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.07);
+}
+.shop-header {
+    height: 104px;
+    padding-right: 26px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+.shop-accent {
+    width: 72px;
+    height: 72px;
+    margin: 0 20px 0 18px;
+    border-radius: 20px;
+    align-items: center;
+    justify-content: center;
+}
+.shop-icon {
+    width: 50px;
+    height: 50px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.shop-title { font-size: 34px; color: rgb(255, 255, 255); }
+.shop-keeper { font-size: 20px; color: rgb(156, 163, 175); }
+.shop-coins {
+    height: 56px;
+    padding: 0 20px 0 12px;
+    border-radius: 28px;
+    background-color: rgba(20, 22, 24, 0.9);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+.shop-coins-label { margin-left: 10px; font-size: 28px; color: rgb(255, 255, 255); }
+.shop-coin-icon--sprite {
+    width: 32px;
+    height: 32px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-scale-mode: scale-to-fit;
+}
+.shop-greeting {
+    margin: 18px 30px 6px 30px;
+    font-size: 22px;
+    color: rgb(214, 218, 222);
+}
+.shop-scroll { margin: 8px 18px 16px 18px; }
+.shop-card {
+    min-height: 150px;
+    padding: 16px 16px 16px 14px;
+    border-radius: 20px;
+    background-color: rgb(40, 43, 48);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.04);
+}
+.shop-card:hover {
+    background-color: rgb(47, 51, 57);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+.shop-swatch {
+    width: 76px;
+    height: 76px;
+    margin-right: 16px;
+    border-radius: 20px;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+.shop-item-icon {
+    width: 58px;
+    height: 58px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.shop-item-name { font-size: 26px; color: rgb(255, 255, 255); }
+.shop-item-desc { margin-top: 4px; font-size: 18px; color: rgb(156, 163, 175); }
+.shop-item-effect {
+    margin-top: 8px;
+    font-size: 17px;
+    color: rgb(110, 214, 150);
+}
+.shop-buy { margin-left: 12px; }
+.shop-state { font-size: 16px; margin-bottom: 6px; color: rgb(156, 163, 175); }
+.shop-buy-button {
+    min-width: 118px;
+    height: 58px;
+    padding: 0 18px 0 14px;
+    border-radius: 29px;
+    background-color: rgb(46, 170, 92);
+}
+.shop-buy-button:hover { background-color: rgb(58, 188, 106); }
+.shop-buy-button:active { background-color: rgb(36, 140, 74); }
+.shop-buy-button:focus { border-width: 3px; border-color: rgb(242, 194, 27); }
+.shop-buy-button:disabled { background-color: rgb(52, 56, 62); opacity: 1; }
+.shop-buy-button--short { background-color: rgb(52, 56, 62); }
+.shop-buy-button--short:hover { background-color: rgb(60, 64, 70); }
+.shop-buy-button--short .shop-price { color: rgb(255, 140, 120); }
+.shop-price { margin-left: 8px; font-size: 26px; }
+.shop-sell {
+    margin: 12px 1% 6px 1%;
+    padding: 18px 20px;
+    border-radius: 20px;
+    background-color: rgb(36, 39, 44);
+}
+.shop-sell-heading { font-size: 21px; margin-bottom: 10px; color: rgb(255, 255, 255); }
+.shop-sell-row { height: 48px; }
+.shop-sell-chip {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    margin-right: 14px;
+    align-items: center;
+    justify-content: center;
+}
+.shop-sell-icon {
+    width: 28px;
+    height: 28px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.shop-sell-name { width: 240px; font-size: 20px; }
+.shop-sell-value { font-size: 20px; color: rgb(242, 194, 27); }
+.shop-sell-total { font-size: 17px; }
+.shop-footer {
+    height: 84px;
+    padding: 0 22px 0 30px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.06);
+}
+.shop-status { font-size: 20px; }
+.shop-leave {
+    height: 56px;
+    padding: 0 30px;
+    border-radius: 28px;
+    font-size: 21px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(58, 62, 68);
+}
+.shop-leave:hover { background-color: rgb(72, 77, 84); }

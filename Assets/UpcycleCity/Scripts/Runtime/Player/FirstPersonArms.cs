@@ -46,6 +46,10 @@ namespace UpcycleCity.Player
         [SerializeField, Range(0f, 60f)] float toolSwingDegrees = 32f;
         [Tooltip("Where the hands reach while bending down to pick litter up by hand (at full bend).")]
         [SerializeField] Vector3 handPickupReach = new Vector3(0f, -0.07f, 0.15f);
+        [Tooltip("Where the free hand reaches while scooping litter up standing, with a tool in the other hand.")]
+        [SerializeField] Vector3 toolReachOffset = new Vector3(0.06f, -0.11f, 0.22f);
+        [Tooltip("How far the free hand turns down to scoop on a standing reach (degrees).")]
+        [SerializeField, Range(0f, 60f)] float toolReachDegrees = 35f;
         [Tooltip("How far the litter picker jabs forward on a grab.")]
         [SerializeField, Range(0f, 0.2f)] float pickerJabReach = 0.09f;
         [Tooltip("How far the litter picker dips its claw on a grab (degrees).")]
@@ -351,6 +355,11 @@ namespace UpcycleCity.Player
                     rightTarget += handPickupReach * bend;
             }
 
+            // Tool in hand: the free (left) hand reaches out and scoops the litter up, no bending down
+            float reach = grabber != null ? grabber.ToolReachAmount : 0f;
+            if (reach > 0f)
+                leftTarget += toolReachOffset * reach;
+
             // Litter picker grab: a quick forward jab with the claw dipping to the litter
             float jab = grabber != null && grabber.CurrentPickup == PickupStyle.Picker
                 ? Mathf.Sin(grabber.PickupProgress * Mathf.PI)
@@ -361,7 +370,7 @@ namespace UpcycleCity.Player
             float pitch = (sprinting ? sprintPitch : 0f) + swayAngles.x;
             float yaw = swayAngles.y;
 
-            Move(ref left, leftTarget, Quaternion.Euler(pitch, yaw, 0f), false);
+            Move(ref left, leftTarget, Quaternion.Euler(pitch + reach * toolReachDegrees, yaw, 0f), false);
             Move(ref right, rightTarget, Quaternion.Euler(pitch - swing * toolSwingDegrees + jab * pickerJabDegrees, yaw, 0f), toolShown);
         }
 

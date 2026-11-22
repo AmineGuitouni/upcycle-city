@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using UpcycleCity.Crafting;
 using UpcycleCity.Inventory;
 using UpcycleCity.Player;
 using UpcycleCity.Shops;
@@ -57,6 +58,10 @@ namespace UpcycleCity.Editor
                 new Color(0.86f, 0.52f, 0.18f), "kaskrout", 90f,
                 new PlayerBoosts.Effect { moveSpeed = 1.1f, jump = 1.3f }, "Kaskrout! Full of energy", "kaskrout_paper");
 
+            ItemDefinition catalyst = MaterialStockSupply("Item_Catalyst", "supply_catalyst", "Refining Catalyst (1 kg)",
+                "Industrial flux and de-inking catalyst added directly to the shared Team Material Stock.",
+                new Color(0.18f, 0.56f, 0.54f), "catalyst", 1.0f);
+
             ItemDefinition broom = Load("Item_Broom");
             ItemDefinition wrench = Load("Item_Wrench");
             ItemDefinition mask = Load("Item_RespiratorMask");
@@ -69,7 +74,7 @@ namespace UpcycleCity.Editor
                     new Color(0.70f, 0.12f, 0.09f), false, Offer(espresso, 6), Offer(tea, 8)),
                 tools = Catalog("Shop_Tools", "Quincaillerie", "Si Mounir",
                     "Marhba! Good tools make a clean city. What are you fixing today?",
-                    new Color(0.95f, 0.76f, 0.11f), false, Offer(broom, 30), Offer(wrench, 45), Offer(mask, 60), Offer(picker, 20)),
+                    new Color(0.95f, 0.76f, 0.11f), false, Offer(broom, 30), Offer(wrench, 45), Offer(mask, 60), Offer(picker, 20), Offer(catalyst, 8)),
                 grocery = Catalog("Shop_Grocery", "Épicerie", "Khalti Fatma",
                     "Ahla ya wildi! Water, kaskrout, everything fresh this morning.",
                     new Color(0.10f, 0.45f, 0.25f), false, Offer(water, 7), Offer(kaskrout, 10), Offer(espresso, 7)),
@@ -126,6 +131,21 @@ namespace UpcycleCity.Editor
                     AssetDatabase.LoadAssetAtPath<GameObject>($"{LitterArt}/{heldModel}.fbx");
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
+            EditorUtility.SetDirty(item);
+            return item;
+        }
+
+        static ItemDefinition MaterialStockSupply(string file, string id, string label, string desc, Color colour, string materialId, float amount)
+        {
+            string path = $"{ShopsDir}/{file}.asset";
+            ItemDefinition item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            if (item == null)
+            {
+                item = ScriptableObject.CreateInstance<ItemDefinition>();
+                AssetDatabase.CreateAsset(item, path);
+            }
+            item.Configure(id, label, desc, ItemCategory.Usable, colour, stackLimit: 10, consume: true);
+            item.SetUseBehavior(new DepositMaterialStockItemBehavior(materialId, amount, directOnPurchase: true));
             EditorUtility.SetDirty(item);
             return item;
         }

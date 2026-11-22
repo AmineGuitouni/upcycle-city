@@ -231,7 +231,8 @@ namespace UpcycleCity.Editor
             respawner.Configure(spawnCenter, spawnEntries);
 
             // 7. Build / update reusable Player.prefab and instantiate into scene
-            GameObject playerPrefab = BuildOrUpdatePlayerPrefab(config, new ItemDefinition[] { litterPicker });
+            // Every run starts with nothing: no tools (buy them at the Quincaillerie) and the configured starting coins
+            GameObject playerPrefab = BuildOrUpdatePlayerPrefab(config, System.Array.Empty<ItemDefinition>());
             GameObject playerGo = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             playerGo.transform.position = new Vector3(0f, 0.1f, -3.5f);
             playerGo.transform.rotation = Quaternion.Euler(0f, 8f, 0f);
@@ -242,6 +243,14 @@ namespace UpcycleCity.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[Upcycle City] Built reusable {PlayerPrefabPath} and Player Gym test scene at {ScenePath}");
+        }
+
+        /// <summary>The single starting-coins setting, <c>NetworkSettings.StartingTeamCoins</c> (default 0), baked for solo.</summary>
+        static int StartingCoins()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<UpcycleCity.Networking.NetworkSettings>(
+                "Assets/UpcycleCity/Settings/Networking/NetworkSettings.asset");
+            return settings != null ? settings.StartingTeamCoins : 0;
         }
 
         static GameObject BuildOrUpdatePlayerPrefab(PlayerConfig config, ItemDefinition[] startingItems)
@@ -275,7 +284,7 @@ namespace UpcycleCity.Editor
             PlayerCameraController camCtrl = playerGo.AddComponent<PlayerCameraController>();
 
             PlayerInventory inventory = playerGo.AddComponent<PlayerInventory>();
-            inventory.SetStartingItems(startingItems, initialCoins: 25);
+            inventory.SetStartingItems(startingItems, initialCoins: StartingCoins());
 
             PhysicsGrabController grabber = playerGo.AddComponent<PhysicsGrabController>();
             grabber.SetObstacleMask(GameLayers.ObstacleMask);

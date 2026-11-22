@@ -56,11 +56,15 @@ namespace UpcycleCity.Player
 
         bool actionsBound;
 
+        // Previous-frame state of the on-screen touch buttons (edge detection)
+        bool prevTouchJump, prevTouchAttack, prevTouchInteract, prevTouchDrop, prevTouchUse;
+
         public PlayerInput PlayerInput => playerInput;
         public PlayerInputMode InputMode { get; private set; } = PlayerInputMode.Gameplay;
         public string CurrentControlScheme => playerInput != null ? playerInput.currentControlScheme : string.Empty;
         public bool IsUsingTouchOrMobile =>
             Application.isMobilePlatform ||
+            VirtualTouchInput.Active ||
             string.Equals(CurrentControlScheme, "Touch", StringComparison.OrdinalIgnoreCase);
 
         public Vector2 Move { get; private set; }
@@ -295,6 +299,8 @@ namespace UpcycleCity.Player
             InteractReleasedThisFrame = interactAction != null && interactAction.WasReleasedThisFrame();
             UseItemPressedThisFrame = useItemAction != null && useItemAction.WasPressedThisFrame();
 
+            MergeVirtualTouchInput();
+
             // Hotbar cycling (Mouse wheel + Previous/Next buttons)
             int scroll = 0;
             if (hotbarScrollAction != null)
@@ -319,6 +325,62 @@ namespace UpcycleCity.Player
             }
         }
 
+        /// <summary>Adds the on-screen touch controls (<see cref="VirtualTouchInput"/>) on top of the action values.</summary>
+        void MergeVirtualTouchInput()
+        {
+            if (!VirtualTouchInput.Active)
+            {
+                prevTouchJump = prevTouchAttack = prevTouchInteract = prevTouchDrop = prevTouchUse = false;
+                return;
+            }
+
+            // Raw screen taps/clicks would also fire Attack — the GRAB button owns that on touch
+            InputDevice attackDevice = attackAction != null ? attackAction.activeControl?.device : null;
+            if (attackDevice is Touchscreen || attackDevice is Mouse)
+            {
+                PrimaryPressedThisFrame = false;
+                PrimaryHeld = false;
+                PrimaryReleasedThisFrame = false;
+            }
+
+            Vector2 stick = VirtualTouchInput.Move;
+            if (stick.sqrMagnitude > Move.sqrMagnitude)
+                Move = stick.sqrMagnitude > 1f ? stick.normalized : stick;
+
+            Vector2 look = VirtualTouchInput.ConsumeLook();
+            if (look.sqrMagnitude > 0f)
+                LookDelta += look * touchLookMultiplier;
+
+            SprintHeld |= VirtualTouchInput.SprintHeld;
+            CrouchHeld |= VirtualTouchInput.CrouchHeld;
+
+            bool jump = VirtualTouchInput.JumpHeld;
+            JumpPressedThisFrame |= jump && !prevTouchJump;
+            JumpReleasedThisFrame |= !jump && prevTouchJump;
+            JumpHeld |= jump;
+            prevTouchJump = jump;
+
+            bool attack = VirtualTouchInput.AttackHeld;
+            PrimaryPressedThisFrame |= attack && !prevTouchAttack;
+            PrimaryReleasedThisFrame |= !attack && prevTouchAttack;
+            PrimaryHeld |= attack;
+            prevTouchAttack = attack;
+
+            bool interact = VirtualTouchInput.InteractHeld;
+            InteractPressedThisFrame |= interact && !prevTouchInteract;
+            InteractReleasedThisFrame |= !interact && prevTouchInteract;
+            InteractHeld |= interact;
+            prevTouchInteract = interact;
+
+            bool drop = VirtualTouchInput.DropHeld;
+            SecondaryPressedThisFrame |= drop && !prevTouchDrop;
+            prevTouchDrop = drop;
+
+            bool use = VirtualTouchInput.UseItemHeld;
+            UseItemPressedThisFrame |= use && !prevTouchUse;
+            prevTouchUse = use;
+        }
+
         Vector2 ReadLookDelta()
         {
             if (lookAction == null)
@@ -333,7 +395,7 @@ namespace UpcycleCity.Player
                 return CursorLocked ? raw : Vector2.zero;
 
             if (device is Touchscreen)
-                return raw * touchLookMultiplier;
+                return VirtualTouchInput.Active ? Vector2.zero : raw * touchLookMultiplier;
 
             if (device is Pointer)
                 return raw;

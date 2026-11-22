@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f0c730e74aed42858ae5f508607a38a, type: 3}
+  m_Name: Item_Catalyst
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.ItemDefinition
+  itemId: supply_catalyst
+  displayName: Refining Catalyst (1 kg)
+  description: Industrial flux and de-inking catalyst added directly to the shared Team Material Stock.
+  category: 1
+  accentColor: {r: 0.18, g: 0.56, b: 0.54, a: 1}
+  maxStack: 10
+  consumeOnUse: 1
+  useCooldown: 0.35
+  grabReachBonus: 0
+  throwForceBonus: 0
+  moveSpeedMultiplier: 1
+  grantsSmogImmunity: 0
+  useBehavior:
+    rid: 1445968247013507150
+  grabTool: 0
+  heldVisualPrefab: {fileID: 0}
+  heldLocalPosition: {x: 0, y: 0, z: 0}
+  heldLocalEuler: {x: 0, y: 0, z: 0}
+  heldUniformScale: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 1445968247013507150
+      type: {class: DepositMaterialStockItemBehavior, ns: UpcycleCity.Crafting, asm: UpcycleCity.Runtime}
+      data:
+        materialId: catalyst
+        amount: 1
+        creditOnPurchase: 1

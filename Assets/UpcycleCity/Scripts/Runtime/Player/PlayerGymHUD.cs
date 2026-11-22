@@ -2,13 +2,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UpcycleCity.Interaction;
 using UpcycleCity.Inventory;
+using UpcycleCity.UI;
 
 namespace UpcycleCity.Player
 {
     /// <summary>
-    /// Clean runtime HUD for testing Phase 1: FSM state pill, velocity/ground telemetry,
-    /// coin counter, crosshair, contextual interaction prompt, throw-charge bar, tool hotbar,
-    /// and floating feedback toasts.
+    /// Local player's HUD owner. Spawns the clean UI Toolkit <see cref="GameHud"/> (chips, hotbar, prompt,
+    /// toasts, touch controls) and keeps the old IMGUI telemetry (FSM state, speed, grab reach, input scheme,
+    /// controls legend) as a developer overlay drawn only after pressing F1 in the Editor / development builds.
+    /// Enabled only for the local player (see NetworkPlayerController), so the HUD is local-only presentation.
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Player/Player Gym HUD")]
@@ -18,11 +20,52 @@ namespace UpcycleCity.Player
         [SerializeField] string stageTitle = "PHASE 1 · PLAYER GYM";
         [SerializeField] bool showControlsLegend = true;
 
+        GameHud gameHud;
+
+        /// <summary>The clean gameplay HUD this component owns (null until enabled).</summary>
+        public GameHud GameHud => gameHud;
+
         public void ConfigureDisplay(string title, bool showControls)
         {
             if (!string.IsNullOrWhiteSpace(title))
                 stageTitle = title;
             showControlsLegend = showControls;
+            if (gameHud != null)
+                gameHud.Bind(player, LocationFallback());
+        }
+
+        string LocationFallback()
+        {
+            string t = string.IsNullOrWhiteSpace(stageTitle) ? "Avenue Habib Bourguiba" : stageTitle;
+            int dot = t.IndexOf('·');
+            if (dot > 0)
+                t = t.Substring(0, dot).Trim();
+            return t.Length > 0 && char.IsUpper(t[t.Length - 1]) ? TitleCase(t) : t;
+        }
+
+        static string TitleCase(string upper)
+        {
+            char[] c = upper.ToLowerInvariant().ToCharArray();
+            bool start = true;
+            for (int i = 0; i < c.Length; i++)
+            {
+                if (start && char.IsLetter(c[i]))
+                    c[i] = char.ToUpperInvariant(c[i]);
+                start = c[i] == ' ' || c[i] == '-';
+            }
+            return new string(c);
+        }
+
+        void EnsureGameHud()
+        {
+            if (gameHud == null)
+            {
+                var go = new GameObject("GameHud");
+                go.transform.SetParent(transform, false);
+                gameHud = go.AddComponent<GameHud>();
+            }
+            gameHud.gameObject.SetActive(true);
+            gameHud.Bind(player, LocationFallback());
         }
 
         struct Toast
@@ -63,18 +106,25 @@ namespace UpcycleCity.Player
         {
             PlayerContext.PlayerRegistered += OnPlayerRegistered;
             BindPlayer(player != null ? player : PlayerContext.Active);
+            EnsureGameHud();
         }
 
         void OnDisable()
         {
             PlayerContext.PlayerRegistered -= OnPlayerRegistered;
             UnbindPlayer();
+            if (gameHud != null)
+                gameHud.gameObject.SetActive(false);
         }
 
         void OnPlayerRegistered(PlayerController activePlayer)
         {
             if (player == null)
+            {
                 BindPlayer(activePlayer);
+                if (gameHud != null)
+                    gameHud.Bind(player, LocationFallback());
+            }
         }
 
         void BindPlayer(PlayerController target)
@@ -111,6 +161,7 @@ namespace UpcycleCity.Player
 
         void Update()
         {
+            DevHud.Poll();
             float dt = Time.deltaTime;
             coinPulse = Mathf.MoveTowards(coinPulse, 0f, dt * 0.8f);
             for (int i = toasts.Count - 1; i >= 0; i--)
@@ -193,20 +244,23 @@ namespace UpcycleCity.Player
 
         void OnGUI()
         {
+            // Player-facing HUD is the UI Toolkit GameHud; this IMGUI telemetry is a dev overlay (F1)
+            if (!DevHud.DebugVisible)
+                return;
             if (player == null || player.Motor == null || player.StateMachine == null)
                 return;
 
             EnsureStyles();
-
-            // A full-screen window (the shop) is open: keep only the toasts, it shows coins itself
             if (player.Input != null && player.Input.InputMode == PlayerInputMode.UI)
-            {
-                DrawToasts();
                 return;
-            }
 
             DrawTopLeftStatePanel();
             DrawTopRightCoinsAndControls();
+        }
+
+        // Legacy IMGUI widgets kept for reference/dev use (superseded by GameHud)
+        void DrawLegacyWidgets()
+        {
             DrawCrosshairAndPrompt();
             DrawToasts();
             DrawBoosts();
@@ -216,10 +270,7 @@ namespace UpcycleCity.Player
         void DrawTopLeftStatePanel()
         {
             // Stage badge pill
-            DrawBox(new Rect(20, 20, 250, 32), BrandRust);
-            GUI.Label(new Rect(20, 20, 250, 32), string.IsNullOrWhiteSpace(stageTitle) ? "PHASE 1 · PLAYER GYM" : stageTitle, pillStyle);
-
-            // FSM & Physics telemetry card
+            // FSM & Physics telemetry card (dev overlay, below the HUD location chip)
             DrawBox(new Rect(20, 60, 275, 108), PanelDark);
             string stateName = player.StateMachine.CurrentName.ToUpperInvariant();
             string grounded = player.Motor.IsGrounded ? $"GROUND ({player.Motor.SlopeAngle:0}°)" : "AIR";
@@ -236,30 +287,17 @@ namespace UpcycleCity.Player
 
         void DrawTopRightCoinsAndControls()
         {
-            float w = Screen.width;
-            int coins = player.Inventory != null ? player.Inventory.Coins : 0;
-
-            DrawBox(new Rect(w - 165, 20, 145, 36), Color.Lerp(PanelDark, coinDelta >= 0 ? BrandGreen : BrandRust, coinPulse * 0.8f));
-            DrawBox(new Rect(w - 157, 29, 18, 18), CoinYellow);
-            GUI.Label(new Rect(w - 132, 20, 105, 36), $"{coins} COINS", labelStyle);
-            if (coinPulse > 0.01f && coinDelta != 0)
-            {
-                Color prev = GUI.color;
-                GUI.color = new Color(1f, 1f, 1f, coinPulse);
-                GUI.Label(new Rect(w - 132, 58 - (1f - coinPulse) * 10f, 105, 22), coinDelta > 0 ? $"+{coinDelta}" : coinDelta.ToString(), labelStyle);
-                GUI.color = prev;
-            }
-
+            float w = 295f;
             if (!showControlsLegend)
                 return;
 
-            // Compact controls legend
-            DrawBox(new Rect(w - 295, 66, 275, 118), PanelDark);
-            GUI.Label(new Rect(w - 283, 72, 255, 20), "WASD Move · Shift Sprint · Ctrl/C Crouch", smallStyle);
-            GUI.Label(new Rect(w - 283, 92, 255, 20), "Space Jump (tap = short hop)", smallStyle);
-            GUI.Label(new Rect(w - 283, 112, 255, 20), "LMB Grab Trash / Hold Throw · RMB Drop", smallStyle);
-            GUI.Label(new Rect(w - 283, 132, 255, 20), "E Pick Up Tool/Coins or Interact · F Use Tool", smallStyle);
-            GUI.Label(new Rect(w - 283, 152, 255, 20), "1-6 / Scroll Hotbar · Esc Unlock Cursor", smallStyle);
+            // Compact controls legend (dev overlay, under the telemetry card)
+            DrawBox(new Rect(w - 275, 176, 275, 118), PanelDark);
+            GUI.Label(new Rect(w - 263, 182, 255, 20), "WASD Move · Shift Sprint · Ctrl/C Crouch", smallStyle);
+            GUI.Label(new Rect(w - 263, 202, 255, 20), "Space Jump (tap = short hop)", smallStyle);
+            GUI.Label(new Rect(w - 263, 222, 255, 20), "LMB Grab Trash / Hold Throw · RMB Drop", smallStyle);
+            GUI.Label(new Rect(w - 263, 242, 255, 20), "E Pick Up Tool/Coins or Interact · F Use Tool", smallStyle);
+            GUI.Label(new Rect(w - 263, 262, 255, 20), "1-6 / Scroll Hotbar · Esc Unlock Cursor", smallStyle);
         }
 
         void DrawCrosshairAndPrompt()

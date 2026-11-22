@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5105eb4e2ee9441b68d1a7b482bb426c, type: 3}
+  m_Name: Card_Building_UpcycledBicycle
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.CraftingCard
+  cardId: building_upcycled_bicycle
+  displayName: Upcycled City Bicycle
+  description: Lightweight smelted aluminum frame fitted with reclaimed polymer tires.
+  category: 1
+  cardArtwork: {fileID: 0}
+  requiredMachineType: {fileID: 11400000, guid: 320854ecdc136400b9ea4cf8220cc20c, type: 2}
+  complexityLevel: 1
+  energyCost: 30
+  temperatureCelsius: 0
+  processingSeconds: 3.2
+  inputs:
+  - material: {fileID: 11400000, guid: f38f0c18689f141b78edd717fbf17187, type: 2}
+    amount: 3
+  - material: {fileID: 11400000, guid: 1b7aecc8d0963417b930ce1f1146383b, type: 2}
+    amount: 1.5
+  outputs:
+  - material: {fileID: 11400000, guid: 6dc3217876b424fbd8c005a5605e98ad, type: 2}
+    amount: 1
+  outputPrefab: {fileID: 7031312669400487435, guid: 62d9590931a274ff9b8969cf8465418e, type: 3}

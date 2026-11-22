@@ -1,5 +1,6 @@
 using UnityEngine;
 using UpcycleCity.Core;
+using UpcycleCity.Crowd;
 using UpcycleCity.Interaction;
 using UpcycleCity.Inventory;
 
@@ -93,6 +94,10 @@ namespace UpcycleCity.Player
             feedback = GetComponent<PlayerFeedbackHub>();
             arms = GetComponent<FirstPersonArms>();
             modifiers = new PlayerModifiers();
+
+            // Walking citizens step around every player, local and remote
+            if (!TryGetComponent(out CrowdObstacle _))
+                gameObject.AddComponent<CrowdObstacle>();
 
             EnsureCameraRig();
 

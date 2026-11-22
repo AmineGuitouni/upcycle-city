@@ -17,6 +17,8 @@ namespace UpcycleCity.Waste
     public sealed class TrashItem : MonoBehaviour, IGrabbable
     {
         [Header("Identity")]
+        [Tooltip("Stable machine-readable waste archetype ID (e.g. 'old_tyre', 'wooden_pallet', 'plastic_bottle'). Used for crafting/material mapping instead of display text.")]
+        [SerializeField] string archetypeId = string.Empty;
         [SerializeField] string displayName = "Litter";
         [SerializeField] WasteStream stream = WasteStream.Plastic;
         [SerializeField] WasteSourceKind source = WasteSourceKind.Initial;
@@ -47,6 +49,7 @@ namespace UpcycleCity.Waste
         public static event Action<TrashItem> Removed;
 
         public Transform Transform => transform;
+        public string ArchetypeId => archetypeId ?? string.Empty;
         public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? WasteStreamPalette.LabelFor(stream) : displayName;
         public string GrabPrompt => $"[LMB / E] Grab {DisplayName} ({WasteStreamPalette.LabelFor(stream)})";
         public WasteStream Stream => stream;
@@ -75,8 +78,10 @@ namespace UpcycleCity.Waste
             int coinValue = 6,
             bool bulky = false,
             float carrySpeed = 1f,
-            float holdOffset = 0f)
+            float holdOffset = 0f,
+            string itemArchetypeId = "")
         {
+            archetypeId = itemArchetypeId ?? string.Empty;
             displayName = itemName;
             stream = wasteStream;
             source = wasteSource;

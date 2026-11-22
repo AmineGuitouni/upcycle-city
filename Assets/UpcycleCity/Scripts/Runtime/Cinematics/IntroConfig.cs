@@ -12,7 +12,7 @@ namespace UpcycleCity.Cinematics
     {
         [Header("Flow")]
         [Tooltip("Scene loaded when the intro ends or is skipped.")]
-        public string nextScene = "CharacterCreator";
+        public string nextScene = "MainMenu";
         [Tooltip("Seconds the skip input must be held. After the intro has been seen once, a single press skips.")]
         [Min(0f)] public float skipHoldSeconds = 1.2f;
         [Tooltip("Height of each letterbox bar as a fraction of the screen (0.12 is about 2.35:1 on 16:9).")]

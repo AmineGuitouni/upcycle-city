@@ -104,11 +104,11 @@ namespace UpcycleCity.Networking
         const float MaxFreeItemStationRange = 4.5f;
 
         [SerializeField, Range(0.1f, 1f)] float syncIntervalSeconds = 0.25f;
-        [SerializeField, Min(0)] int startingTeamCoins = 25;
+        [SerializeField, Min(0)] int startingTeamCoins = 0;
         [SerializeField] GameObject networkTrashPrefab;
 
         readonly NetworkVariable<int> teamCoins = new NetworkVariable<int>(
-            25,
+            0,
             NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission.Server);
 
@@ -130,6 +130,7 @@ namespace UpcycleCity.Networking
         NetworkList<ReplicatedStateEntry> replicatedStates;
 
         readonly Dictionary<uint, int> serverStateIndexByHash = new Dictionary<uint, int>(64);
+        readonly List<uint> scratchStaleHashes = new List<uint>(8);
         readonly Dictionary<int, Action<ShopPurchaseResult>> pendingShopCallbacks = new Dictionary<int, Action<ShopPurchaseResult>>(8);
         readonly Dictionary<int, Action<bool, string>> pendingCustomActionCallbacks = new Dictionary<int, Action<bool, string>>(8);
 
@@ -147,6 +148,7 @@ namespace UpcycleCity.Networking
 
         public bool IsAuthoritative => !IsSpawned || IsServer;
         public bool IsMultiplayer => IsSpawned;
+        public double ServerTime => IsSpawned && NetworkManager != null ? NetworkManager.ServerTime.Time : Time.unscaledTimeAsDouble;
         public int TeamCoins => teamCoins.Value;
         public string ActiveEventTitle => cachedActiveEventTitle;
         public byte ActiveEventSeverity => activeEventSeverity.Value;
@@ -175,7 +177,7 @@ namespace UpcycleCity.Networking
         }
 
         /// <summary>Configures runtime references before or after spawning (used by <see cref="CoopSessionManager"/> and tests).</summary>
-        public void Configure(GameObject trashPrefab, float syncInterval = 0.25f, int initialCoins = 25)
+        public void Configure(GameObject trashPrefab, float syncInterval = 0.25f, int initialCoins = 0)
         {
             if (trashPrefab != null)
                 networkTrashPrefab = trashPrefab;
@@ -194,8 +196,13 @@ namespace UpcycleCity.Networking
             if (ReferenceEquals(previous, next))
                 return;
 
-            if (IsSpawned && !IsServer)
-                previous.Changed -= ApplyAllReplicatedStatesToClient;
+            if (IsSpawned)
+            {
+                if (IsServer)
+                    previous.ProviderUnregistered -= OnServerProviderUnregistered;
+                else
+                    previous.Changed -= ApplyAllReplicatedStatesToClient;
+            }
 
             stateRegistry = next;
 
@@ -204,6 +211,7 @@ namespace UpcycleCity.Networking
 
             if (IsServer)
             {
+                next.ProviderUnregistered += OnServerProviderUnregistered;
                 serverStateIndexByHash.Clear();
                 replicatedStates?.Clear();
                 PushAllProviderStatesToNetwork(forceAll: true);
@@ -243,6 +251,8 @@ namespace UpcycleCity.Networking
             return false;
         }
 
+        ulong ResolveLocalClientId() => NetworkManager != null && NetworkManager.IsListening ? NetworkManager.LocalClientId : 0UL;
+
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
@@ -251,6 +261,7 @@ namespace UpcycleCity.Networking
             {
                 Active = this;
                 GameAuthority.SetAuthority(this);
+                GameAuthority.LocalClientIdResolver = ResolveLocalClientId;
             }
 
             if (networkTrashPrefab == null && CoopSessionManager.Instance != null && CoopSessionManager.Instance.Settings != null)
@@ -270,6 +281,8 @@ namespace UpcycleCity.Networking
                 wallet.BalanceChanged += OnServerWalletChanged;
                 teamCoins.Value = wallet.Balance;
                 serverStateIndexByHash.Clear();
+                replicatedStates?.Clear();
+                StateRegistry.ProviderUnregistered += OnServerProviderUnregistered;
                 PushAllProviderStatesToNetwork(forceAll: true);
             }
             else
@@ -296,6 +309,7 @@ namespace UpcycleCity.Networking
             if (replicatedStates != null)
                 replicatedStates.OnListChanged -= OnClientStateListChanged;
 
+            StateRegistry.ProviderUnregistered -= OnServerProviderUnregistered;
             StateRegistry.Changed -= ApplyAllReplicatedStatesToClient;
             FailPendingCallbacks("Disconnected from the co-op session.");
 
@@ -303,7 +317,10 @@ namespace UpcycleCity.Networking
                 Active = null;
 
             if (ReferenceEquals(GameAuthority.Current, this))
+            {
                 GameAuthority.ResetToLocal();
+                GameAuthority.LocalClientIdResolver = null;
+            }
 
             base.OnNetworkDespawn();
         }
@@ -380,6 +397,56 @@ namespace UpcycleCity.Networking
 
         // ---------------------------------------------------------------- IGameAuthority
 
+        public bool TrySpendTeamCoins(int amount)
+        {
+            if (amount <= 0)
+                return true;
+            if (!IsSpawned)
+                return LocalGameAuthority.Instance.TrySpendTeamCoins(amount);
+            if (!IsServer || wallet == null)
+                return false;
+            return wallet.TrySpend(amount);
+        }
+
+        public void CreditTeamCoins(int amount)
+        {
+            if (amount <= 0)
+                return;
+            if (!IsSpawned)
+            {
+                LocalGameAuthority.Instance.CreditTeamCoins(amount);
+                return;
+            }
+            if (IsServer && wallet != null)
+                wallet.Credit(amount);
+        }
+
+        public void FlushSyncedStates()
+        {
+            if (IsSpawned && IsServer)
+                PushAllProviderStatesToNetwork(forceAll: false);
+        }
+
+        public void SendTargetedFeedback(
+            ulong targetClientId,
+            string message,
+            Color color,
+            PlayerFeedbackEvent feedbackEvent,
+            Vector3 worldPos)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+            if (!IsSpawned)
+            {
+                LocalGameAuthority.Instance.SendTargetedFeedback(targetClientId, message, color, feedbackEvent, worldPos);
+                return;
+            }
+            if (!IsServer)
+                return;
+
+            SendFeedbackToClient(targetClientId, message, color, (byte)feedbackEvent, worldPos);
+        }
+
         public void RequestSortTrash(SortingCrate crate, TrashItem item, PlayerInteractor interactor)
         {
             if (!IsSpawned || crate == null || item == null)
@@ -398,6 +465,26 @@ namespace UpcycleCity.Networking
                 ExecuteSortByIdOnServer(crateHash, trashNetId, NetworkManager.ServerClientId, isPassiveTrigger);
             else
                 SortTrashServerRpc(crateHash, trashNetId);
+        }
+
+        public void RequestDepositTrash(ITrashHopper hopper, TrashItem item, PlayerInteractor interactor)
+        {
+            if (!IsSpawned || hopper == null || item == null)
+                return;
+
+            uint hopperHash = SyncedStateRegistry.ComputeKeyHash(hopper.HopperKey);
+            bool isPassiveTrigger = interactor == null;
+            if (!TryGetNetworkObjectId(item.gameObject, out ulong trashNetId))
+            {
+                if (IsServer)
+                    ExecuteDepositOnServer(hopper, item, NetworkManager.ServerClientId, isPassiveTrigger);
+                return;
+            }
+
+            if (IsServer)
+                ExecuteDepositByIdOnServer(hopperHash, trashNetId, NetworkManager.ServerClientId, isPassiveTrigger);
+            else
+                DepositTrashServerRpc(hopperHash, trashNetId);
         }
 
         public void RequestSellTrash(RecyclingBuyBack buyBack, TrashItem item, PlayerInteractor interactor)
@@ -569,13 +656,25 @@ namespace UpcycleCity.Networking
             GameObject prefab,
             Vector3 worldPosition,
             Quaternion rotation,
+            Transform parent = null) =>
+            SpawnNetworkedPrefab(prefab, worldPosition, rotation, beforeSpawn: null, parent: parent);
+
+        public GameObject SpawnNetworkedPrefab(
+            GameObject prefab,
+            Vector3 worldPosition,
+            Quaternion rotation,
+            Action<GameObject> beforeSpawn,
             Transform parent = null)
         {
             if (prefab == null)
                 return null;
 
             if (!IsSpawned)
-                return Instantiate(prefab, worldPosition, rotation, parent);
+            {
+                GameObject localGo = Instantiate(prefab, worldPosition, rotation, parent);
+                beforeSpawn?.Invoke(localGo);
+                return localGo;
+            }
 
             if (!IsServer)
             {
@@ -586,6 +685,7 @@ namespace UpcycleCity.Networking
             }
 
             GameObject go = Instantiate(prefab, worldPosition, rotation);
+            beforeSpawn?.Invoke(go);
             NetworkObject netObj = go.GetComponent<NetworkObject>();
             if (netObj != null)
             {
@@ -667,7 +767,8 @@ namespace UpcycleCity.Networking
                     offlineTrash.IsBulky,
                     offlineTrash.CarrySpeedMultiplier,
                     offlineTrash.HoldDistanceOffset,
-                    idx);
+                    idx,
+                    offlineTrash.ArchetypeId);
 
             GameObject go = Instantiate(networkTrashPrefab, offlineTrash.transform.position, offlineTrash.transform.rotation);
             NetworkTrashArchetype archetype = go.GetComponent<NetworkTrashArchetype>();
@@ -711,8 +812,9 @@ namespace UpcycleCity.Networking
 
         void ExecuteSortOnServer(SortingCrate crate, TrashItem item, ulong senderClientId, bool isPassiveTrigger = false)
         {
-            // Capture feedback recipient BEFORE item.Dispose() resets NetworkedPhysicsItem.LastHolderClientId
+            // Capture feedback recipient & material stream BEFORE item.Dispose() resets them
             ulong feedbackRecipient = ResolveTrashActionFeedbackRecipient(item, senderClientId, isPassiveTrigger);
+            byte materialStream = FeedbackSignal.EncodeMaterial(item.Stream, item.IsBulky);
 
             bool executed = crate.ExecuteAuthoritativeSort(
                 item,
@@ -737,7 +839,96 @@ namespace UpcycleCity.Networking
                 message,
                 color,
                 (byte)(match ? PlayerFeedbackEvent.SortCorrect : PlayerFeedbackEvent.SortWrong),
-                crate.transform.position);
+                crate.transform.position,
+                materialStream);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        void DepositTrashServerRpc(uint hopperKeyHash, ulong trashNetworkObjectId, RpcParams rpcParams = default)
+        {
+            ExecuteDepositByIdOnServer(hopperKeyHash, trashNetworkObjectId, rpcParams.Receive.SenderClientId, isPassiveTrigger: false);
+        }
+
+        void ExecuteDepositByIdOnServer(uint hopperKeyHash, ulong trashNetworkObjectId, ulong senderClientId, bool isPassiveTrigger = false)
+        {
+            if (!TrashHopperRegistry.TryGet(hopperKeyHash, out ITrashHopper hopper))
+                return;
+            if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(trashNetworkObjectId, out NetworkObject trashNetObj))
+                return;
+            TrashItem item = trashNetObj.GetComponent<TrashItem>();
+            if (item == null || item.IsDisposed)
+                return;
+
+            if (!ValidateHopperDepositAction(senderClientId, item, hopper.Transform.position, isPassiveTrigger))
+                return;
+
+            ExecuteDepositOnServer(hopper, item, senderClientId, isPassiveTrigger);
+        }
+
+        bool ValidateHopperDepositAction(ulong senderClientId, TrashItem item, Vector3 stationPosition, bool isPassiveTrigger)
+        {
+            NetworkedPhysicsItem netItem = item.GetComponent<NetworkedPhysicsItem>();
+            if (netItem != null && netItem.IsHeldByAnyone)
+            {
+                if (netItem.HolderClientId != senderClientId)
+                    return false;
+
+                return ValidateSenderRangeStrict(senderClientId, stationPosition, MaxInteractRange);
+            }
+
+            if (Vector3.Distance(item.transform.position, stationPosition) > MaxFreeItemStationRange)
+                return false;
+
+            if (!isPassiveTrigger && !ValidateSenderRangeStrict(senderClientId, stationPosition, MaxInteractRange + 1.5f))
+                return false;
+
+            return true;
+        }
+
+        bool ValidateSenderRangeStrict(ulong senderClientId, Vector3 targetPosition, float maxRange)
+        {
+            if (TryGetSenderPosition(senderClientId, out Vector3 senderPos))
+                return Vector3.Distance(senderPos, targetPosition) <= maxRange;
+
+            if (senderClientId == NetworkManager.ServerClientId && PlayerContext.Active != null)
+                return Vector3.Distance(PlayerContext.Active.transform.position, targetPosition) <= maxRange;
+
+            // In co-op, reject hopper actions whose sender has no known player position
+            return false;
+        }
+
+        void ExecuteDepositOnServer(ITrashHopper hopper, TrashItem item, ulong senderClientId, bool isPassiveTrigger = false)
+        {
+            ulong feedbackRecipient = ResolveTrashActionFeedbackRecipient(item, senderClientId, isPassiveTrigger);
+
+            bool executed = hopper.ExecuteAuthoritativeDeposit(
+                item,
+                interactor: null,
+                out string message,
+                out Color color,
+                emitLocalFeedback: false);
+
+            if (!executed)
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    SendFeedbackToClient(
+                        feedbackRecipient,
+                        message,
+                        color,
+                        (byte)PlayerFeedbackEvent.SortWrong,
+                        hopper.Transform.position);
+                }
+                return;
+            }
+
+            PushAllProviderStatesToNetwork(forceAll: false);
+            SendFeedbackToClient(
+                feedbackRecipient,
+                message,
+                color,
+                (byte)PlayerFeedbackEvent.SortCorrect,
+                hopper.Transform.position);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -764,8 +955,9 @@ namespace UpcycleCity.Networking
 
         void ExecuteSellOnServer(RecyclingBuyBack buyBack, TrashItem item, ulong senderClientId, bool isPassiveTrigger = false)
         {
-            // Capture feedback recipient BEFORE item.Dispose() resets NetworkedPhysicsItem.LastHolderClientId
+            // Capture feedback recipient & material stream BEFORE item.Dispose() resets them
             ulong feedbackRecipient = ResolveTrashActionFeedbackRecipient(item, senderClientId, isPassiveTrigger);
+            byte materialStream = FeedbackSignal.EncodeMaterial(item.Stream, item.IsBulky);
 
             bool executed = buyBack.ExecuteAuthoritativeBuy(
                 item,
@@ -787,8 +979,9 @@ namespace UpcycleCity.Networking
                 feedbackRecipient,
                 message,
                 colour,
-                (byte)PlayerFeedbackEvent.PickupCoins,
-                buyBack.transform.position);
+                (byte)PlayerFeedbackEvent.SellTrash,
+                buyBack.transform.position,
+                materialStream);
         }
 
         ulong ResolveTrashActionFeedbackRecipient(TrashItem item, ulong fallbackClientId, bool isPassiveTrigger)
@@ -835,7 +1028,7 @@ namespace UpcycleCity.Networking
                 senderClientId,
                 message,
                 color,
-                (byte)PlayerFeedbackEvent.Interact,
+                (byte)PlayerFeedbackEvent.BinServiced,
                 bin.transform.position);
         }
 
@@ -865,10 +1058,11 @@ namespace UpcycleCity.Networking
             PushProviderStateNow(factory);
             // Factory repair is a team-wide district milestone, broadcast once to everyone
             BroadcastFeedbackClientRpc(
-                new FixedString128Bytes(message),
+                ToFixed128(message),
                 color,
-                (byte)PlayerFeedbackEvent.ToolUse,
-                factory.transform.position);
+                (byte)PlayerFeedbackEvent.FactoryRepaired,
+                factory.transform.position,
+                FeedbackSignal.NoMaterialStream);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -894,7 +1088,7 @@ namespace UpcycleCity.Networking
                 result.Quantity,
                 result.Price,
                 result.RemainingCoins,
-                new FixedString128Bytes(result.RejectionReason ?? string.Empty),
+                ToFixed128(result.RejectionReason),
                 RpcTarget.Single(senderId, RpcTargetUse.Temp));
         }
 
@@ -930,6 +1124,12 @@ namespace UpcycleCity.Networking
                     resolvedPrice,
                     wallet.Balance,
                     $"Not enough team coins — costs {resolvedPrice}.");
+            }
+
+            if (offer.item != null && offer.item.UseBehavior is IMaterialStockCreditBehavior stockCredit && stockCredit.CreditOnPurchase)
+            {
+                stockCredit.CreditAuthoritativeStock(offer.quantity, out _);
+                PushAllProviderStatesToNetwork(forceAll: false);
             }
 
             return new ShopPurchaseResult(true, itemId, quantity, resolvedPrice, wallet.Balance);
@@ -978,21 +1178,38 @@ namespace UpcycleCity.Networking
                 floatArg,
                 senderPos);
 
+            PushAllProviderStatesToNetwork(forceAll: false);
+
             if (requestId > 0)
             {
+                var msg = new FixedString512Bytes();
+                msg.CopyFromTruncated(result.Message ?? string.Empty);
+
                 CustomActionResponseClientRpc(
                     requestId,
                     result.Success,
-                    new FixedString128Bytes(result.Message ?? string.Empty),
+                    msg,
                     RpcTarget.Single(senderId, RpcTargetUse.Temp));
             }
+        }
+
+        /// <summary>
+        /// Converts a player-facing message to a <see cref="FixedString128Bytes"/>, truncating by UTF-8 byte count
+        /// (accents and symbols like "→" take several bytes) so long card/shop messages never throw.
+        /// </summary>
+        static FixedString128Bytes ToFixed128(string text)
+        {
+            var fixedText = new FixedString128Bytes();
+            if (!string.IsNullOrEmpty(text))
+                fixedText.CopyFromTruncated(text);
+            return fixedText;
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
         void CustomActionResponseClientRpc(
             int requestId,
             bool success,
-            FixedString128Bytes message,
+            FixedString512Bytes message,
             RpcParams rpcParams = default)
         {
             if (pendingCustomActionCallbacks.TryGetValue(requestId, out Action<bool, string> cb))
@@ -1002,41 +1219,64 @@ namespace UpcycleCity.Networking
             }
         }
 
-        void SendFeedbackToClient(ulong targetClientId, string message, Color color, byte feedbackEvent, Vector3 worldPos)
+        void SendFeedbackToClient(
+            ulong targetClientId,
+            string message,
+            Color color,
+            byte feedbackEvent,
+            Vector3 worldPos,
+            byte materialStream = FeedbackSignal.NoMaterialStream)
         {
             if (string.IsNullOrEmpty(message))
                 return;
 
             if (targetClientId == NetworkManager.LocalClientId)
             {
-                EmitLocalFeedback(message, color, (PlayerFeedbackEvent)feedbackEvent, worldPos);
+                EmitLocalFeedback(message, color, (PlayerFeedbackEvent)feedbackEvent, worldPos, materialStream);
                 return;
             }
 
             TargetedFeedbackClientRpc(
-                new FixedString128Bytes(message),
+                ToFixed128(message),
                 color,
                 feedbackEvent,
                 worldPos,
+                materialStream,
                 RpcTarget.Single(targetClientId, RpcTargetUse.Temp));
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
-        void TargetedFeedbackClientRpc(FixedString128Bytes message, Color color, byte feedbackEvent, Vector3 worldPos, RpcParams rpcParams = default)
+        void TargetedFeedbackClientRpc(
+            FixedString128Bytes message,
+            Color color,
+            byte feedbackEvent,
+            Vector3 worldPos,
+            byte materialStream,
+            RpcParams rpcParams = default)
         {
-            EmitLocalFeedback(message.ToString(), color, (PlayerFeedbackEvent)feedbackEvent, worldPos);
+            EmitLocalFeedback(message.ToString(), color, (PlayerFeedbackEvent)feedbackEvent, worldPos, materialStream);
         }
 
         [Rpc(SendTo.ClientsAndHost)]
-        void BroadcastFeedbackClientRpc(FixedString128Bytes message, Color color, byte feedbackEvent, Vector3 worldPos)
+        void BroadcastFeedbackClientRpc(
+            FixedString128Bytes message,
+            Color color,
+            byte feedbackEvent,
+            Vector3 worldPos,
+            byte materialStream)
         {
-            EmitLocalFeedback(message.ToString(), color, (PlayerFeedbackEvent)feedbackEvent, worldPos);
+            EmitLocalFeedback(message.ToString(), color, (PlayerFeedbackEvent)feedbackEvent, worldPos, materialStream);
         }
 
-        void EmitLocalFeedback(string text, Color color, PlayerFeedbackEvent evt, Vector3 worldPos)
+        void EmitLocalFeedback(
+            string text,
+            Color color,
+            PlayerFeedbackEvent evt,
+            Vector3 worldPos,
+            byte materialStream = FeedbackSignal.NoMaterialStream)
         {
             PlayerContext.ActiveInteractor?.NotifyFeedback(text, color);
-            PlayerContext.ActiveFeedback?.Emit(evt, worldPos, 1f, text, color);
+            PlayerContext.ActiveFeedback?.Emit(evt, worldPos, 1f, text, color, materialStream);
             LocalFeedbackReceived?.Invoke(text, color, (byte)evt);
         }
 
@@ -1142,8 +1382,66 @@ namespace UpcycleCity.Networking
 
         // ---------------------------------------------------------------- Generic State Registry Sync
 
+        void OnServerProviderUnregistered(uint keyHash)
+        {
+            if (!IsSpawned || !IsServer || replicatedStates == null)
+                return;
+
+            // Leaving a session: Shutdown disposes the NetworkList before scene providers (machines, bins)
+            // unregister in OnDisable while the gameplay scene unloads; nothing is left to replicate to.
+            if (NetworkManager == null || !NetworkManager.IsListening || NetworkManager.ShutdownInProgress)
+                return;
+
+            // If another provider immediately took ownership of the same hash, keep the slot.
+            if (StateRegistry.TryGet(keyHash, out _))
+                return;
+
+            try
+            {
+                RemoveServerStateEntry(keyHash);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Same teardown race when the list is disposed before NGO reports the shutdown
+            }
+        }
+
+        void RemoveServerStateEntry(uint keyHash)
+        {
+            if (!serverStateIndexByHash.TryGetValue(keyHash, out int idx))
+                return;
+
+            serverStateIndexByHash.Remove(keyHash);
+            if (replicatedStates == null || idx < 0 || idx >= replicatedStates.Count)
+                return;
+
+            replicatedStates.RemoveAt(idx);
+            // Rebuild indices for shifted elements so every live hash maps to its exact NetworkList index.
+            for (int i = idx; i < replicatedStates.Count; i++)
+                serverStateIndexByHash[replicatedStates[i].keyHash] = i;
+        }
+
+        void PruneUnregisteredServerStates()
+        {
+            if (serverStateIndexByHash.Count == 0 || replicatedStates == null)
+                return;
+
+            scratchStaleHashes.Clear();
+            foreach (KeyValuePair<uint, int> kv in serverStateIndexByHash)
+            {
+                if (!StateRegistry.TryGet(kv.Key, out _))
+                    scratchStaleHashes.Add(kv.Key);
+            }
+
+            for (int i = 0; i < scratchStaleHashes.Count; i++)
+                RemoveServerStateEntry(scratchStaleHashes[i]);
+            scratchStaleHashes.Clear();
+        }
+
         void PushAllProviderStatesToNetwork(bool forceAll)
         {
+            PruneUnregisteredServerStates();
+
             IReadOnlyList<ISyncedStateProvider> providers = StateRegistry.AllProviders;
             for (int i = 0; i < providers.Count; i++)
             {
@@ -1196,6 +1494,8 @@ namespace UpcycleCity.Networking
             {
                 ApplyAllReplicatedStatesToClient();
             }
+            // Remove / RemoveAt / Clear automatically drop entries from replicatedStates so
+            // TryGetReplicatedState and ReplicatedStateCount reflect removals immediately on clients.
         }
 
         void ApplyAllReplicatedStatesToClient()
@@ -1264,7 +1564,8 @@ namespace UpcycleCity.Networking
                 entry.isBulky,
                 entry.carrySpeedMultiplier,
                 entry.holdDistanceOffset,
-                entryIndex);
+                entryIndex,
+                entry.ResolvedArchetypeId);
         }
     }
 }

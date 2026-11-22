@@ -338,7 +338,9 @@ namespace UpcycleCity.Interaction
             {
                 ActivePrompt = grabber.CurrentPickup == PickupStyle.Hand
                     ? "Picking up by hand…  (a Litter Picker grabs on the move)"
-                    : "Snap!";
+                    : grabber.CurrentPickup == PickupStyle.ToolReach
+                        ? "Scooping it up…"
+                        : "Snap!";
                 return;
             }
 

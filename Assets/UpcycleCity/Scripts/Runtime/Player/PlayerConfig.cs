@@ -97,6 +97,9 @@ namespace UpcycleCity.Player
         [Range(0f, 30f)] public float handPickupPitch = 14f;
         [Tooltip("Seconds for a litter picker grab (jaws snap shut). The player keeps moving.")]
         [Range(0.05f, 0.6f)] public float pickerPickupDuration = 0.16f;
+        [Tooltip("Seconds for a standing hand-reach pickup while another tool (broom, wrench…) is in hand. " +
+                 "No bending down and the player keeps walking — the tool's advantage over bare hands.")]
+        [Range(0.1f, 1.5f)] public float toolReachPickupDuration = 0.45f;
         [Tooltip("How much tighter held trash follows the picker's claw than it follows the hands.")]
         [Range(1f, 4f)] public float pickerHoldStiffness = 2.2f;
 

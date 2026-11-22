@@ -19,7 +19,8 @@ namespace UpcycleCity.Editor
     /// Idempotent Editor setup tool that builds the co-op networking assets:
     /// <c>NetworkPlayer.prefab</c> (variant of <c>Player.prefab</c>), <c>NetworkTrashItem.prefab</c>,
     /// <c>NetworkCityState.prefab</c>, <c>NetworkSettings.asset</c>, <c>UpcycleCityNetworkPrefabs.asset</c>,
-    /// and wires <see cref="CoopSessionManager"/> + <see cref="CoopMenuController"/> into <c>CharacterCreator.unity</c>.
+    /// and (re)builds the <c>MainMenu.unity</c> title scene that owns the persistent <see cref="CoopSessionManager"/> +
+    /// <see cref="CoopMenuController"/> (see <see cref="MainMenuBuilder"/>).
     /// </summary>
     public static class CoopMultiplayerSetup
     {
@@ -31,7 +32,6 @@ namespace UpcycleCity.Editor
         const string NetworkSettingsPath = NetworkPrefabRegistryTool.NetworkSettingsFolder + "/NetworkSettings.asset";
         const string PanelSettingsPath = "Assets/UpcycleCity/UI/UpcycleCityPanelSettings.asset";
         const string CoopMenuStylePath = "Assets/UpcycleCity/UI/CoopMenu.uss";
-        const string CharacterCreatorScenePath = "Assets/UpcycleCity/Scenes/CharacterCreator.unity";
 
         [MenuItem("Upcycle City/Networking/Setup Co-op Prefabs & Scene", priority = 51)]
         public static void SetupAll()
@@ -50,16 +50,16 @@ namespace UpcycleCity.Editor
             NetworkPrefabsList prefabsList = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(
                 NetworkPrefabRegistryTool.NetworkPrefabsListPath);
 
-            NetworkSettings settings = CreateOrUpdateNetworkSettings(
+            CreateOrUpdateNetworkSettings(
                 prefabsList,
                 networkPlayerPrefab,
                 networkTrashPrefab,
                 networkCityStatePrefab);
 
-            WireCharacterCreatorScene();
+            MainMenuBuilder.Build();
 
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Upcycle City] Co-op setup complete ({registered} network prefabs registered, NetworkSettings + CharacterCreator wired).");
+            Debug.Log($"[Upcycle City] Co-op setup complete ({registered} network prefabs registered, NetworkSettings + MainMenu wired).");
         }
 
         static GameObject CreateOrUpdateNetworkPlayerPrefab()
@@ -131,7 +131,8 @@ namespace UpcycleCity.Editor
             var go = new GameObject("NetworkCityState");
             go.AddComponent<NetworkObject>();
             NetworkStateReplicator replicator = go.AddComponent<NetworkStateReplicator>();
-            replicator.Configure(networkTrashPrefab, 0.25f, 25);
+            // Starting coins come from NetworkSettings.StartingTeamCoins at spawn time (CoopSessionManager)
+            replicator.Configure(networkTrashPrefab, 0.25f, 0);
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(go, NetworkCityStatePrefabPath);
             Object.DestroyImmediate(go);
@@ -175,27 +176,11 @@ namespace UpcycleCity.Editor
             nt.SyncScaleZ = false;
         }
 
-        static void WireCharacterCreatorScene()
-        {
-            if (!File.Exists(CharacterCreatorScenePath))
-                return;
-
-            string previousScenePath = SceneManager.GetActiveScene().path;
-            Scene creatorScene = EditorSceneManager.OpenScene(CharacterCreatorScenePath, OpenSceneMode.Single);
-
-            // Reload NetworkSettings AFTER OpenScene, since OpenSceneMode.Single unloads unreferenced ScriptableObjects
-            NetworkSettings settings = AssetDatabase.LoadAssetAtPath<NetworkSettings>(NetworkSettingsPath);
-            WireCoopIntoActiveCreatorScene(settings);
-
-            EditorSceneManager.MarkSceneDirty(creatorScene);
-            EditorSceneManager.SaveScene(creatorScene, CharacterCreatorScenePath);
-
-            if (!string.IsNullOrEmpty(previousScenePath) && previousScenePath != CharacterCreatorScenePath && File.Exists(previousScenePath))
-                EditorSceneManager.OpenScene(previousScenePath, OpenSceneMode.Single);
-        }
-
-        /// <summary>Wires CoopSessionManager + NetworkManager + UnityTransport + CoopMenuController into the active CharacterCreator scene.</summary>
-        public static void WireCoopIntoActiveCreatorScene(NetworkSettings settings = null)
+        /// <summary>
+        /// Adds CoopSessionManager + NetworkManager + UnityTransport and the Main Menu <see cref="CoopMenuController"/>
+        /// to the active scene (the MainMenu scene). Idempotent.
+        /// </summary>
+        public static void WireCoopIntoActiveMenuScene(NetworkSettings settings = null, PanelSettings menuPanel = null)
         {
             if (settings == null)
                 settings = AssetDatabase.LoadAssetAtPath<NetworkSettings>(NetworkSettingsPath);
@@ -205,8 +190,8 @@ namespace UpcycleCity.Editor
                 return;
             }
 
-            // Ensure CoopSessionRoot with NetworkManager + UnityTransport + CoopSessionManager
-            CoopSessionManager existingSession = Object.FindAnyObjectByType<CoopSessionManager>();
+            Scene active = SceneManager.GetActiveScene();
+            CoopSessionManager existingSession = FindInScene<CoopSessionManager>(active);
             GameObject sessionGo = existingSession != null ? existingSession.gameObject : new GameObject("CoopSessionManager");
             CoopSessionManager sessionManager = existingSession != null ? existingSession : sessionGo.AddComponent<CoopSessionManager>();
             sessionManager.Configure(settings);
@@ -233,13 +218,22 @@ namespace UpcycleCity.Editor
             EditorUtility.SetDirty(nm);
             EditorUtility.SetDirty(sessionManager);
 
-            // Ensure CoopMenuController in the CharacterCreator scene
-            CoopMenuController existingMenu = Object.FindAnyObjectByType<CoopMenuController>();
-            GameObject menuGo = existingMenu != null ? existingMenu.gameObject : new GameObject("CoopMenuUI");
+            CoopMenuController existingMenu = FindInScene<CoopMenuController>(active);
+            GameObject menuGo = existingMenu != null ? existingMenu.gameObject : new GameObject("MainMenuUI");
             CoopMenuController menu = existingMenu != null ? existingMenu : menuGo.AddComponent<CoopMenuController>();
-            CharacterCreatorController creator = Object.FindAnyObjectByType<CharacterCreatorController>();
-            menu.Configure(settings.PanelSettings, settings.CoopMenuStyleSheet, creator);
+            menu.Configure(menuPanel != null ? menuPanel : settings.PanelSettings, settings.CoopMenuStyleSheet);
             EditorUtility.SetDirty(menu);
+        }
+
+        static T FindInScene<T>(Scene scene) where T : Component
+        {
+            foreach (GameObject rootGo in scene.GetRootGameObjects())
+            {
+                T found = rootGo.GetComponentInChildren<T>(true);
+                if (found != null)
+                    return found;
+            }
+            return null;
         }
     }
 }

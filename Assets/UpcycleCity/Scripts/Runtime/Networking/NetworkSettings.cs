@@ -27,10 +27,18 @@ namespace UpcycleCity.Networking
         [SerializeField, Range(2, 4)] int maxPlayers = 4;
         [SerializeField, Range(15, 60)] uint tickRate = 30;
         [SerializeField] CoopTransportMode defaultTransportMode = CoopTransportMode.Relay;
-        [Tooltip("Optional scene override for Play Solo. Leave empty to use CharacterCreatorController.GameplayScene (PlayerGym).")]
-        [SerializeField] string soloSceneName = "";
+        [Tooltip("Gameplay scene loaded when a solo player confirms their look in the Character Creator. Leave empty to use CharacterCreatorController.GameplayScene.")]
+        [SerializeField] string soloSceneName = "EcosystemSandbox";
+        [Tooltip("Gameplay scene the host loads for everyone (NGO scene management) once all players are ready.")]
         [SerializeField] string coopSceneName = "EcosystemSandbox";
-        [SerializeField] string menuSceneName = "CharacterCreator";
+        [Tooltip("Title screen (Play Solo / Host Room / Join Room). Leaving a co-op session returns here.")]
+        [SerializeField] string menuSceneName = "MainMenu";
+        [Tooltip("Character Creator scene: solo players go here from the menu; in co-op the host loads it for the whole room.")]
+        [SerializeField] string characterSceneName = "CharacterCreator";
+
+        [Header("Economy")]
+        [Tooltip("Coins every run starts with: the shared team wallet in co-op and the player's wallet in solo. Players also start with no tools.")]
+        [SerializeField, Min(0)] int startingTeamCoins = 0;
 
         [Header("Direct Connect Fallback")]
         [SerializeField] string defaultDirectAddress = "127.0.0.1";
@@ -56,10 +64,15 @@ namespace UpcycleCity.Networking
         public int MaxPlayers => Mathf.Clamp(maxPlayers, 2, 4);
         public uint TickRate => tickRate < 15 ? 30u : tickRate;
         public CoopTransportMode DefaultTransportMode => defaultTransportMode;
-        /// <summary>Explicit solo scene override, or empty string to defer to <c>CharacterCreatorController.GameplayScene</c>.</summary>
+        /// <summary>Solo gameplay scene, or empty string to defer to <c>CharacterCreatorController.GameplayScene</c>.</summary>
         public string SoloSceneName => string.IsNullOrWhiteSpace(soloSceneName) ? string.Empty : soloSceneName.Trim();
-        public string CoopSceneName => string.IsNullOrWhiteSpace(coopSceneName) ? "EcosystemSandbox" : coopSceneName;
-        public string MenuSceneName => string.IsNullOrWhiteSpace(menuSceneName) ? "CharacterCreator" : menuSceneName;
+        public string CoopSceneName => string.IsNullOrWhiteSpace(coopSceneName) ? "EcosystemSandbox" : coopSceneName.Trim();
+        /// <summary>Title screen scene (default <c>MainMenu</c>); leaving a session returns here.</summary>
+        public string MenuSceneName => string.IsNullOrWhiteSpace(menuSceneName) ? "MainMenu" : menuSceneName.Trim();
+        /// <summary>Character Creator scene (default <c>CharacterCreator</c>).</summary>
+        public string CharacterSceneName => string.IsNullOrWhiteSpace(characterSceneName) ? "CharacterCreator" : characterSceneName.Trim();
+        /// <summary>Coins a run starts with (team wallet in co-op, player wallet in solo). Default 0.</summary>
+        public int StartingTeamCoins => Mathf.Max(0, startingTeamCoins);
         public string DefaultDirectAddress => string.IsNullOrWhiteSpace(defaultDirectAddress) ? "127.0.0.1" : defaultDirectAddress;
         public ushort DefaultDirectPort => defaultDirectPort == 0 ? (ushort)7777 : defaultDirectPort;
         public float RelayTimeoutSeconds => Mathf.Clamp(relayTimeoutSeconds, 3f, 30f);
@@ -72,6 +85,18 @@ namespace UpcycleCity.Networking
         public GameObject NetworkCityStatePrefab => networkCityStatePrefab;
         public PanelSettings PanelSettings => panelSettings;
         public StyleSheet CoopMenuStyleSheet => coopMenuStyleSheet;
+
+        /// <summary>Editor/setup helper to assign the session flow scene names.</summary>
+        public void ConfigureScenes(string menuScene, string characterScene, string soloScene, string coopScene)
+        {
+            menuSceneName = menuScene;
+            characterSceneName = characterScene;
+            soloSceneName = soloScene;
+            coopSceneName = coopScene;
+        }
+
+        /// <summary>Sets the coins every run starts with (tests / setup tools).</summary>
+        public void SetStartingTeamCoins(int coins) => startingTeamCoins = Mathf.Max(0, coins);
 
         /// <summary>Editor/setup helper to assign prefab, prefab-list, and UI references.</summary>
         public void ConfigureAssets(

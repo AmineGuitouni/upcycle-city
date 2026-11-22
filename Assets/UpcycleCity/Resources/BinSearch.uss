@@ -1,0 +1,367 @@
+/* Street-bin search: dark card over the dimmed game, phone-first (reference 1080x608 landscape).
+   Brand: Company Green #2E8B57, Teal #2F8F8A, Safety Yellow #F2C21B, Hi-Vis Orange #FF7A1A. */
+
+.bs-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    -unity-font-style: bold;
+}
+
+.bs-backdrop {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(6, 9, 11, 0.6);
+}
+
+.bs-window {
+    width: 1000px;
+    max-width: 96%;
+    max-height: 94%;
+    background-color: rgb(30, 33, 36);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgb(62, 67, 71);
+    overflow: hidden;
+}
+
+.bs-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px 12px 20px;
+    background-color: rgb(20, 22, 24);
+    border-bottom-width: 4px;
+    border-bottom-color: rgb(46, 139, 87);
+}
+
+.bs-titles { flex-grow: 1; flex-shrink: 1; }
+
+.bs-title {
+    font-size: 24px;
+    color: rgb(240, 240, 236);
+    letter-spacing: 2px;
+}
+
+.bs-hint {
+    font-size: 14px;
+    -unity-font-style: normal;
+    color: rgb(150, 162, 166);
+    white-space: normal;
+}
+
+.bs-close {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+    border-radius: 26px;
+    border-width: 0;
+    background-color: rgb(52, 56, 60);
+    color: rgb(230, 230, 226);
+}
+
+.bs-close:hover { background-color: rgb(200, 70, 59); }
+
+.bs-body {
+    flex-direction: row;
+    padding: 12px;
+    flex-shrink: 1;
+}
+
+.bs-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 6px;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: rgb(24, 27, 29);
+}
+
+.bs-panel-bin { flex-grow: 1.15; }
+
+.bs-panel-head {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.bs-panel-title {
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: rgb(242, 194, 27);
+}
+
+.bs-panel-count {
+    font-size: 14px;
+    -unity-font-style: normal;
+    color: rgb(170, 180, 184);
+}
+
+.bs-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+/* One slot: big enough to tap on a phone */
+.bs-slot {
+    width: 31%;
+    height: 82px;
+    margin: 1%;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(70, 76, 80);
+    background-color: rgb(40, 44, 47);
+    overflow: hidden;
+    justify-content: flex-end;
+    transition-property: scale, opacity, background-color;
+    transition-duration: 0.18s, 0.18s, 0.25s;
+    transition-timing-function: ease-out-back, ease-out, ease-out;
+}
+
+.bs-panel-bag .bs-slot { width: 31%; }
+
+.bs-slot:hover { background-color: rgb(50, 56, 60); }
+
+.bs-slot-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 0;
+    background-color: rgba(47, 143, 138, 0.35);
+}
+
+.bs-slot-chip {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 6px;
+}
+
+.bs-slot-name {
+    font-size: 15px;
+    color: rgb(238, 238, 232);
+    white-space: normal;
+    -unity-text-align: lower-left;
+}
+
+.bs-slot-tag {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: rgb(150, 160, 164);
+}
+
+/* Not found yet */
+.bs-slot-hidden {
+    background-color: rgb(33, 36, 38);
+    border-color: rgb(52, 57, 60);
+    justify-content: center;
+}
+
+.bs-slot-hidden .bs-slot-name {
+    font-size: 26px;
+    color: rgb(84, 92, 96);
+    -unity-text-align: middle-center;
+}
+
+.bs-slot-digging { border-color: rgb(47, 143, 138); }
+
+.bs-slot-digging .bs-slot-name { color: rgb(120, 190, 186); }
+
+.bs-slot-digging .bs-slot-tag {
+    color: rgb(120, 190, 186);
+    -unity-text-align: middle-center;
+}
+
+/* Empty space */
+.bs-slot-empty {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgb(48, 52, 55);
+}
+
+/* Being taken */
+.bs-slot-taking { opacity: 0.35; }
+
+/* Pop when a find turns up or lands in the bag */
+.bs-pop-start { scale: 0.6 0.6; opacity: 0.2; }
+.bs-pop { scale: 1 1; opacity: 1; }
+
+.bs-footer {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 18px 14px 18px;
+}
+
+.bs-status {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 15px;
+    color: rgb(242, 194, 27);
+    white-space: normal;
+}
+
+.bs-button {
+    height: 52px;
+    padding: 0 22px;
+    margin-left: 10px;
+    font-size: 17px;
+    border-radius: 8px;
+    border-width: 0;
+    background-color: rgb(46, 139, 87);
+    color: rgb(245, 245, 240);
+}
+
+.bs-button:hover { background-color: rgb(58, 160, 102); }
+
+.bs-button-alt { background-color: rgb(47, 143, 138); }
+
+.bs-button-alt:hover { background-color: rgb(60, 165, 160); }
+
+.bs-button:disabled { opacity: 0.4; }
+
+.bs-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Bag counter during play (right edge, clear of the hotbar and crosshair) */
+.bs-badge {
+    position: absolute;
+    right: 16px;
+    top: 42%;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: rgb(245, 245, 240);
+    background-color: rgba(46, 139, 87, 0.88);
+}
+
+/* ---------------------------------------------------------------- kit restyle + loot icons (IconLibrary.ForLoot)
+   Overrides the rules above: charcoal rounded window, tile slots with the find's icon, rarity ring,
+   stream-coloured corner dot, pill buttons. */
+.bs-backdrop { background-color: rgba(8, 10, 12, 0.55); }
+.bs-window {
+    width: 940px;
+    background-color: rgba(30, 32, 35, 0.97);
+    border-radius: 22px;
+    border-color: rgba(255, 255, 255, 0.07);
+}
+.bs-header {
+    padding: 12px 14px 12px 22px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+.bs-title { font-size: 22px; color: rgb(255, 255, 255); }
+.bs-hint { font-size: 13px; color: rgb(156, 163, 175); }
+.bs-close {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background-color: rgb(52, 56, 62);
+    align-items: center;
+    justify-content: center;
+}
+.bs-close-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.bs-panel {
+    padding: 12px;
+    border-radius: 16px;
+    background-color: rgba(20, 22, 24, 0.7);
+}
+.bs-panel-title { font-size: 14px; color: rgb(242, 194, 27); }
+.bs-panel-count { font-size: 13px; color: rgb(156, 163, 175); }
+
+.bs-slot {
+    height: 96px;
+    padding: 6px 8px 7px 8px;
+    border-radius: 14px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.06);
+    background-color: rgb(42, 45, 50);
+    align-items: center;
+    justify-content: flex-end;
+}
+.bs-slot:hover { background-color: rgb(52, 56, 62); }
+.bs-slot-fill { background-color: rgba(46, 170, 92, 0.28); border-radius: 12px; }
+/* stream colour shown as a small corner dot instead of a side bar */
+.bs-slot-chip {
+    left: 7px;
+    top: 7px;
+    bottom: auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+}
+.bs-slot-icon {
+    position: absolute;
+    left: 0; right: 0; top: 8px;
+    height: 44px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.bs-slot-name {
+    font-size: 12px;
+    color: rgb(248, 250, 252);
+    -unity-text-align: lower-center;
+}
+.bs-slot-tag {
+    font-size: 9px;
+    -unity-text-align: lower-center;
+}
+.bs-slot-hidden {
+    background-color: rgb(34, 36, 40);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+.bs-slot-hidden .bs-slot-name { font-size: 26px; color: rgb(80, 86, 94); }
+.bs-slot-digging { border-color: rgb(46, 170, 92); }
+.bs-slot-digging .bs-slot-name,
+.bs-slot-digging .bs-slot-tag { color: rgb(110, 214, 150); }
+.bs-slot-empty {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+.bs-footer { padding: 6px 18px 14px 20px; }
+.bs-status { font-size: 14px; }
+.bs-button {
+    height: 46px;
+    padding: 0 22px;
+    font-size: 15px;
+    border-radius: 23px;
+    background-color: rgb(46, 170, 92);
+}
+.bs-button:hover { background-color: rgb(58, 188, 106); }
+.bs-button-alt { background-color: rgb(242, 106, 27); }
+.bs-button-alt:hover { background-color: rgb(255, 124, 46); }
+
+.bs-badge {
+    padding: 7px 14px;
+    border-radius: 17px;
+    font-size: 14px;
+    background-color: rgba(28, 30, 33, 0.88);
+    border-width: 1px;
+    border-color: rgba(46, 170, 92, 0.6);
+}
+
+/* 4 columns so a full bin (12) and a full bag (10) fit in three rows without scrolling */
+.bs-slot,
+.bs-panel-bag .bs-slot {
+    width: 23%;
+    height: 84px;
+}
+.bs-slot-icon { top: 7px; height: 38px; }
+.bs-slot-name { font-size: 11px; }
+.bs-slot-tag { font-size: 8px; }
+.bs-slot-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.bs-slot-hidden .bs-slot-name { white-space: normal; }
+.bs-slot-icon { height: 42px; }

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b242f100ab8874e14ab11d5141188bc4, type: 3}
+  m_Name: MachineDef_CrucibleFurnace
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.MachineDefinition
+  machineId: machine_crucible_furnace
+  displayName: Bellows Crucible Furnace
+  description: High-heat smelting hearth with hand-pumped forge bellows. Upgrade to Lv 1 for aluminum smelting.
+  machineType: {fileID: 11400000, guid: 69af0947a154e47cbb52bad727d2eeab, type: 2}
+  accentColor: {r: 0.784, g: 0.275, b: 0.231, a: 1}
+  icon: {fileID: 0}
+  defaultLevel: 0
+  maxLevel: 1
+  acceptedCardCategories: 00000000i
+  interactRange: 6.5
+  upgradeCosts:
+  - targetLevel: 1
+    coins: 25
+    materials:
+    - material: {fileID: 11400000, guid: 1b7aecc8d0963417b930ce1f1146383b, type: 2}
+      amount: 2
+  acceptedHopperStreams: 03000000i
+  acceptedHopperMaterials: []
+  purchasePrice: 50
+  machinePrefab: {fileID: 431358578280317941, guid: d5781d4f04545469abd6b46d73ef0081, type: 3}
+  placementFootprint: {x: 2, y: 2}

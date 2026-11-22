@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UpcycleCity.Core;
 using UpcycleCity.Interaction;
 using UpcycleCity.Player;
 using UpcycleCity.Waste;
+using Random = UnityEngine.Random;
 
 namespace UpcycleCity.Ecosystem
 {
@@ -10,8 +13,12 @@ namespace UpcycleCity.Ecosystem
     /// Cause #2: Overflowing Street / Shop Bins.
     /// Fills over time from foot traffic &amp; citizen deposits. Once full (fillLevel >= 1),
     /// it visibly overflows by spilling physical TrashItems onto the sidewalk and adding stench/grime load.
-    /// The player can service/empty it with [E] (<see cref="IInteractable"/>) to earn coins,
-    /// stop the overflow, and boost local Resident Satisfaction.
+    /// <para>
+    /// [E] opens the bin like an inventory (<see cref="BinSearchUI"/>): the player rummages through it and finds turn up
+    /// one by one, common things first and rare ones last (<see cref="BinContents"/>, <see cref="BinLootTable"/>). Each
+    /// find taken goes into the player's <see cref="RecyclingBag"/> and lowers the fill; emptying the bin completely
+    /// pays the team, stops the overflow and boosts local Resident Satisfaction.
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Ecosystem/Overflowing Bin Source")]
@@ -48,6 +55,19 @@ namespace UpcycleCity.Ecosystem
         float spillTimer;
         string syncKey;
 
+        readonly BinContents contents = new BinContents();
+        readonly HashSet<ulong> searchers = new HashSet<ulong>();
+        System.Random lootRandom;
+
+        /// <summary>What's inside and how far the search has got (replicated).</summary>
+        public BinContents Contents => contents;
+
+        /// <summary>Raised when the contents or search state change (host or replicated).</summary>
+        public event Action ContentsChanged;
+
+        /// <summary>Shared clock the search runs on (server time in co-op).</summary>
+        public static float SearchClock => (float)GameAuthority.Current.ServerTime;
+
         public override WasteSourceKind SourceKind => WasteSourceKind.ShopOverflow;
         public float FillLevel => fillLevel;
         public bool IsOverflowing => fillLevel >= 0.99f;
@@ -69,12 +89,11 @@ namespace UpcycleCity.Ecosystem
         {
             get
             {
-                int pct = Mathf.RoundToInt(fillLevel * 100f);
-                if (IsOverflowing)
-                    return $"[E] Empty OVERFLOWING {DisplayName} (+{ServiceCoinReward} Coins)";
-                if (fillLevel >= 0.15f)
-                    return $"[E] Service {DisplayName} ({pct}% Full)";
-                return $"{DisplayName} is Clean ({pct}% Full)";
+                if (contents.Count == 0)
+                    return $"{DisplayName} is empty";
+                return IsOverflowing
+                    ? $"[E] Search OVERFLOWING {DisplayName}"
+                    : $"[E] Search {DisplayName} ({Mathf.RoundToInt(fillLevel * 100f)}% full)";
             }
         }
 
@@ -136,6 +155,7 @@ namespace UpcycleCity.Ecosystem
                 fillLevel = Mathf.Min(1f, fillLevel + passiveFill * Time.deltaTime);
                 RefreshIndicator();
             }
+            FillContentsToLevel();
 
             if (IsOverflowing)
             {
@@ -176,14 +196,93 @@ namespace UpcycleCity.Ecosystem
 
         public bool CanInteract(PlayerInteractor interactor)
         {
-            return fillLevel >= 0.15f;
+            return contents.Count > 0 && (BinSearchUI.Instance == null || !BinSearchUI.Instance.IsOpen);
         }
 
         public void Interact(PlayerInteractor interactor)
         {
             if (!CanInteract(interactor))
                 return;
-            GameAuthority.Current.RequestServiceBin(this, interactor);
+            BinSearchUI.EnsureInstance().Open(this);
+        }
+
+        // ------------------------------------------------------------ searching (host)
+
+        // A new find only appears once the fill has reached a whole slot, so taking one (which drops the fill to
+        // exactly what's left) isn't instantly undone by the next tick of passive fill
+        static int SlotsFor(float fill, BinLootTable table) =>
+            Mathf.Clamp(Mathf.FloorToInt(fill * table.BinSlots + 0.0001f), 0, table.BinSlots);
+
+        // The bin holds one find per slot of fill: as it fills up (foot traffic, citizens) new finds are rolled in
+        void FillContentsToLevel()
+        {
+            BinLootTable table = BinLootTable.Active;
+            if (table == null)
+                return;
+            int target = SlotsFor(fillLevel, table);
+            if (contents.Count >= target)
+                return;
+
+            lootRandom ??= new System.Random(unchecked((int)SyncedStateRegistry.ComputeKeyHash(SyncKey) ^ Environment.TickCount));
+            float now = SearchClock;
+            bool changed = false;
+            while (contents.Count < target)
+            {
+                int entry = table.Roll(lootRandom);
+                if (entry < 0 || !contents.Add(entry, now, table))
+                    break;
+                changed = true;
+            }
+            if (changed)
+                ContentsChanged?.Invoke();
+        }
+
+        /// <summary>Host: a player started (or stopped) searching this bin; the search runs while anyone is at it.</summary>
+        public void AuthoritativeSetSearcher(ulong clientId, bool searching)
+        {
+            BinLootTable table = BinLootTable.Active;
+            if (table == null)
+                return;
+            bool wasSearching = searchers.Count > 0;
+            if (searching) searchers.Add(clientId);
+            else searchers.Remove(clientId);
+            bool isSearching = searchers.Count > 0;
+            if (wasSearching == isSearching)
+                return;
+            FillContentsToLevel();
+            contents.SetSearching(isSearching, SearchClock, table);
+            ContentsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Host: takes the find in <paramref name="slot"/> if it has turned up and is still <paramref name="expectedEntry"/>.
+        /// Lowers the fill; emptying the bin completely pays the team. Returns the loot entry, or -1.
+        /// </summary>
+        public int AuthoritativeTake(int slot, int expectedEntry, ulong takerClientId)
+        {
+            BinLootTable table = BinLootTable.Active;
+            if (table == null || slot < 0 || slot >= contents.Count || contents[slot] != expectedEntry)
+                return -1;
+            int entry = contents.TakeAt(slot, SearchClock, table);
+            if (entry < 0)
+                return -1;
+
+            bool wasOverflow = IsOverflowing;
+            fillLevel = Mathf.Min(fillLevel, contents.Count / (float)table.BinSlots);
+            if (contents.Count == 0)
+            {
+                fillLevel = 0f;
+                spillTimer = SpillInterval;
+                int payout = Mathf.Max(2, ServiceCoinReward / 2);
+                GameAuthority.Current.CreditTeamCoins(payout);
+                district?.AddSatisfactionBoost(wasOverflow ? 0.12f : 0.06f);
+                string message = $"Emptied {DisplayName}! +{payout} Coins";
+                GameAuthority.Current.SendTargetedFeedback(takerClientId, message, new Color(0.18f, 0.72f, 0.42f),
+                    PlayerFeedbackEvent.BinServiced, transform.position);
+            }
+            RefreshIndicator();
+            ContentsChanged?.Invoke();
+            return entry;
         }
 
         /// <summary>Executes authoritative bin emptying (invoked directly in solo or on the host in co-op).</summary>
@@ -207,6 +306,8 @@ namespace UpcycleCity.Ecosystem
 
             fillLevel = 0f;
             spillTimer = SpillInterval;
+            contents.Clear();
+            ContentsChanged?.Invoke();
             RefreshIndicator();
 
             if (creditLocalInventory)
@@ -220,7 +321,7 @@ namespace UpcycleCity.Ecosystem
             if (emitLocalFeedback)
             {
                 interactor?.NotifyFeedback(message, color);
-                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.Interact, transform.position, 1f, message, color);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.BinServiced, transform.position, 1f, message, color);
             }
             return true;
         }
@@ -231,14 +332,26 @@ namespace UpcycleCity.Ecosystem
             ExecuteAuthoritativeService(interactor, out _, out _, out _, creditLocalInventory: true, emitLocalFeedback: true);
         }
 
-        public SyncedStateRecord CaptureSyncState() => new SyncedStateRecord
+        public SyncedStateRecord CaptureSyncState()
         {
-            v0 = fillLevel,
-        };
+            contents.Capture(out float progressBase, out float searchStart, out int i0, out int i1);
+            return new SyncedStateRecord
+            {
+                v0 = fillLevel,
+                v1 = progressBase,
+                v2 = searchStart,
+                i0 = i0,
+                i1 = i1,
+            };
+        }
 
         public void ApplySyncState(in SyncedStateRecord state)
         {
             fillLevel = Mathf.Clamp01(state.v0);
+            contents.Capture(out float b, out float s, out int i0, out int i1);
+            contents.Apply(state.v1, state.v2, state.i0, state.i1);
+            if (i0 != state.i0 || i1 != state.i1 || !Mathf.Approximately(b, state.v1) || !Mathf.Approximately(s, state.v2))
+                ContentsChanged?.Invoke();
             RefreshIndicator();
         }
 

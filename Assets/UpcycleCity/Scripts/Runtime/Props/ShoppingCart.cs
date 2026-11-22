@@ -401,7 +401,11 @@ namespace UpcycleCity.Props
 
             Stow(ref entry);
             basket.Add(entry);
-            PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.Drop, item.transform.position, 0.45f);
+            PlayerContext.ActiveFeedback?.Emit(
+                PlayerFeedbackEvent.CartStow,
+                item.transform.position,
+                0.45f,
+                materialStream: FeedbackSignal.EncodeMaterial(item.Stream, item.IsBulky));
         }
 
         bool Contains(TrashItem item)

@@ -95,6 +95,10 @@ MonoBehaviour:
   ambienceLoop: {fileID: 8300000, guid: f903e5c856ce44f6b98141bca34cc437, type: 3}
   ambienceBaseVolume: 0.22
   ambienceSmogMinMultiplier: 0.55
+  shopOpenAmbienceDuck: 0
+  ambienceSilentScenes:
+  - CharacterCreator
+  - MainMenu
   masterVolume: 1
   sfxVolume: 0.9
   musicVolume: 0.75

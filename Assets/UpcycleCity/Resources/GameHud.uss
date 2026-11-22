@@ -1,0 +1,577 @@
+/* Upcycle City — gameplay HUD + touch controls (UI Toolkit, 1080x608 reference).
+   Kit palette: charcoal cards, white bold text, orange action, green selected, stream colours. */
+
+:root {
+    --uc-card: rgba(30, 32, 35, 0.92);
+    --uc-chip: rgba(28, 30, 33, 0.86);
+    --uc-chip-border: rgba(255, 255, 255, 0.07);
+    --uc-text: rgb(255, 255, 255);
+    --uc-muted: rgb(176, 181, 188);
+    --uc-orange: rgb(242, 106, 27);
+    --uc-green: rgb(46, 170, 92);
+    --uc-yellow: rgb(242, 194, 27);
+    --uc-teal: rgb(47, 143, 138);
+    --uc-red: rgb(214, 74, 58);
+}
+
+.uc-hud-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    -unity-font-style: bold;
+    color: var(--uc-text);
+}
+
+.uc-hud, .uc-cue-layer, .uc-touch {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.uc-chip {
+    flex-direction: row;
+    align-items: center;
+    height: 34px;
+    padding: 0 12px 0 6px;
+    border-radius: 17px;
+    background-color: var(--uc-chip);
+    border-width: 1px;
+    border-color: var(--uc-chip-border);
+}
+
+.uc-badge {
+    height: 22px;
+    padding: 0 8px;
+    margin-right: 8px;
+    border-radius: 11px;
+    background-color: var(--uc-orange);
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+}
+.uc-badge--clean { background-color: var(--uc-green); }
+.uc-badge--hazy { background-color: rgb(196, 140, 30); }
+.uc-badge--smog { background-color: var(--uc-orange); }
+
+.uc-chip-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--uc-text);
+}
+.uc-chip-caption {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--uc-muted);
+    margin-right: 6px;
+}
+.uc-chip-value {
+    font-size: 15px;
+    -unity-font-style: bold;
+    margin-left: 6px;
+}
+.uc-chip-divider {
+    width: 1px;
+    height: 16px;
+    margin: 0 10px;
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.uc-top-left {
+    position: absolute;
+    left: 18px; top: 14px;
+    flex-direction: row;
+}
+.uc-top-right {
+    position: absolute;
+    right: 18px; top: 14px;
+    flex-direction: row;
+    align-items: flex-start;
+}
+.uc-top-right > .uc-chip { margin-left: 8px; }
+
+.uc-air-dot {
+    width: 14px; height: 14px;
+    margin: 0 6px 0 4px;
+    border-radius: 7px;
+    background-color: var(--uc-teal);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.uc-streams { flex-direction: row; }
+.uc-stream {
+    width: 11px; height: 11px;
+    margin-left: 4px;
+    border-radius: 3px;
+}
+.uc-stream--paper { background-color: rgb(46, 111, 181); }
+.uc-stream--plastic { background-color: rgb(242, 181, 27); }
+.uc-stream--glass { background-color: rgb(46, 139, 87); }
+.uc-stream--cans { background-color: rgb(200, 70, 59); }
+
+.uc-chip--coins { padding: 0 14px 0 6px; }
+.uc-coin-icon {
+    width: 24px; height: 24px;
+    margin-right: 6px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-coin-value {
+    font-size: 18px;
+    -unity-font-style: bold;
+    min-width: 22px;
+}
+.uc-coin-delta {
+    position: absolute;
+    right: 18px; top: 40px;
+    font-size: 15px;
+    color: rgb(120, 230, 150);
+    -unity-font-style: bold;
+}
+.uc-coin-delta--neg { color: rgb(255, 140, 120); }
+
+/* top-centre: event + smog + toasts */
+.uc-top-center {
+    position: absolute;
+    left: 0; right: 0; top: 14px;
+    align-items: center;
+}
+.uc-top-center > .uc-chip { margin-bottom: 6px; }
+
+.uc-chip--event { border-color: rgba(242, 194, 27, 0.5); }
+.uc-chip--event .uc-badge { background-color: var(--uc-yellow); color: rgb(30, 30, 30); }
+.uc-chip--event .uc-chip-value { color: var(--uc-yellow); }
+.uc-chip--event-urgent { border-color: rgba(242, 106, 27, 0.9); }
+.uc-chip--event-urgent .uc-badge { background-color: var(--uc-orange); color: white; }
+
+.uc-chip--smog {
+    height: 28px;
+    padding: 0 12px 0 8px;
+    background-color: rgba(120, 44, 30, 0.82);
+    border-color: rgba(255, 140, 110, 0.35);
+}
+.uc-chip--smog .uc-chip-title { font-size: 12px; }
+.uc-smog-dot {
+    width: 10px; height: 10px;
+    border-radius: 5px;
+    margin-right: 7px;
+    background-color: rgb(255, 140, 100);
+}
+.uc-chip--smog-safe {
+    background-color: rgba(24, 90, 96, 0.82);
+    border-color: rgba(120, 220, 210, 0.35);
+}
+.uc-chip--smog-safe .uc-smog-dot { background-color: rgb(120, 220, 210); }
+
+.uc-toasts { align-items: center; margin-top: 2px; }
+.uc-toast {
+    max-width: 460px;
+    margin-bottom: 5px;
+    padding: 6px 14px 6px 12px;
+    border-radius: 10px;
+    background-color: var(--uc-card);
+    border-left-width: 4px;
+    border-left-color: var(--uc-green);
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+/* ---------------------------------------------------------------- centre */
+
+.uc-center {
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    align-items: center;
+}
+.uc-crosshair {
+    position: absolute;
+    top: -9px;
+    width: 18px; height: 18px;
+    border-radius: 9px;
+    border-width: 0;
+    border-color: rgba(255, 255, 255, 0.0);
+    align-items: center;
+    justify-content: center;
+    transition-property: border-width, border-color, scale;
+    transition-duration: 0.12s;
+}
+.uc-crosshair-dot {
+    width: 5px; height: 5px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.35);
+}
+.uc-crosshair--target {
+    border-width: 2px;
+    border-color: rgba(242, 194, 27, 0.95);
+}
+.uc-crosshair--target .uc-crosshair-dot { background-color: var(--uc-yellow); }
+
+.uc-charge {
+    position: absolute;
+    top: 18px;
+    width: 120px; height: 6px;
+    border-radius: 3px;
+    background-color: rgba(20, 22, 24, 0.7);
+    overflow: hidden;
+}
+.uc-charge-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 3px;
+    background-color: var(--uc-orange);
+}
+
+.uc-prompt {
+    position: absolute;
+    top: 34px;
+    flex-direction: row;
+    align-items: center;
+    padding: 5px 12px 5px 6px;
+    border-radius: 16px;
+    background-color: rgba(24, 26, 29, 0.82);
+}
+.uc-prompt-part {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 10px;
+}
+.uc-prompt-part:last-child { margin-right: 0; }
+.uc-keycap {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    margin-right: 6px;
+    border-radius: 6px;
+    background-color: rgb(245, 245, 245);
+    border-bottom-width: 2px;
+    border-bottom-color: rgb(150, 150, 150);
+    color: rgb(28, 30, 33);
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+.uc-prompt-text {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--uc-text);
+}
+
+/* ---------------------------------------------------------------- bottom */
+
+.uc-bottom {
+    position: absolute;
+    left: 0; right: 0; bottom: 12px;
+    align-items: center;
+}
+.uc-boosts { flex-direction: row; margin-bottom: 6px; }
+.uc-boost {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    margin: 0 3px;
+    border-radius: 12px;
+    background-color: var(--uc-chip);
+    overflow: hidden;
+}
+.uc-boost-name { font-size: 11px; margin-right: 6px; }
+.uc-boost-time { font-size: 11px; color: var(--uc-muted); }
+.uc-boost-bar {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 3px;
+}
+
+.uc-hotbar-name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+    padding: 2px 10px;
+    border-radius: 8px;
+    background-color: rgba(24, 26, 29, 0.7);
+}
+
+.uc-hotbar {
+    flex-direction: row;
+    padding: 5px;
+    border-radius: 16px;
+    background-color: rgba(22, 24, 27, 0.72);
+    border-width: 1px;
+    border-color: var(--uc-chip-border);
+}
+.uc-slot {
+    width: 52px; height: 52px;
+    margin: 0 3px;
+    border-radius: 12px;
+    background-color: rgba(48, 51, 56, 0.92);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.05);
+    align-items: center;
+    justify-content: center;
+    transition-property: scale, border-color, background-color;
+    transition-duration: 0.1s;
+}
+.uc-slot--empty { background-color: rgba(40, 43, 47, 0.7); }
+.uc-slot--selected {
+    border-color: var(--uc-green);
+    background-color: rgba(46, 170, 92, 0.28);
+    scale: 1.08 1.08;
+}
+.uc-slot-key {
+    position: absolute;
+    left: 5px; top: 2px;
+    font-size: 9px;
+    color: var(--uc-muted);
+}
+.uc-slot-icon {
+    width: 36px; height: 36px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-slot-fallback {
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+.uc-slot-count {
+    position: absolute;
+    right: 4px; bottom: 1px;
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+/* ---------------------------------------------------------------- citizen cues */
+
+.uc-cue {
+    position: absolute;
+    translate: -50% -50%;
+    padding: 3px 9px;
+    border-radius: 10px;
+    background-color: rgba(24, 26, 29, 0.85);
+    border-bottom-width: 2px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: var(--uc-text);
+}
+
+/* ---------------------------------------------------------------- touch controls */
+
+.uc-touch { -unity-font-style: bold; }
+.uc-look-zone {
+    position: absolute;
+    left: 40%; right: 0; top: 0; bottom: 0;
+}
+.uc-stick-zone {
+    position: absolute;
+    left: 0; width: 40%; top: 30%; bottom: 0;
+}
+.uc-stick-base {
+    position: absolute;
+    left: 46px; bottom: 40px;
+    width: 132px; height: 132px;
+    border-radius: 66px;
+    background-color: rgba(22, 24, 27, 0.45);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.18);
+    align-items: center;
+    justify-content: center;
+}
+.uc-stick-knob {
+    width: 58px; height: 58px;
+    border-radius: 29px;
+    background-color: rgba(245, 245, 245, 0.85);
+    border-width: 3px;
+    border-color: rgba(0, 0, 0, 0.15);
+}
+.uc-tbtn {
+    position: absolute;
+    width: 58px; height: 58px;
+    border-radius: 29px;
+    background-color: rgba(28, 30, 33, 0.7);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.16);
+    align-items: center;
+    justify-content: center;
+}
+.uc-tbtn--held {
+    background-color: rgba(46, 170, 92, 0.75);
+    border-color: rgba(255, 255, 255, 0.6);
+    scale: 0.94 0.94;
+}
+.uc-tbtn--on {
+    background-color: rgba(46, 170, 92, 0.6);
+}
+.uc-tbtn-icon {
+    width: 26px; height: 26px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-tbtn-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--uc-text);
+    -unity-text-align: middle-center;
+}
+.uc-tbtn--grab {
+    right: 36px; bottom: 66px;
+    width: 88px; height: 88px;
+    border-radius: 44px;
+    background-color: rgba(242, 106, 27, 0.85);
+    border-color: rgba(255, 255, 255, 0.5);
+    border-width: 3px;
+}
+.uc-tbtn--grab .uc-tbtn-label { font-size: 13px; }
+.uc-tbtn--grab.uc-tbtn--held { background-color: rgba(255, 140, 60, 0.95); }
+.uc-tbtn--jump { right: 136px; bottom: 30px; }
+.uc-tbtn--use { right: 136px; bottom: 100px; }
+.uc-tbtn--tool { right: 46px; bottom: 166px; }
+.uc-tbtn--drop { right: 116px; bottom: 170px; width: 48px; height: 48px; }
+.uc-tbtn--crouch { right: 200px; bottom: 30px; width: 48px; height: 48px; }
+.uc-tbtn--sprint { left: 196px; bottom: 44px; width: 48px; height: 48px; }
+
+/* ================================================================ UI art kit (Art/UI, see Art/UI/README.md)
+   @2x sprites on this 1080x608 panel → slice scale ≈ 0.5px (chips use 0.42px so their 40px-tall slices
+   fit the 34px chip height). Background colours/borders above stay as the fallback if art is missing. */
+
+.uc-chip {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hud_chip.png");
+    -unity-slice-left: 40;
+    -unity-slice-top: 34;
+    -unity-slice-right: 40;
+    -unity-slice-bottom: 40;
+    -unity-slice-scale: 0.42px;
+}
+/* Smog / event chips: white tintable minibanner */
+.uc-chip--smog,
+.uc-chip--event {
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hud_minibanner.png");
+    -unity-slice-left: 38;
+    -unity-slice-top: 34;
+    -unity-slice-right: 38;
+    -unity-slice-bottom: 40;
+    -unity-slice-scale: 0.4px;
+}
+.uc-chip--smog { -unity-background-image-tint-color: rgba(185, 64, 48, 0.92); background-color: rgba(0, 0, 0, 0); }
+.uc-chip--smog-safe { -unity-background-image-tint-color: rgba(30, 112, 118, 0.92); background-color: rgba(0, 0, 0, 0); }
+.uc-chip--event { -unity-background-image-tint-color: rgba(30, 33, 36, 0.94); }
+.uc-chip--event-urgent { -unity-background-image-tint-color: rgba(214, 74, 58, 0.94); }
+.uc-chip--event-urgent .uc-chip-value { color: rgb(255, 255, 255); }
+
+.uc-coin-icon {
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hud_coin.png");
+}
+
+/* Crosshair art; turns Safety Yellow over something interactable */
+.uc-crosshair {
+    top: -12px;
+    width: 24px;
+    height: 24px;
+    border-width: 0;
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hud_crosshair.png");
+    -unity-background-scale-mode: scale-to-fit;
+    transition-property: scale, -unity-background-image-tint-color;
+}
+.uc-crosshair-dot { display: none; }
+.uc-crosshair--target {
+    border-width: 0;
+    scale: 1.25 1.25;
+    -unity-background-image-tint-color: rgb(242, 194, 27);
+}
+
+/* Keycap art */
+.uc-keycap {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px 2px 8px;
+    border-bottom-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hud_prompt_key.png");
+    -unity-slice-left: 26;
+    -unity-slice-top: 24;
+    -unity-slice-right: 26;
+    -unity-slice-bottom: 30;
+    -unity-slice-scale: 0.5px;
+    color: rgb(242, 194, 27);
+    font-size: 11px;
+}
+
+/* Hotbar slots */
+.uc-slot {
+    width: 56px;
+    height: 56px;
+    margin: 0 2px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hotbar_slot.png");
+    -unity-slice-left: 36;
+    -unity-slice-top: 34;
+    -unity-slice-right: 36;
+    -unity-slice-bottom: 38;
+    -unity-slice-scale: 0.5px;
+}
+.uc-slot--empty { background-color: rgba(0, 0, 0, 0); opacity: 0.85; }
+.uc-slot--selected {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/HUD/hotbar_slot_selected.png");
+    opacity: 1;
+}
+.uc-slot-key { left: 7px; top: 4px; }
+.uc-hotbar { background-color: rgba(22, 24, 27, 0.5); padding: 4px; }
+
+/* Touch controls */
+.uc-stick-base {
+    width: 136px;
+    height: 136px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/joystick_base.png");
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.8;
+}
+.uc-stick-knob {
+    width: 62px;
+    height: 62px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/joystick_knob.png");
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-tbtn {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_base.png");
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-tbtn--held {
+    background-color: rgba(0, 0, 0, 0);
+    background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_base_pressed.png");
+}
+.uc-tbtn--on {
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-image-tint-color: rgb(120, 230, 150);
+}
+.uc-tbtn-icon {
+    width: 24px;
+    height: 24px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.uc-tbtn-label { font-size: 9px; margin-top: -1px; }
+.uc-tbtn--jump .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_jump.png"); }
+.uc-tbtn--use .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_interact.png"); }
+.uc-tbtn--drop .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_throw.png"); width: 18px; height: 18px; }
+.uc-tbtn--crouch .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_crouch.png"); width: 18px; height: 18px; }
+.uc-tbtn--sprint .uc-tbtn-icon { background-image: url("project://database/Assets/UpcycleCity/Art/UI/Touch/touch_btn_glyph_sprint.png"); width: 18px; height: 18px; }
+/* GRAB keeps its orange identity: tinted base */
+.uc-tbtn--grab {
+    background-image: none;
+    background-color: rgba(242, 106, 27, 0.9);
+    border-width: 3px;
+    border-color: rgba(255, 255, 255, 0.75);
+}
+.uc-tbtn--grab.uc-tbtn--held { background-image: none; background-color: rgb(255, 140, 60); }
+.uc-tbtn--grab .uc-tbtn-icon { width: 46px; height: 46px; }
+.uc-tbtn--grab .uc-tbtn-label { font-size: 12px; }

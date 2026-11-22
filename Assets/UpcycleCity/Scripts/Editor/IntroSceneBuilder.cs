@@ -1578,26 +1578,7 @@ namespace UpcycleCity.Editor
             go.AddComponent<CameraAnchor>().fieldOfView = fov;
         }
 
-        /// <summary>Intro first, then the character creator, then everything else already listed.</summary>
-        internal static void UpdateBuildScenes()
-        {
-            var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(ScenePath, true) };
-            bool hasCreator = false;
-            foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
-            {
-                if (s.path == ScenePath || !File.Exists(s.path))
-                    continue;
-                if (s.path == CreatorScenePath)
-                {
-                    hasCreator = true;
-                    scenes.Insert(1, s);
-                    continue;
-                }
-                scenes.Add(s);
-            }
-            if (!hasCreator && File.Exists(CreatorScenePath))
-                scenes.Insert(1, new EditorBuildSettingsScene(CreatorScenePath, true));
-            EditorBuildSettings.scenes = scenes.ToArray();
-        }
+        /// <summary>Intro first, then Main Menu, Character Creator, Avenue and the rest (see <see cref="MainMenuBuilder"/>).</summary>
+        internal static void UpdateBuildScenes() => MainMenuBuilder.ApplyBuildSceneOrder();
     }
 }

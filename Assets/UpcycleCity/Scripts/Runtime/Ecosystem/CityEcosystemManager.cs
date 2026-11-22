@@ -337,6 +337,10 @@ namespace UpcycleCity.Ecosystem
             for (int i = 0; i < Districts.Count; i++)
                 Districts[i]?.BeginAccumulation();
 
+            // The pollution grid gets the same real causes, cell by cell, and leaks them to neighbouring cells
+            PollutionGrid grid = PollutionGrid.Active;
+            grid?.BeginDeposits();
+
             // Copy liveTrash into scratch list to safely purge any destroyed references without GC
             scratchTrash.Clear();
             foreach (TrashItem item in liveTrash)
@@ -358,10 +362,15 @@ namespace UpcycleCity.Ecosystem
                 if (srcIdx >= 0 && srcIdx < countsBySource.Length)
                     countsBySource[srcIdx]++;
 
-                CityDistrict d = FindDistrictForPosition(item.transform.position);
+                Vector3 trashPos = item.transform.position;
+                CityDistrict d = FindDistrictForPosition(trashPos);
                 if (d != null)
                     d.AccumulateTrash(item.PollutionWeight);
+                grid?.Deposit(trashPos, Mathf.Max(0.05f, item.PollutionWeight));
             }
+
+            if (grid != null)
+                DepositGridSources(grid, dt, snapImmediate);
 
             float weightedPollution = 0f;
             float weightedSatisfaction = 0f;
@@ -395,6 +404,33 @@ namespace UpcycleCity.Ecosystem
 
             UpdatePlayerSmogExposure();
             Updated?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Feeds air sources (smokestacks, overflowing bins, decay) and not-yet-materialised background litter
+        /// into the grid, then steps it. Runs on the authority only; clients receive the cells.
+        /// </summary>
+        void DepositGridSources(PollutionGrid grid, float dt, bool snapImmediate)
+        {
+            for (int i = 0; i < Sources.Count; i++)
+            {
+                IPollutionSource source = Sources[i];
+                if (source == null || !source.IsActive)
+                    continue;
+                float air = source.AirPollutionLoad;
+                if (air > 0f)
+                    grid.Deposit(source.WorldPosition, air, grid.AirSpreadRadius);
+            }
+
+            for (int i = 0; i < Districts.Count; i++)
+            {
+                CityDistrict d = Districts[i];
+                if (d != null && d.BackgroundLitterLoad > 0f)
+                    grid.Deposit(d.transform.position, d.BackgroundLitterLoad, d.Radius * 0.6f);
+            }
+
+            grid.CapacityScale = balance != null ? balance.districtCapacityScale : 1f;
+            grid.Simulate(dt, snapImmediate);
         }
 
         void UpdatePlayerSmogExposure()

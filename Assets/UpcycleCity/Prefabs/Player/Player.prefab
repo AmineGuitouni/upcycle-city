@@ -278,10 +278,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffba0e888681a4ee0a1dd244e6c3dc7f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Inventory.PlayerInventory
-  startingCoins: 25
+  startingCoins: 0
   slotCount: 6
-  startingItems:
-  - {fileID: 11400000, guid: 8fcb24f12db934f06ba162843fe09ec4, type: 2}
+  startingItems: []
 --- !u!114 &3874644866404779001
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -82,6 +82,12 @@ namespace UpcycleCity.Ecosystem
         [Tooltip("Multiplies what the RÉCUP buy-back pays (on top of its per-stream rates).")]
         [Range(0f, 3f)] public float recyclingPayout = 1f;
 
+        [Header("Crafting & Sorting Integration")]
+        [Tooltip("Explicit design choice: when true, correctly sorting trash into a Sorting Crate both pays coins AND credits the team's crafting Material Stock so street cleanup feeds the workshop.")]
+        public bool sortingCratesCreditMaterialStock = true;
+        [Tooltip("Scales material yield credited to TeamMaterialStock when trash is sorted into a Sorting Crate (1 = full MaterialDefinition.DepositYieldPerTrashItem).")]
+        [Range(0f, 3f)] public float sortingMaterialYieldScale = 1f;
+
         /// <summary>Called by the ecosystem manager when it starts and stops.</summary>
         public static void SetActive(EcosystemBalance balance) => Active = balance;
 
@@ -115,6 +121,8 @@ namespace UpcycleCity.Ecosystem
             factoryRepairReward = 35;
             sortingPayout = 1f;
             recyclingPayout = 1f;
+            sortingCratesCreditMaterialStock = true;
+            sortingMaterialYieldScale = 1f;
 
             switch (difficulty)
             {

@@ -698,7 +698,7 @@ namespace UpcycleCity.Cinematics
         void LoadNext()
         {
             ReleaseAudio();
-            string next = config != null ? config.nextScene : "CharacterCreator";
+            string next = config != null ? config.nextScene : "MainMenu";
             if (!Application.CanStreamedLevelBeLoaded(next))
             {
                 Debug.LogError($"[Upcycle City] Intro: scene '{next}' is not in the build settings.", this);

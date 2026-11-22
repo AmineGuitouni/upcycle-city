@@ -14,6 +14,11 @@ namespace UpcycleCity.Player
         Hand = 1,
         /// <summary>Snapping it up with a litter picker's jaws: quick, and the player keeps moving.</summary>
         Picker = 2,
+        /// <summary>
+        /// A tool (broom, wrench…) is in hand: no bending down — the free hand reaches out and scoops the litter up
+        /// while the player stays upright and can keep walking.
+        /// </summary>
+        ToolReach = 3,
     }
 
     /// <summary>Something that says where held trash should sit, e.g. the litter picker's claw.</summary>
@@ -83,6 +88,25 @@ namespace UpcycleCity.Player
 
         /// <summary>A claw tool (litter picker) is selected in the hotbar.</summary>
         public bool PickerEquipped => inventory != null && inventory.EquippedItem != null && inventory.EquippedItem.IsGrabTool;
+
+        /// <summary>A non-claw tool is selected in the hotbar: pickups are a standing hand reach instead of bending down.</summary>
+        public bool ToolEquipped => inventory != null && inventory.EquippedItem != null
+            && inventory.EquippedItem.Category == ItemCategory.Tool && !inventory.EquippedItem.IsGrabTool;
+
+        /// <summary>
+        /// 0..1 reach of the free hand during a <see cref="PickupStyle.ToolReach"/> pickup: out to the litter by the
+        /// moment it is taken, then back in.
+        /// </summary>
+        public float ToolReachAmount
+        {
+            get
+            {
+                if (pickupStyle != PickupStyle.ToolReach)
+                    return 0f;
+                float t = PickupProgress, g = Mathf.Clamp(PickupGrabPoint, 0.05f, 0.95f);
+                return t < g ? Smooth(t / g) : 1f - Smooth((t - g) / (1f - g));
+            }
+        }
 
         public bool IsPickingUp => pickupStyle != PickupStyle.None;
         public PickupStyle CurrentPickup => pickupStyle;
@@ -167,13 +191,18 @@ namespace UpcycleCity.Player
                 return false;
 
             bool picker = PickerEquipped && !grabbable.IsBulky;
-            pickupStyle = picker ? PickupStyle.Picker : PickupStyle.Hand;
+            bool toolReach = !picker && ToolEquipped && !grabbable.IsBulky;
+            pickupStyle = picker ? PickupStyle.Picker : toolReach ? PickupStyle.ToolReach : PickupStyle.Hand;
             pickupTarget = grabbable;
             pickupTimer = 0f;
-            pickupDuration = picker ? config.pickerPickupDuration : config.handPickupDuration;
+            pickupDuration = picker ? config.pickerPickupDuration
+                : toolReach ? config.toolReachPickupDuration
+                : config.handPickupDuration;
             pickupGrabTime = pickupDuration * (picker ? PickerGrabPoint : config.handPickupGrabPoint);
 
-            if (!picker && modifiers != null)
+            if (toolReach && modifiers != null)
+                modifiers.SetFlag(PickupModifierSource, PlayerModifierFlag.BlockSprint, true);
+            else if (!picker && modifiers != null)
             {
                 modifiers.SetFlag(PickupModifierSource, PlayerModifierFlag.BlockMove, true);
                 modifiers.SetFlag(PickupModifierSource, PlayerModifierFlag.BlockJump, true);

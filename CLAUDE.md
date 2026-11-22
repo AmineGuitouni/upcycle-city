@@ -53,10 +53,13 @@ inspecting runtime state with `script eval` (not by adding Debug.Log everywhere)
 
 ## Scenes (there is no single "main" scene)
 
-Build order is wired by Editor builders, roughly: **CharacterCreator → PlayerGym**.
+Build order is wired by Editor builders (`MainMenuBuilder.ApplyBuildSceneOrder`):
+**Intro → MainMenu → CharacterCreator → EcosystemSandbox**, then PlayerGym / CraftingWorkshop (dev scenes).
 
+- `Assets/UpcycleCity/Scenes/MainMenu.unity` — title screen (Play Solo / Host Room / Join Room / Quit)
+  and the co-op Room; owns the persistent `CoopSessionManager`.
 - `Assets/UpcycleCity/Scenes/CharacterCreator.unity` — UI Toolkit character creator
-  (body / eyes / hair), the intended first scene; its Start button loads the gym.
+  (body / eyes / hair); Start loads the Avenue (solo) or becomes READY (co-op).
 - `Assets/UpcycleCity/Scenes/PlayerGym.unity` — Phase-1 test gym: movement, physics
   grabbing/throwing, 4-stream sorting, HUD. Best scene for testing player mechanics.
 - `Assets/UpcycleCity/Scenes/EcosystemSandbox.unity` — the big Phase-2 scene (the

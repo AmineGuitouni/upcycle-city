@@ -25,12 +25,16 @@ MonoBehaviour:
   moveSpeedMultiplier: 1
   grantsSmogImmunity: 0
   useBehavior:
-    rid: 1445968227851829350
+    rid: 1445968247013507148
+  grabTool: 0
   heldVisualPrefab: {fileID: 919132149155446097, guid: a9922f9dbde77456cb870bdd3e1cab27, type: 3}
+  heldLocalPosition: {x: 0, y: 0, z: 0}
+  heldLocalEuler: {x: 0, y: 0, z: 0}
+  heldUniformScale: 1
   references:
     version: 2
     RefIds:
-    - rid: 1445968227851829350
+    - rid: 1445968247013507148
       type: {class: TimedBoostItemBehavior, ns: UpcycleCity.Inventory, asm: UpcycleCity.Runtime}
       data:
         boostId: water

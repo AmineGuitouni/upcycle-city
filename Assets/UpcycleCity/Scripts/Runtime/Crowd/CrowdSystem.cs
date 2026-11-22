@@ -12,7 +12,9 @@ namespace UpcycleCity.Crowd
     /// <summary>
     /// Runs the whole crowd from one place, so its cost grows gently with the number of NPCs:
     /// <list type="bullet">
-    /// <item>Walkers move in one Burst-compiled transform job, not in per-NPC Update calls.</item>
+    /// <item>Walkers move in one Burst-compiled transform job, not in per-NPC Update calls. Their routes are
+    /// planned over the <see cref="CrowdNavMesh"/>, and they steer round players, each other and
+    /// <see cref="CrowdObstacle"/>s within the room the pavement has either side.</item>
     /// <item>Only the nearest visible NPCs, up to <see cref="animatedBudget"/>, get an animated rig, borrowed
     /// from a pool; everyone else shows a posed mesh that costs no more than a prop. Animators that are
     /// off screen are not evaluated.</item>
@@ -59,6 +61,37 @@ namespace UpcycleCity.Crowd
         [Tooltip("How quickly walkers turn to face their way, per second.")]
         [SerializeField, Min(0.1f)] float turnRate = 6f;
 
+        [Header("Navigation & avoidance")]
+        [Tooltip("Route walkers over a Crowd Nav Mesh. With none in the scene, one is built in the background at start.")]
+        [SerializeField] bool useNavMesh = true;
+
+        [Tooltip("Body radius of a walker, in metres.")]
+        [SerializeField, Range(0.15f, 0.6f)] float walkerRadius = 0.3f;
+
+        [Tooltip("Furthest a walker strays from its route to make way, in metres.")]
+        [SerializeField, Range(0.2f, 4f)] float maxSidestep = 1.6f;
+
+        [Tooltip("Walkers keep this far to the right of their way, so people walking opposite ways pass each other.")]
+        [SerializeField, Range(0f, 1f)] float keepRight = 0.25f;
+
+        [Tooltip("How far ahead walkers notice people and obstacles in their way, in metres.")]
+        [SerializeField, Range(0.5f, 3f)] float lookAhead = 2.6f;
+
+        [Tooltip("Extra space walkers leave when passing someone, in metres.")]
+        [SerializeField, Range(0f, 1f)] float personalSpace = 0.3f;
+
+        [Tooltip("Sideways stepping speed, in m/s.")]
+        [SerializeField, Range(0.2f, 3f)] float sidestepSpeed = 1.1f;
+
+        [Tooltip("How quickly walkers slow down and speed up, in m/s².")]
+        [SerializeField, Range(0.5f, 10f)] float acceleration = 2.5f;
+
+        [Tooltip("Seconds a walker waits behind something it can't get round before turning back.")]
+        [SerializeField, Range(0.5f, 10f)] float turnBackDelay = 3.5f;
+
+        [Tooltip("Below this speed a walker plays its idle animation instead of walking on the spot, in m/s.")]
+        [SerializeField, Range(0f, 0.5f)] float stopSpeed = 0.15f;
+
         static readonly HashSet<CrowdAgent> Registry = new HashSet<CrowdAgent>();
         static bool registryChanged;
 
@@ -85,8 +118,13 @@ namespace UpcycleCity.Crowd
             public float Priority;
             public int Walker = -1;
             public bool WalkerReady;
+            public bool Stopped; // walker held up, showing idle
             public CrowdWalkerState WalkerState;
         }
+
+        const float CellSize = 3f;
+        static readonly int IdleHash = StateHashes[(int)CrowdActivity.Idle];
+        static readonly int WalkHash = StateHashes[(int)CrowdActivity.Walk];
 
         readonly List<Slot> slots = new List<Slot>();
         readonly Dictionary<CrowdAgent, Slot> slotByAgent = new Dictionary<CrowdAgent, Slot>();
@@ -97,10 +135,17 @@ namespace UpcycleCity.Crowd
 
         NativeArray<Vector3> points;
         NativeArray<float> distances;
+        NativeArray<Vector2> clearance;
         NativeArray<CrowdPathSpan> paths;
         NativeArray<CrowdWalkerState> walkers;
+        NativeArray<Vector4> positions;
+        NativeArray<int> cellStart, cellCount, cellCursor, sorted, walkerCell;
+        NativeArray<Vector4> obstacles;
         TransformAccessArray walkerTransforms;
         JobHandle movement;
+
+        readonly Dictionary<CrowdPath, CrowdRoute> routes = new Dictionary<CrowdPath, CrowdRoute>();
+        int routeVersion = int.MinValue;
 
         CrowdRigPool pool;
         float lodTimer;
@@ -143,6 +188,9 @@ namespace UpcycleCity.Crowd
                 CrowdWalkerState walker = walkers[slot.Walker];
                 walker.Active = !slot.Hidden && !paused;
                 walker.Speed = effectiveSpeed;
+                if (paused)
+                    walker.CurrentSpeed = 0f;
+                walker.Blocked = 0f;
 
                 if (paused && lookAtWorldPos.HasValue)
                 {
@@ -165,9 +213,10 @@ namespace UpcycleCity.Crowd
                 ? effectiveSpeed / walkClipSpeed
                 : 1f;
 
-            bool stateChanged = slot.StateHash != newHash;
+            bool stateChanged = slot.StateHash != newHash || slot.Stopped;
             slot.StateHash = newHash;
             slot.Playback = newPlayback;
+            slot.Stopped = false;
 
             if (slot.Rig != null && slot.Rig.Animator != null)
             {
@@ -210,6 +259,13 @@ namespace UpcycleCity.Crowd
             registryChanged = true;
         }
 
+        void Start()
+        {
+            // No baked nav mesh in the scene: build one in the background, walkers re-route when it's ready
+            if (useNavMesh && CrowdNavMesh.Active == null)
+                gameObject.AddComponent<CrowdNavMesh>();
+        }
+
         void OnDisable()
         {
             if (Active == this)
@@ -229,6 +285,9 @@ namespace UpcycleCity.Crowd
             slotByAgent.Clear();
             walkerSlots.Clear();
             DisposeWalkerData();
+            if (obstacles.IsCreated) obstacles.Dispose();
+            routes.Clear();
+            routeVersion = int.MinValue;
         }
 
         void OnPollutionChanged(PollutionController controller) => pollutionChanged = true;
@@ -236,21 +295,64 @@ namespace UpcycleCity.Crowd
         void Update()
         {
             using var _ = UpdateMarker.Auto();
+            int navVersion = useNavMesh ? CrowdNavMesh.Version : 0;
+            if (navVersion != routeVersion)
+            {
+                // The nav mesh appeared or changed: re-plan every route and put walkers back on them where they stand
+                routeVersion = navVersion;
+                routes.Clear();
+                foreach (Slot slot in slots)
+                    slot.WalkerReady = false;
+                registryChanged = true;
+            }
             if (registryChanged)
                 Rebuild();
             if (walkerSlots.Count == 0)
                 return;
 
+            int obstacleCount = GatherObstacles();
             float deltaTime = Time.deltaTime;
+            float invCell = 1f / CellSize;
+
+            JobHandle snapshot = new CrowdSnapshotJob { Walkers = walkers, Positions = positions }
+                .Schedule(walkers.Length, 64);
+            JobHandle grid = new CrowdGridJob
+            {
+                Positions = positions,
+                CellStart = cellStart,
+                CellCount = cellCount,
+                CellCursor = cellCursor,
+                Sorted = sorted,
+                WalkerCell = walkerCell,
+                InvCellSize = invCell,
+            }.Schedule(snapshot);
             movement = new CrowdMovementJob
             {
                 Points = points,
                 Distances = distances,
+                Clearance = clearance,
                 Paths = paths,
+                Positions = positions,
+                CellStart = cellStart,
+                CellCount = cellCount,
+                Sorted = sorted,
+                Obstacles = obstacles,
+                ObstacleCount = obstacleCount,
                 Walkers = walkers,
+                Steering = new CrowdSteering
+                {
+                    KeepRight = keepRight,
+                    Sense = Mathf.Min(lookAhead, CellSize),
+                    SidestepSpeed = sidestepSpeed,
+                    Acceleration = acceleration,
+                    TurnBackDelay = turnBackDelay,
+                    Personal = personalSpace,
+                },
+                InvCellSize = invCell,
                 DeltaTime = deltaTime,
                 TurnBlend = 1f - Mathf.Exp(-turnRate * deltaTime),
-            }.Schedule(walkerTransforms);
+                PositionBlend = 1f - Mathf.Exp(-12f * deltaTime),
+            }.Schedule(walkerTransforms, grid);
             JobHandle.ScheduleBatchedJobs();
         }
 
@@ -258,6 +360,7 @@ namespace UpcycleCity.Crowd
         {
             using var _ = LateUpdateMarker.Auto();
             movement.Complete();
+            UpdateWalkerAnimation();
             if (pollutionChanged)
                 UpdateHidden();
 
@@ -329,6 +432,7 @@ namespace UpcycleCity.Crowd
             var pathIndex = new Dictionary<CrowdPath, int>();
             var pointList = new List<Vector3>();
             var distanceList = new List<float>();
+            var clearanceList = new List<Vector2>();
             var spans = new List<CrowdPathSpan>();
             foreach (Slot slot in slots)
             {
@@ -337,17 +441,20 @@ namespace UpcycleCity.Crowd
                     continue;
 
                 CrowdPath path = slot.Agent.Path;
+                CrowdRoute route = RouteFor(path);
                 if (!pathIndex.TryGetValue(path, out int index))
                 {
                     index = spans.Count;
                     pathIndex.Add(path, index);
-                    spans.Add(BakePath(path, pointList, distanceList));
+                    spans.Add(AppendRoute(route, pointList, distanceList, clearanceList));
                 }
 
                 if (!slot.WalkerReady)
-                    PlaceOnPath(slot, path);
+                    PlaceOnRoute(slot, route);
                 slot.WalkerState.Path = index;
+                slot.WalkerState.Radius = walkerRadius;
                 slot.WalkerState.Active = !slot.Hidden && !slot.PausedByBehavior;
+                slot.WalkerState.Present = !slot.Hidden;
                 slot.Walker = walkerSlots.Count;
                 walkerSlots.Add(slot);
             }
@@ -357,8 +464,18 @@ namespace UpcycleCity.Crowd
 
             points = new NativeArray<Vector3>(pointList.ToArray(), Allocator.Persistent);
             distances = new NativeArray<float>(distanceList.ToArray(), Allocator.Persistent);
+            clearance = new NativeArray<Vector2>(clearanceList.ToArray(), Allocator.Persistent);
             paths = new NativeArray<CrowdPathSpan>(spans.ToArray(), Allocator.Persistent);
             walkers = new NativeArray<CrowdWalkerState>(walkerSlots.Count, Allocator.Persistent);
+            positions = new NativeArray<Vector4>(walkerSlots.Count, Allocator.Persistent);
+            sorted = new NativeArray<int>(walkerSlots.Count, Allocator.Persistent);
+            walkerCell = new NativeArray<int>(walkerSlots.Count, Allocator.Persistent);
+            int cells = Mathf.NextPowerOfTwo(Mathf.Max(64, walkerSlots.Count * 2));
+            cellStart = new NativeArray<int>(cells, Allocator.Persistent);
+            cellCount = new NativeArray<int>(cells, Allocator.Persistent);
+            cellCursor = new NativeArray<int>(cells, Allocator.Persistent);
+            if (!obstacles.IsCreated)
+                obstacles = new NativeArray<Vector4>(16, Allocator.Persistent);
             var transforms = new Transform[walkerSlots.Count];
             for (int i = 0; i < walkerSlots.Count; i++)
             {
@@ -368,44 +485,110 @@ namespace UpcycleCity.Crowd
             walkerTransforms = new TransformAccessArray(transforms);
         }
 
-        static CrowdPathSpan BakePath(CrowdPath path, List<Vector3> pointList, List<float> distanceList)
+        CrowdRoute RouteFor(CrowdPath path)
         {
-            var span = new CrowdPathSpan { Start = pointList.Count, Segments = path.SegmentCount, Loop = path.Loop };
-            float travelled = 0f;
-            for (int i = 0; i <= span.Segments; i++) // a loop's last point is its first again
+            if (!routes.TryGetValue(path, out CrowdRoute route))
             {
-                Vector3 point = path.GetPoint(i);
-                if (i > 0)
-                    travelled += CrowdPath.FlatDistance(pointList[pointList.Count - 1], point);
-                pointList.Add(point);
-                distanceList.Add(travelled);
+                route = CrowdRoute.Build(path, useNavMesh && CrowdNavMesh.IsReady, maxSidestep, walkerRadius);
+                routes.Add(path, route);
             }
-            span.Length = Mathf.Max(travelled, 1e-3f);
+            return route;
+        }
+
+        static CrowdPathSpan AppendRoute(CrowdRoute route, List<Vector3> pointList, List<float> distanceList, List<Vector2> clearanceList)
+        {
+            var span = new CrowdPathSpan
+            {
+                Start = pointList.Count,
+                Segments = route.Points.Length - 1,
+                Length = route.Length,
+                Loop = route.Loop,
+            };
+            pointList.AddRange(route.Points);
+            distanceList.AddRange(route.Distances);
+            clearanceList.AddRange(route.Clearance);
             return span;
         }
 
-        // Walkers start from the point of the path nearest to where they were placed, facing their way
-        static void PlaceOnPath(Slot slot, CrowdPath path)
+        // Walkers start from the point of the route nearest to where they stand, facing their way
+        void PlaceOnRoute(Slot slot, CrowdRoute route)
         {
-            path.Project(slot.Transform.position, out float distance, out float offset, out Vector3 tangent);
+            route.Project(slot.Transform.position, out float distance, out float offset, out Vector3 tangent, out Vector2 room);
             Vector3 forward = slot.Transform.forward;
+            float direction = forward.x * tangent.x + forward.z * tangent.z >= 0f ? 1f : -1f;
+            CrowdWalkerState previous = slot.WalkerState;
+            bool keepSpeed = slot.WalkerReady || previous.Speed > 0f;
             slot.WalkerState = new CrowdWalkerState
             {
                 Distance = distance,
-                Speed = slot.Agent.WalkSpeed,
-                Direction = forward.x * tangent.x + forward.z * tangent.z >= 0f ? 1f : -1f,
-                Lane = Mathf.Clamp(offset, -2f, 2f),
+                Lateral = Mathf.Clamp(offset, -room.x, room.y),
+                Lane = Mathf.Clamp(offset * direction, -0.6f, 0.6f),
+                Speed = keepSpeed ? previous.Speed : slot.Agent.WalkSpeed,
+                CurrentSpeed = keepSpeed ? previous.CurrentSpeed : slot.Agent.WalkSpeed,
+                Direction = direction,
                 Yaw = Mathf.Atan2(forward.x, forward.z),
+                Radius = walkerRadius,
             };
             slot.WalkerReady = true;
+        }
+
+        // Players and other dynamic obstacles, copied for the job (no allocation unless the count grows)
+        int GatherObstacles()
+        {
+            List<CrowdObstacle> all = CrowdObstacle.All;
+            if (all.Count > obstacles.Length)
+            {
+                obstacles.Dispose();
+                obstacles = new NativeArray<Vector4>(Mathf.NextPowerOfTwo(all.Count), Allocator.Persistent);
+            }
+            int count = 0;
+            for (int i = 0; i < all.Count; i++)
+            {
+                CrowdObstacle obstacle = all[i];
+                if (obstacle == null)
+                    continue;
+                Vector3 p = obstacle.transform.position;
+                obstacles[count++] = new Vector4(p.x, p.y, p.z, obstacle.Radius);
+            }
+            return count;
+        }
+
+        // Walkers held up by someone show idle instead of walking on the spot, and walk at their real pace
+        void UpdateWalkerAnimation()
+        {
+            for (int i = 0; i < walkerSlots.Count; i++)
+            {
+                Slot slot = walkerSlots[i];
+                if (slot.Rig == null || slot.Rig.Animator == null || slot.StateHash != WalkHash || slot.PausedByBehavior)
+                    continue;
+                CrowdWalkerState walker = walkers[i];
+                if (!walker.Active)
+                    continue;
+
+                Animator animator = slot.Rig.Animator;
+                bool stopped = walker.CurrentSpeed < (slot.Stopped ? stopSpeed * 1.5f : stopSpeed);
+                if (stopped != slot.Stopped)
+                {
+                    slot.Stopped = stopped;
+                    animator.CrossFade(stopped ? IdleHash : WalkHash, 0.25f, 0);
+                }
+                animator.speed = stopped ? 1f : Mathf.Max(0.3f, walker.CurrentSpeed / walkClipSpeed);
+            }
         }
 
         void DisposeWalkerData()
         {
             if (points.IsCreated) points.Dispose();
             if (distances.IsCreated) distances.Dispose();
+            if (clearance.IsCreated) clearance.Dispose();
             if (paths.IsCreated) paths.Dispose();
             if (walkers.IsCreated) walkers.Dispose();
+            if (positions.IsCreated) positions.Dispose();
+            if (sorted.IsCreated) sorted.Dispose();
+            if (walkerCell.IsCreated) walkerCell.Dispose();
+            if (cellStart.IsCreated) cellStart.Dispose();
+            if (cellCount.IsCreated) cellCount.Dispose();
+            if (cellCursor.IsCreated) cellCursor.Dispose();
             if (walkerTransforms.isCreated) walkerTransforms.Dispose();
         }
 
@@ -441,6 +624,7 @@ namespace UpcycleCity.Crowd
                 {
                     CrowdWalkerState walker = walkers[slot.Walker];
                     walker.Active = !hidden && !slot.PausedByBehavior;
+                    walker.Present = !hidden;
                     walkers[slot.Walker] = walker;
                 }
             }
@@ -528,8 +712,8 @@ namespace UpcycleCity.Crowd
 
             if (rig.Animator != null)
             {
-                rig.Animator.speed = slot.Playback;
-                rig.Animator.Play(slot.StateHash, 0, (float)random.NextDouble());
+                rig.Animator.speed = slot.Stopped ? 1f : slot.Playback;
+                rig.Animator.Play(slot.Stopped ? IdleHash : slot.StateHash, 0, (float)random.NextDouble());
                 rig.Animator.Update(0f); // pose it straight away, so it never shows a frame of T-pose
             }
         }

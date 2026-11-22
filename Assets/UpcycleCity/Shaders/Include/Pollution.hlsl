@@ -6,7 +6,9 @@
 // Everything below is a *global* pushed by PollutionController (see PollutionShaderGlobals.cs),
 // so materials stay SRP Batcher compatible and the whole city reacts to one value:
 //   _Pollution           scene-wide level, 0 = clean, 1 = fully polluted
-//   _PollutionZones      local overrides (a cleaned district, a clean-up wave), up to POLLUTION_MAX_ZONES
+//   _PollutionGridTex    PollutionGrid.cs: one texel per city cell (R8), the host-simulated level of each cell,
+//                        including what leaked in from neighbouring cells. Replaces the scene-wide level inside the grid.
+//   _PollutionZones      local overrides (a clean-up wave, ...), up to POLLUTION_MAX_ZONES, applied on top
 //   per renderer         PollutionVisibility.cs writes Renderer.SetShaderUserValue to make an object
 //                        show only in the polluted or only in the clean city (dissolving in between)
 
@@ -21,6 +23,12 @@ float  _Pollution;
 float  _PollutionZoneCount;
 float4 _PollutionZones[POLLUTION_MAX_ZONES];        // xyz centre (world), w radius (m)
 float4 _PollutionZoneSettings[POLLUTION_MAX_ZONES]; // x level inside, y falloff width (m), z weight
+
+TEXTURE2D(_PollutionGridTex);
+SAMPLER(sampler_PollutionGridTex);
+float4 _PollutionGridRect;   // xy world X/Z of the grid's minimum corner, zw 1 / world size
+float4 _PollutionGridParams; // x weight (0 = no grid), y cells along X, z cells along Z, w edge fade (cells)
+float4 _PollutionGridLook;   // x edge jitter (cells), y jitter noise scale (1/m)
 
 float4 _PollutionSmogTint;         // rgb tint for dirty colours, a strength
 float4 _PollutionGrimeColor;       // rgb dirt multiplied into surfaces, a strength
@@ -61,11 +69,38 @@ float PollutionFbm(float3 p)
 
 // ---------------------------------------------------------------- level
 
-// Pollution at a world position: the scene-wide level, overridden inside zones.
-// Zones are vertical cylinders, so a cleaned district is clean from the street to the rooftops.
+// The city grid: bilinear between cells (whose levels already contain the decaying leak from their
+// neighbours), with a little world-space noise on the lookup so stains have organic edges instead of
+// squares, fading into the scene-wide level over the last cells of the border.
+// Like the zones, it only depends on X/Z: a polluted cell is dirty from the street to the rooftops.
+float SamplePollutionGrid(float3 positionWS, float level)
+{
+    UNITY_BRANCH
+    if (_PollutionGridParams.x <= 0.0)
+        return level;
+
+    float2 cells = _PollutionGridParams.yz;
+    float2 uv = (positionWS.xz - _PollutionGridRect.xy) * _PollutionGridRect.zw;
+
+    float2 edge = min(uv, 1.0 - uv) * cells;
+    float inside = saturate(min(edge.x, edge.y) / max(_PollutionGridParams.w, 1e-3));
+    UNITY_BRANCH
+    if (inside <= 0.0)
+        return level;
+
+    float3 n = float3(positionWS.xz * _PollutionGridLook.y, 0.0);
+    float2 jitter = float2(PollutionNoise(n), PollutionNoise(n + float3(19.7, 7.3, 3.1))) - 0.5;
+    uv += jitter * (_PollutionGridLook.x / cells);
+
+    float grid = SAMPLE_TEXTURE2D_LOD(_PollutionGridTex, sampler_PollutionGridTex, uv, 0).r;
+    return lerp(level, grid, inside * _PollutionGridParams.x);
+}
+
+// Pollution at a world position: the scene-wide level, replaced by the city grid where there is one,
+// then overridden inside zones. Zones are vertical cylinders, so a cleaned spot is clean from the street to the rooftops.
 float SamplePollution(float3 positionWS)
 {
-    float level = _Pollution;
+    float level = SamplePollutionGrid(positionWS, _Pollution);
     uint count = min((uint)_PollutionZoneCount, (uint)POLLUTION_MAX_ZONES);
 
     [loop]

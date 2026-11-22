@@ -30,3 +30,6 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 8fcb24f12db934f06ba162843fe09ec4, type: 2}
     price: 20
     quantity: 1
+  - item: {fileID: 11400000, guid: 5889579539bed4790a2649b46cc71d6c, type: 2}
+    price: 8
+    quantity: 1

@@ -6,9 +6,12 @@ using UnityEngine.UIElements;
 namespace UpcycleCity.Character
 {
     /// <summary>
-    /// Character Creator screen (UI Toolkit): Body / Eyes / Hair steps with Back and Next, option buttons
-    /// and colour swatches generated from the <see cref="CharacterPartsLibrary"/>, a turntable (slider or
-    /// drag), and a camera that frames the full body or the head. Start saves the look and loads gameplay.
+    /// Character Creator screen (UI Toolkit, kit look over the live 3D street backdrop): an appearance card with
+    /// Hide / Body / Eyes / Hair tabs, option pills and ringed colour swatches generated from the
+    /// <see cref="CharacterPartsLibrary"/>, a turntable (slider or drag), Surprise me!, a Menu pill and a big round
+    /// PLAY button (READY in co-op); the camera frames the full body or the head. PLAY saves the look and loads gameplay
+    /// (or, in co-op, <see cref="StartRequested"/> handlers turn it into READY); Back on the first step returns
+    /// to the Main Menu (<see cref="MenuRequested"/> lets the co-op session leave cleanly first).
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     [AddComponentMenu("Upcycle City/Character/Character Creator Controller")]
@@ -19,8 +22,10 @@ namespace UpcycleCity.Character
         [SerializeField] Transform turntable;
         [SerializeField] Camera creatorCamera;
         [SerializeField] StyleSheet styleSheet;
-        [Tooltip("Scene loaded by Start (must be in the build profile's scene list).")]
-        [SerializeField] string gameplayScene = "PlayerGym";
+        [Tooltip("Scene loaded by Start when nothing else handles it (must be in the build profile's scene list).")]
+        [SerializeField] string gameplayScene = "EcosystemSandbox";
+        [Tooltip("Scene loaded by Back on the first step (the title screen).")]
+        [SerializeField] string menuScene = "MainMenu";
 
         [Header("Camera Framing")]
         [SerializeField] Vector3 bodyTarget = new Vector3(0f, 1.0f, 0f);
@@ -53,12 +58,14 @@ namespace UpcycleCity.Character
         bool dragging;
         float dragStartX, dragStartYaw;
 
-        VisualElement root, content;
+        VisualElement root, content, panel, cardBody, brand;
         VisualElement[] stepDots;
-        Label headerTitle;
-        Button backButton, nextButton;
+        Label headerTitle, playLabel;
+        Button backButton, nextButton, hideTab;
+        bool collapsed, brandHidden;
         Slider turntableSlider;
         bool panelHidden;
+        string startLabel = "Start";
 
         void Awake()
         {
@@ -96,6 +103,7 @@ namespace UpcycleCity.Character
                 root.styleSheets.Add(styleSheet);
             root.AddToClassList("cc-root");
 
+            // Drag anywhere on the live 3D scene to turn the character
             var stage = new VisualElement();
             stage.AddToClassList("cc-stage");
             stage.RegisterCallback<PointerDownEvent>(OnStagePointerDown);
@@ -103,46 +111,79 @@ namespace UpcycleCity.Character
             stage.RegisterCallback<PointerUpEvent>(OnStagePointerUp);
             root.Add(stage);
 
-            root.Add(MakeLabel("Customize Appearance", "cc-title"));
-            root.Add(MakeLabel("Who's cleaning up the city today?", "cc-subtitle"));
+            // Top-left: back to the menu
+            backButton = MakeButton(string.Empty, "cc-menu-pill", OnMenuPressed);
+            backButton.Add(MakeLabel("\u2039", "cc-menu-arrow"));
+            backButton.Add(MakeLabel("MENU", "cc-menu-label"));
+            root.Add(backButton);
 
-            var panel = new VisualElement();
+            // Right: title block
+            brand = new VisualElement();
+            brand.AddToClassList("cc-brand");
+            // Kit wordmark (Art/UI/Logo/logo_upcycle_city.png via USS); text title as fallback when the art is missing
+            var logo = new VisualElement();
+            logo.AddToClassList("cc-brand-logo");
+            brand.Add(logo);
+            Label fallbackTitle = MakeLabel("UPCYCLE CITY", "cc-brand-title");
+            brand.Add(fallbackTitle);
+            logo.RegisterCallback<CustomStyleResolvedEvent>(_ =>
+                fallbackTitle.style.display = logo.resolvedStyle.backgroundImage.texture != null
+                    || logo.resolvedStyle.backgroundImage.sprite != null
+                        ? DisplayStyle.None : DisplayStyle.Flex);
+            var stagePill = new VisualElement();
+            stagePill.AddToClassList("cc-stage-pill");
+            var dot = new VisualElement();
+            dot.AddToClassList("cc-stage-dot");
+            stagePill.Add(dot);
+            stagePill.Add(MakeLabel("STAGE 1 \u2022 BAB BHAR", "cc-stage-text"));
+            brand.Add(stagePill);
+            brand.Add(MakeLabel("Clean up the city, one bag at a time", "cc-brand-sub"));
+            root.Add(brand);
+
+            // Left: appearance card with tabs
+            panel = new VisualElement();
             panel.AddToClassList("cc-panel");
             root.Add(panel);
 
-            var header = new VisualElement();
-            header.AddToClassList("cc-header");
-            backButton = MakeButton("Back", "cc-nav", () => ShowStep(step - 1));
-            headerTitle = MakeLabel(string.Empty, "cc-header-title");
-            nextButton = MakeButton("Next", "cc-nav", OnNext);
-            header.Add(backButton);
-            header.Add(headerTitle);
-            header.Add(nextButton);
-            panel.Add(header);
-
             var tabs = new VisualElement();
             tabs.AddToClassList("cc-tabs");
+            hideTab = MakeButton("Hide", "cc-tab", ToggleCollapsed);
+            hideTab.AddToClassList("cc-tab--hide");
+            tabs.Add(hideTab);
             stepDots = new VisualElement[StepTitles.Length];
-            for (int i = 0; i < stepDots.Length; i++)
+            for (int i = 0; i < StepTitles.Length; i++)
             {
-                stepDots[i] = new VisualElement();
-                stepDots[i].AddToClassList("cc-tab-dot");
-                tabs.Add(stepDots[i]);
+                Step target = (Step)i;
+                Button tab = MakeButton(StepTitles[i], "cc-tab", () =>
+                {
+                    SetCollapsed(false);
+                    ShowStep(target);
+                });
+                stepDots[i] = tab;
+                tabs.Add(tab);
             }
             panel.Add(tabs);
+
+            cardBody = new VisualElement();
+            cardBody.AddToClassList("cc-card-body");
+            panel.Add(cardBody);
+
+            cardBody.Add(MakeLabel("Customize Appearance", "cc-title"));
+            headerTitle = MakeLabel("Who's cleaning up the city today?", "cc-subtitle");
+            cardBody.Add(headerTitle);
 
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.AddToClassList("cc-scroll");
             content = new VisualElement();
             content.AddToClassList("cc-content");
             scroll.Add(content);
-            panel.Add(scroll);
+            cardBody.Add(scroll);
 
             var footer = new VisualElement();
             footer.AddToClassList("cc-footer");
-            footer.Add(MakeButton("Surprise me!", "cc-random", Randomize));
-            panel.Add(footer);
-
+            var turnRow = new VisualElement();
+            turnRow.AddToClassList("cc-turn-row");
+            turnRow.Add(MakeLabel("\u21bb", "cc-turn-icon"));
             turntableSlider = new Slider(-180f, 180f);
             turntableSlider.AddToClassList("cc-turntable");
             turntableSlider.SetValueWithoutNotify(yaw);
@@ -151,10 +192,60 @@ namespace UpcycleCity.Character
                 yaw = e.newValue;
                 ApplyYaw();
             });
-            root.Add(turntableSlider);
+            turnRow.Add(turntableSlider);
+            footer.Add(turnRow);
+            footer.Add(MakeButton("Surprise me!", "cc-random", Randomize));
+            cardBody.Add(footer);
+
+            // Bottom-right: big round PLAY (READY in co-op)
+            nextButton = MakeButton(string.Empty, "cc-play", StartGame);
+            var triangle = new VisualElement();
+            triangle.AddToClassList("cc-play-icon");
+            nextButton.Add(triangle);
+            playLabel = MakeLabel(PlayText(), "cc-play-label");
+            nextButton.Add(playLabel);
+            root.Add(nextButton);
 
             root.RegisterCallback<GeometryChangedEvent>(_ => UpdateOrientationClass());
             root.style.display = panelHidden ? DisplayStyle.None : DisplayStyle.Flex;
+            SetCollapsed(collapsed);
+        }
+
+        string PlayText() => string.Equals(startLabel, "Start", StringComparison.OrdinalIgnoreCase)
+            ? "PLAY"
+            : startLabel.ToUpperInvariant();
+
+        void ToggleCollapsed() => SetCollapsed(!collapsed);
+
+        void SetCollapsed(bool value)
+        {
+            collapsed = value;
+            if (cardBody != null)
+                cardBody.style.display = collapsed ? DisplayStyle.None : DisplayStyle.Flex;
+            panel?.EnableInClassList("cc-panel--collapsed", collapsed);
+            hideTab?.EnableInClassList("cc-tab--active", collapsed);
+            if (stepDots != null)
+            {
+                for (int i = 0; i < stepDots.Length; i++)
+                    stepDots[i].EnableInClassList("cc-tab--active", !collapsed && i == (int)step);
+            }
+        }
+
+        /// <summary>Horizontal offset of the character in landscape (fraction of screen width, + = right).</summary>
+        public void SetLandscapeShift(float shift) => landscapeShift = Mathf.Clamp(shift, -0.3f, 0.3f);
+
+        /// <summary>Shows or hides the right-hand title block (the co-op crew card takes that side).</summary>
+        public void SetBrandVisible(bool visible)
+        {
+            brandHidden = !visible;
+            if (brand != null)
+                brand.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        void OnMenuPressed()
+        {
+            step = Step.Body;
+            OnBack();
         }
 
         static Label MakeLabel(string text, string cls)
@@ -182,19 +273,32 @@ namespace UpcycleCity.Character
         void ShowStep(Step next)
         {
             step = (Step)Mathf.Clamp((int)next, 0, StepTitles.Length - 1);
-            headerTitle.text = StepTitles[(int)step];
-            backButton.SetEnabled(step > Step.Body);
-
-            bool last = step == Step.Hair;
-            nextButton.text = last ? "Start" : "Next";
-            nextButton.EnableInClassList("cc-nav--start", last);
-
+            backButton.SetEnabled(!string.IsNullOrEmpty(menuScene) || MenuRequested != null);
             for (int i = 0; i < stepDots.Length; i++)
-            {
-                stepDots[i].EnableInClassList("cc-tab-dot--done", i < (int)step);
-                stepDots[i].EnableInClassList("cc-tab-dot--current", i == (int)step);
-            }
+                stepDots[i].EnableInClassList("cc-tab--active", !collapsed && i == (int)step);
+            if (brand != null)
+                brand.style.display = brandHidden ? DisplayStyle.None : DisplayStyle.Flex;
             RebuildContent();
+        }
+
+        void OnBack()
+        {
+            if (step > Step.Body)
+            {
+                ShowStep(step - 1);
+                return;
+            }
+
+            if (MenuRequested != null)
+            {
+                foreach (Delegate d in MenuRequested.GetInvocationList())
+                {
+                    if (d is Func<CharacterCreatorController, bool> handler && handler(this))
+                        return;
+                }
+            }
+            if (!string.IsNullOrEmpty(menuScene))
+                SceneManager.LoadScene(menuScene);
         }
 
         void OnNext()
@@ -263,6 +367,8 @@ namespace UpcycleCity.Character
             {
                 int index = i;
                 Button b = MakeButton(names[i], "cc-option", () => Choose(choose, index));
+                if (names.Length == 2)
+                    b.AddToClassList("cc-option--half");
                 b.EnableInClassList("cc-option--selected", i == selected);
                 grid.Add(b);
             }
@@ -308,8 +414,32 @@ namespace UpcycleCity.Character
         /// </summary>
         public static event Func<CharacterCreatorController, bool> StartRequested;
 
+        /// <summary>
+        /// Optional interceptor invoked when the player presses Back/Menu on the first step.
+        /// Return true if another system (such as the co-op session leaving to the menu) handles it.
+        /// </summary>
+        public static event Func<CharacterCreatorController, bool> MenuRequested;
+
         /// <summary>Default gameplay scene configured on this creator.</summary>
         public string GameplayScene => gameplayScene;
+
+        /// <summary>The look currently being edited (not necessarily saved yet).</summary>
+        public CharacterAppearance CurrentAppearance => appearance;
+
+        /// <summary>Label of the final step's confirm button (<c>Start</c> solo, <c>Ready</c> in co-op).</summary>
+        public string StartLabel => startLabel;
+
+        /// <summary>Changes the final step's confirm button label (co-op shows <c>Ready</c>).</summary>
+        public void SetStartLabel(string label)
+        {
+            startLabel = string.IsNullOrWhiteSpace(label) ? "Start" : label;
+            if (playLabel != null)
+                playLabel.text = PlayText();
+            nextButton?.EnableInClassList("cc-play--ready", !string.Equals(startLabel, "Start", StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>Saves the current look and starts (same as pressing the final step's Start/Ready button).</summary>
+        public void Confirm() => StartGame();
 
         /// <summary>True while the Character Creator panel is visible.</summary>
         public bool IsCreatorPanelVisible => !panelHidden && root != null && root.style.display != DisplayStyle.None;
@@ -342,6 +472,7 @@ namespace UpcycleCity.Character
         static void ResetStatics()
         {
             StartRequested = null;
+            MenuRequested = null;
         }
 
         // ---------------------------------------------------------------- turntable
@@ -391,6 +522,44 @@ namespace UpcycleCity.Character
             }
         }
 
+        [Header("Layout-aware framing")]
+        [Tooltip("Panel pixels kept free on the right when the title column is hidden (the co-op crew card sits there).")]
+        [SerializeField, Min(0f)] float reservedRightWhenNoTitle = 520f;
+        [Tooltip("Width (m) the character needs in the free gap: full body, head close-up.")]
+        [SerializeField] Vector2 requiredWidth = new Vector2(1.25f, 0.55f);
+
+        /// <summary>Screen fraction (0..1, left→right) where the character is centred this frame (tests / tooling).</summary>
+        public float CharacterScreenFraction { get; private set; } = 0.5f;
+
+        /// <summary>
+        /// The horizontal strip (fractions of the screen) between the appearance card and the title column / crew card,
+        /// read from the live UI layout so the character never sits under either at any aspect ratio.
+        /// </summary>
+        bool TryGetFreeRegion(out float left, out float right)
+        {
+            left = 0f;
+            right = 1f;
+            if (root == null || root.panel == null)
+                return false;
+            float width = root.panel.visualTree.layout.width;
+            if (float.IsNaN(width) || width < 1f)
+                return false;
+
+            bool uiShown = !panelHidden && root.resolvedStyle.display != DisplayStyle.None;
+            float margin = width * 0.015f;
+            left = uiShown && panel != null && !float.IsNaN(panel.worldBound.xMax) && panel.worldBound.width > 0f
+                ? (panel.worldBound.xMax + margin) / width
+                : 0.04f;
+
+            bool titleShown = uiShown && brand != null && !brandHidden && brand.worldBound.width > 0f;
+            right = titleShown
+                ? (brand.worldBound.xMin - margin) / width
+                : 1f - reservedRightWhenNoTitle / width;
+            if (right <= left + 0.05f)
+                right = left + 0.05f;
+            return true;
+        }
+
         void UpdateCamera(bool snap)
         {
             if (creatorCamera == null)
@@ -402,16 +571,27 @@ namespace UpcycleCity.Character
 
             Vector3 look = Vector3.Lerp(bodyTarget, headTarget, t);
             float distance = Mathf.Lerp(bodyDistance, headDistance, t);
+            float tanHalf = Mathf.Tan(creatorCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float aspect = creatorCamera.aspect;
 
             Transform cam = creatorCamera.transform;
             Quaternion rot = Quaternion.LookRotation(Vector3.back, Vector3.up); // the character faces +Z
-            Vector3 pos = look - rot * Vector3.forward * distance;
 
-            // Keep the character clear of the panel: left panel in landscape, bottom panel in portrait
-            float halfHeight = distance * Mathf.Tan(creatorCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
-            float aspect = creatorCamera.aspect;
+            float fraction = 0.5f + landscapeShift;
+            if (aspect >= 1f && TryGetFreeRegion(out float left, out float right))
+            {
+                // Centre the character in the free gap and pull back until it fits there
+                fraction = (left + right) * 0.5f;
+                float need = Mathf.Lerp(requiredWidth.x, requiredWidth.y, t);
+                float fitDistance = need / Mathf.Max(0.05f, (right - left) * 2f * tanHalf * aspect);
+                distance = Mathf.Max(distance, fitDistance);
+            }
+            CharacterScreenFraction = fraction;
+
+            Vector3 pos = look - rot * Vector3.forward * distance;
+            float halfHeight = distance * tanHalf;
             if (aspect >= 1f)
-                pos -= rot * Vector3.right * (halfHeight * aspect * 2f * landscapeShift);
+                pos -= rot * Vector3.right * (halfHeight * aspect * 2f * (fraction - 0.5f));
             else
                 pos -= rot * Vector3.up * (halfHeight * 0.45f);
 

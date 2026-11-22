@@ -34,7 +34,31 @@ namespace UpcycleCity.Waste
         public static event Action<SortingCrate, TrashItem, bool, int> ItemSorted;
 
         public Transform Transform => transform;
-        public string InteractionPrompt => $"[E] Deposit into {WasteStreamPalette.LabelFor(acceptedStream)} ({Mathf.RoundToInt(Purity * 100f)}% Purity)";
+        public string InteractionPrompt
+        {
+            get
+            {
+                PlayerInteractor local = PlayerContext.ActiveInteractor;
+                bool holding = local != null && local.Grabber != null && local.Grabber.IsHolding;
+                int inBag = holding ? 0 : MatchingInBag();
+                return inBag > 0
+                    ? $"[E] Empty {inBag} {WasteStreamPalette.LabelFor(acceptedStream)} from your bag"
+                    : $"[E] Deposit into {WasteStreamPalette.LabelFor(acceptedStream)} ({Mathf.RoundToInt(Purity * 100f)}% Purity)";
+            }
+        }
+
+        /// <summary>Finds in the local player's <see cref="RecyclingBag"/> that belong in this bin.</summary>
+        int MatchingInBag()
+        {
+            if (acceptedStream == WasteStream.BulkyUpcyclable)
+                return 0;
+            RecyclingBag bag = RecyclingBagService.LocalBag;
+            BinLootTable table = BinLootTable.Active;
+            return bag != null && table != null ? bag.CountMatching(table, false, acceptedStream) : 0;
+        }
+
+        /// <summary>Host: counts finds emptied from a Recycling Bag as correctly sorted (they were picked by hand).</summary>
+        public void RecordBagDeposit(int count) => correctCount += Mathf.Max(0, count);
 
         public void Configure(WasteStream stream, bool payOnSort = true)
         {
@@ -44,16 +68,23 @@ namespace UpcycleCity.Waste
 
         public bool CanInteract(PlayerInteractor interactor)
         {
-            return interactor != null
-                && interactor.Grabber != null
-                && interactor.Grabber.IsHolding
-                && interactor.Grabber.HeldObject is TrashItem;
+            if (interactor == null || interactor.Grabber == null)
+                return false;
+            if (interactor.Grabber.IsHolding)
+                return interactor.Grabber.HeldObject is TrashItem;
+            return MatchingInBag() > 0;
         }
 
         public void Interact(PlayerInteractor interactor)
         {
             if (!CanInteract(interactor))
                 return;
+
+            if (!interactor.Grabber.IsHolding)
+            {
+                RecyclingBagService.RequestDeposit(this);
+                return;
+            }
 
             TrashItem item = interactor.Grabber.ReleaseForDeposit() as TrashItem;
             if (item != null)
@@ -128,7 +159,8 @@ namespace UpcycleCity.Waste
                     transform.position,
                     1f,
                     message,
-                    feedbackColor);
+                    feedbackColor,
+                    FeedbackSignal.EncodeMaterial(item.Stream, item.IsBulky));
             }
 
             ItemSorted?.Invoke(this, item, match, payout);

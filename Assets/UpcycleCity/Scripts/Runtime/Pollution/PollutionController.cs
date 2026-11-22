@@ -61,10 +61,24 @@ namespace UpcycleCity.Pollution
             }
         }
 
-        /// <summary>Pollution at a world position, zones included. Mirrors SamplePollution() in Pollution.hlsl.</summary>
+        /// <summary>
+        /// Pollution at a world position, grid and zones included. Mirrors SamplePollution() in Pollution.hlsl
+        /// (without the grid's cosmetic edge jitter).
+        /// </summary>
         public float SampleAt(Vector3 position)
         {
             float level = pollution;
+            PollutionGrid grid = PollutionGrid.Active;
+            if (grid != null)
+                level = grid.Apply(level, position);
+            return ApplyZones(level, position);
+        }
+
+        /// <summary>Pollution at a world position from the scene-wide level and zones only (seeds the grid).</summary>
+        public float SampleWithoutGrid(Vector3 position) => ApplyZones(pollution, position);
+
+        static float ApplyZones(float level, Vector3 position)
+        {
             int count = Mathf.Min(Zones.Count, PollutionShaderGlobals.MaxZones);
             for (int i = 0; i < count; i++)
                 level = Zones[i].Apply(level, position);

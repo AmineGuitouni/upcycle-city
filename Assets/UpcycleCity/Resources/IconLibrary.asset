@@ -1,0 +1,187 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ebcb188b7b73e4bd791df92c25166cc0, type: 3}
+  m_Name: IconLibrary
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.UI.IconLibrary
+  entries:
+  - key: blue_bag
+    sprite: {fileID: 21300000, guid: e18b252d00b9b4acb83d62902a6bde6d, type: 3}
+  - key: broken_cafe_chair
+    sprite: {fileID: 21300000, guid: 6b27698e46db242f78b0d0238f05f0b9, type: 3}
+  - key: broken_tv
+    sprite: {fileID: 21300000, guid: 61b1d581691ea44e8b3dea86d43a2a08, type: 3}
+  - key: brown_glass_bottle
+    sprite: {fileID: 21300000, guid: 3607f9075f0274689b29d2d4f4da9934, type: 3}
+  - key: crushed_bottle
+    sprite: {fileID: 21300000, guid: dcd6510189e9c49638a7ce11de0c635f, type: 3}
+  - key: crushed_can
+    sprite: {fileID: 21300000, guid: 7e68e8085c192454aa9c834048266032, type: 3}
+  - key: espresso_cup
+    sprite: {fileID: 21300000, guid: 01f9b8003b04944ebb3ebf4c86ec1fbc, type: 3}
+  - key: food_espresso
+    sprite: {fileID: 21300000, guid: 505a6be3e25d24d25b47d88b3eeb6bb4, type: 3}
+  - key: food_kaskrout
+    sprite: {fileID: 21300000, guid: f2c1f224eb6b5410ebe4b44061c0324d, type: 3}
+  - key: food_mint_tea
+    sprite: {fileID: 21300000, guid: 8048923fcb7c04c0086bf1a47aed8441, type: 3}
+  - key: food_water
+    sprite: {fileID: 21300000, guid: d7f3c6a66b052438e84df7bb0c1261be, type: 3}
+  - key: glibettes_cone
+    sprite: {fileID: 21300000, guid: ab1a4e2a1c81041f693e803e2c6501ad, type: 3}
+  - key: green_glass_bottle
+    sprite: {fileID: 21300000, guid: 692ba318888984dc2b4b44e012923c9c, type: 3}
+  - key: harissa_tin
+    sprite: {fileID: 21300000, guid: e26b5c3ee4aad4fa18828dcd9a7c8763, type: 3}
+  - key: industrial_bottle
+    sprite: {fileID: 21300000, guid: 4ca65f239b23246559d71f33d7d5a4a5, type: 3}
+  - key: kaskrout_wrap
+    sprite: {fileID: 21300000, guid: c504d714f717b45368f6e843133a89fd, type: 3}
+  - key: loot_alu_tray
+    sprite: {fileID: 21300000, guid: b8f0bc5b935c44363aaabf7532ecb392, type: 3}
+  - key: loot_coffee_grounds
+    sprite: {fileID: 21300000, guid: ca6b2778deed34f239e17d7362d7b413, type: 3}
+  - key: loot_copper_kettle
+    sprite: {fileID: 21300000, guid: b7756e1d6bdbb4cd9beeed9f2b3b123a, type: 3}
+  - key: loot_crate_lid
+    sprite: {fileID: 21300000, guid: 79273f51ca6924eb8a95bcb1b1fc4661, type: 3}
+  - key: loot_food_scraps
+    sprite: {fileID: 21300000, guid: 9846c81edee444a44852642824822b44, type: 3}
+  - key: loot_glass_bottle
+    sprite: {fileID: 21300000, guid: caa68c19ea78e4532ac24d76b4a2ed26, type: 3}
+  - key: loot_jam_jar
+    sprite: {fileID: 21300000, guid: 84adf84a18657491bb3dd5b8f4bf9176, type: 3}
+  - key: loot_melon_rinds
+    sprite: {fileID: 21300000, guid: a889f56bd59f44abfb734eba30c4e78c, type: 3}
+  - key: loot_oil_jug
+    sprite: {fileID: 21300000, guid: fede217e1aaab4e9f99ba99fb52738d9, type: 3}
+  - key: loot_orange_peels
+    sprite: {fileID: 21300000, guid: 948b7ed0d4898434e997ccfb8513dedf, type: 3}
+  - key: loot_perfume_flask
+    sprite: {fileID: 21300000, guid: a3fb3fe5e773d4da68f4b788d8dca794, type: 3}
+  - key: loot_stale_bread
+    sprite: {fileID: 21300000, guid: 4b0de643d077f47fd8ab2704b949d456, type: 3}
+  - key: mat_aluminum_cans
+    sprite: {fileID: 21300000, guid: df550f112c0b1479887e973760080fbe, type: 3}
+  - key: mat_built_bicycle
+    sprite: {fileID: 21300000, guid: 20aafb0a2afb84730b039402a16025b6, type: 3}
+  - key: mat_built_park_bench
+    sprite: {fileID: 21300000, guid: 2904696bc813e42bbab7174776bee177, type: 3}
+  - key: mat_catalyst
+    sprite: {fileID: 21300000, guid: 36a2f2041d6734ea9ab4f9ab8f7032fa, type: 3}
+  - key: mat_cleaned_pulp
+    sprite: {fileID: 21300000, guid: eab52ed672ed842108bb845db7a7854d, type: 3}
+  - key: mat_glass_cullet
+    sprite: {fileID: 21300000, guid: 6569c17b6b06b48cdb1291a86324e44e, type: 3}
+  - key: mat_old_wheel
+    sprite: {fileID: 21300000, guid: 32116f67f1c444d88b7f82d4dedb8b0e, type: 3}
+  - key: mat_organic_waste
+    sprite: {fileID: 21300000, guid: 1e2f7f3fe6fcd45388d9ecb19c5f5cfe, type: 3}
+  - key: mat_paper_carton
+    sprite: {fileID: 21300000, guid: 1b7cbae43d3094472912780f51bca602, type: 3}
+  - key: mat_plastic_scrap
+    sprite: {fileID: 21300000, guid: bd66e6d0eff8b4ff487dcc618eb2e479, type: 3}
+  - key: mat_recycled_polymer
+    sprite: {fileID: 21300000, guid: d2aeb6a6945f94938b6bfff037a314b4, type: 3}
+  - key: mat_refined_aluminum
+    sprite: {fileID: 21300000, guid: 90809aba85a0e4423b72929472f3c233, type: 3}
+  - key: mat_wood_pulp
+    sprite: {fileID: 21300000, guid: de34d5110a10542c5b32da426d325d80, type: 3}
+  - key: mat_wood_scrap
+    sprite: {fileID: 21300000, guid: 8f4f9813f0ccf434bb2ba974f9162174, type: 3}
+  - key: newspaper
+    sprite: {fileID: 21300000, guid: a0bdacde9aa324d9da18ef0050014f82, type: 3}
+  - key: old_tyre
+    sprite: {fileID: 21300000, guid: 3073d614b60f2469ca2f57e8dc72f063, type: 3}
+  - key: paper_coffee_cup
+    sprite: {fileID: 21300000, guid: 6a40be665ae8741df8747b4d06f3a5e1, type: 3}
+  - key: pizza_box
+    sprite: {fileID: 21300000, guid: edb384793a76b4ef29dc915c3fd80928, type: 3}
+  - key: rubbish_bag
+    sprite: {fileID: 21300000, guid: 8781c88fefd8b459ead707b63b167d9e, type: 3}
+  - key: scrap_pipe
+    sprite: {fileID: 21300000, guid: 85db1ad829e864133bd80342dab4129d, type: 3}
+  - key: shipping_carton
+    sprite: {fileID: 21300000, guid: e19477aa726c94bfa8f994442f678344, type: 3}
+  - key: shop_cafe
+    sprite: {fileID: 21300000, guid: b2400098ee2204dc3afccdcd75120cde, type: 3}
+  - key: shop_epicerie
+    sprite: {fileID: 21300000, guid: 6e3fb084ecbee43d197600f6412e1c25, type: 3}
+  - key: shop_quincaillerie
+    sprite: {fileID: 21300000, guid: 201f014aadfb648319833d1765fd2c6a, type: 3}
+  - key: shop_recup
+    sprite: {fileID: 21300000, guid: 7032f7dd58b3d441f86e22bf3e6bb24e, type: 3}
+  - key: soda_can
+    sprite: {fileID: 21300000, guid: 3c6eeb9154e874367a61fe1f2fc1b951, type: 3}
+  - key: stream_bulky
+    sprite: {fileID: 21300000, guid: 669cdc34f1fd249f4aebed0b1682cdd6, type: 3}
+  - key: stream_cans
+    sprite: {fileID: 21300000, guid: da2ef0a227fb44f309298bddddfba1fe, type: 3}
+  - key: stream_glass
+    sprite: {fileID: 21300000, guid: 92d5753b5cc9b4072a6101420e480e1e, type: 3}
+  - key: stream_organic
+    sprite: {fileID: 21300000, guid: a4641bb3da2ce4c1498052fabea023d8, type: 3}
+  - key: stream_paper
+    sprite: {fileID: 21300000, guid: 34af23b3ea36049668e31b3d444646d0, type: 3}
+  - key: stream_plastic
+    sprite: {fileID: 21300000, guid: 4ca264eca929a43e3977ca6277d1b1cc, type: 3}
+  - key: supply_catalyst
+    sprite: {fileID: 21300000, guid: dc8d4eded6f8a4dd8809e51ec969761e, type: 3}
+  - key: tool_broom
+    sprite: {fileID: 21300000, guid: 00fe5f3544890469196b547e3a71401a, type: 3}
+  - key: tool_litter_picker
+    sprite: {fileID: 21300000, guid: b3c393583169f45819eb7129bea26de2, type: 3}
+  - key: tool_respirator
+    sprite: {fileID: 21300000, guid: a271b151a47fa4211a155076b161fb67, type: 3}
+  - key: tool_wrench
+    sprite: {fileID: 21300000, guid: 3130d87489d3c45eea728b4ffa35bc0d, type: 3}
+  - key: tuna_tin
+    sprite: {fileID: 21300000, guid: f7a144471311149489a6f91f2e3fa592, type: 3}
+  - key: ui_bag
+    sprite: {fileID: 21300000, guid: d668b5758b7f149beaf5b95bf020a58b, type: 3}
+  - key: ui_cart
+    sprite: {fileID: 21300000, guid: 52089471bd3fd43b487aaac1d6bd745f, type: 3}
+  - key: ui_close
+    sprite: {fileID: 21300000, guid: d3ef0289962ad4e33a718dc8de9fb4b3, type: 3}
+  - key: ui_coin
+    sprite: {fileID: 21300000, guid: 74cbc622fbae14d8c8c7423a02a118d4, type: 3}
+  - key: ui_energy
+    sprite: {fileID: 21300000, guid: 61718fca958af4964b8cb60bbc5ccda8, type: 3}
+  - key: ui_hands
+    sprite: {fileID: 21300000, guid: a53e297d28a884efb99759f319e859db, type: 3}
+  - key: ui_host
+    sprite: {fileID: 21300000, guid: bc16fe8aa54a844d18bc3072124e78f9, type: 3}
+  - key: ui_join
+    sprite: {fileID: 21300000, guid: 2999dc3404e254c068ff79f06c3abc0f, type: 3}
+  - key: ui_lock
+    sprite: {fileID: 21300000, guid: 8e6cd741ea60340fea8e1b16d5d943ef, type: 3}
+  - key: ui_ready
+    sprite: {fileID: 21300000, guid: 8d144f1b5973549538f8c02817496834, type: 3}
+  - key: ui_search
+    sprite: {fileID: 21300000, guid: a9715d936260a40759ea34d7a3398225, type: 3}
+  - key: ui_sell
+    sprite: {fileID: 21300000, guid: 5a99c8c3b62144d27a233bce0cfcaade, type: 3}
+  - key: ui_settings
+    sprite: {fileID: 21300000, guid: 560ee04f985754fe2a9617b6b593037b, type: 3}
+  - key: ui_solo
+    sprite: {fileID: 21300000, guid: eaceb19096e5844c4aca2e95a13fc289, type: 3}
+  - key: ui_throw
+    sprite: {fileID: 21300000, guid: 39da6cda1e3804c94b30ea155aef3012, type: 3}
+  - key: upgrade_recycling_bag
+    sprite: {fileID: 21300000, guid: a04822f45b43242d5b68f193c77404fe, type: 3}
+  - key: upgrade_shopping_cart
+    sprite: {fileID: 21300000, guid: 2fec68f3cf9f94e61be73168d146a29f, type: 3}
+  - key: usable_paint_teal
+    sprite: {fileID: 21300000, guid: 9f79588f6ba6a49b0be8ebb70c3fe309, type: 3}
+  - key: water_bottle
+    sprite: {fileID: 21300000, guid: ac335d604162f4bccb0655e079a4aac6, type: 3}
+  - key: wooden_pallet
+    sprite: {fileID: 21300000, guid: 2909d67a7e0e24ce390b1c641377d653, type: 3}

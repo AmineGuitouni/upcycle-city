@@ -1,54 +1,59 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UpcycleCity.Character;
 
 namespace UpcycleCity.Networking
 {
     /// <summary>
-    /// Mobile-friendly UI Toolkit flow shown after the Character Creator:
-    /// Play Solo / Host Co-op / Join Co-op (Relay join code or Direct IP fallback),
-    /// live lobby roster (up to 4 players), and clear error / disconnect banners.
+    /// Main Menu (title screen) of the <c>MainMenu</c> scene, built in code with UI Toolkit, phone-first landscape:
+    /// <list type="bullet">
+    /// <item><b>Title</b>: kit-styled title over the live 3D backdrop (<c>MenuBackdrop</c>): player name chip, round
+    /// PLAY (solo → Character Creator offline), HOST ROOM, JOIN ROOM, SETTINGS (Online Code / Direct IP card), QUIT.</item>
+    /// <item><b>JoinInput</b>: join code (or <c>IP:port</c> in Direct mode).</item>
+    /// <item><b>Connecting</b>: status + Cancel.</item>
+    /// <item><b>Room</b>: join code with Copy, the player list, host's CHOOSE CHARACTERS (loads the Character Creator
+    /// for everyone through NGO scene management) and Leave.</item>
+    /// </list>
+    /// Disconnect reasons recorded by <see cref="CoopSessionManager"/> show as a banner on return.
     /// Styled by <c>Assets/UpcycleCity/UI/CoopMenu.uss</c>.
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("Upcycle City/Networking/Co-op Menu Controller")]
+    [AddComponentMenu("Upcycle City/Networking/Main Menu (Co-op Menu Controller)")]
     public sealed class CoopMenuController : MonoBehaviour
     {
         [SerializeField] PanelSettings panelSettings;
         [SerializeField] StyleSheet styleSheet;
-        [SerializeField] CharacterCreatorController characterCreator;
 
         enum ScreenMode
         {
-            Hidden,
-            ModeSelect,
+            Title,
             JoinInput,
             Connecting,
-            Lobby,
+            Room,
         }
 
         UIDocument document;
-        VisualElement root, overlay, panel;
-        VisualElement modeView, joinView, connectingView, lobbyView;
-        VisualElement bannerBox, rosterContainer;
-        Label headerTitle, bannerLabel, joinCodeBadge, lobbyHintLabel, joinInputHint, connectingStatusLabel;
+        VisualElement root, panel;
+        VisualElement titleView, joinView, connectingView, roomView;
+        VisualElement bannerBox, rosterContainer, titleButtons;
+        bool settingsOpen;
+        Label headerTitle, bannerLabel, joinCodeBadge, roomHintLabel, joinInputHint, connectingStatusLabel;
         TextField nameField, joinInputField;
         Button relayToggleButton, directToggleButton;
-        Button hostButton, joinSubmitButton, cancelConnectingButton, copyCodeButton, startCoopButton, switchToDirectButton;
+        Button soloButton, hostButton, joinButton, joinSubmitButton, cancelConnectingButton, copyCodeButton, continueButton, switchToDirectButton;
 
-        ScreenMode currentScreen = ScreenMode.Hidden;
-        ScreenMode screenBeforeConnecting = ScreenMode.ModeSelect;
+        ScreenMode currentScreen = ScreenMode.Title;
+        ScreenMode screenBeforeConnecting = ScreenMode.Title;
         CoopTransportMode selectedTransport = CoopTransportMode.Relay;
         bool busy;
         bool showingCopiedFeedback;
         float copiedFeedbackUntil;
 
-        /// <summary>Current menu screen name for diagnostics and UI tests (<c>Hidden</c>, <c>ModeSelect</c>, <c>JoinInput</c>, <c>Connecting</c>, <c>Lobby</c>).</summary>
+        /// <summary>Current screen name for diagnostics and UI tests (<c>Title</c>, <c>JoinInput</c>, <c>Connecting</c>, <c>Room</c>).</summary>
         public string CurrentScreenName => currentScreen.ToString();
 
-        /// <summary>True when any co-op menu screen is visible.</summary>
-        public bool IsMenuVisible => currentScreen != ScreenMode.Hidden && root != null && root.style.display != DisplayStyle.None;
+        /// <summary>True when the menu document is visible.</summary>
+        public bool IsMenuVisible => root != null && root.style.display != DisplayStyle.None;
 
         /// <summary>True when the status/error banner is currently visible.</summary>
         public bool IsBannerVisible => bannerBox != null && bannerBox.style.display != DisplayStyle.None;
@@ -62,26 +67,27 @@ namespace UpcycleCity.Networking
             && connectingView != null
             && connectingView.style.display != DisplayStyle.None;
 
-        /// <summary>Current label of the Lobby Copy code button (<c>"Copy"</c> or <c>"Copied!"</c>).</summary>
+        /// <summary>Current label of the Room Copy code button (<c>"Copy"</c> or <c>"Copied!"</c>).</summary>
         public string CopyCodeButtonText => copyCodeButton != null ? copyCodeButton.text : string.Empty;
 
-        /// <summary>True when the Lobby Copy code button is visible.</summary>
-        public bool IsCopyCodeButtonVisible => currentScreen == ScreenMode.Lobby
+        /// <summary>True when the Room Copy code button is visible.</summary>
+        public bool IsCopyCodeButtonVisible => currentScreen == ScreenMode.Room
             && copyCodeButton != null
             && copyCodeButton.style.display != DisplayStyle.None;
 
-        public void Configure(PanelSettings settings, StyleSheet sheet, CharacterCreatorController creator = null)
+        /// <summary>True when the host's CHOOSE CHARACTERS button is visible on the Room screen.</summary>
+        public bool IsContinueButtonVisible => currentScreen == ScreenMode.Room
+            && continueButton != null
+            && continueButton.style.display != DisplayStyle.None;
+
+        public void Configure(PanelSettings settings, StyleSheet sheet)
         {
             panelSettings = settings;
             styleSheet = sheet;
-            characterCreator = creator;
         }
 
         void Awake()
         {
-            if (characterCreator == null)
-                characterCreator = FindAnyObjectByType<CharacterCreatorController>();
-
             if (CoopSessionManager.Instance != null && CoopSessionManager.Instance.Settings != null)
             {
                 if (panelSettings == null)
@@ -91,7 +97,7 @@ namespace UpcycleCity.Networking
                 selectedTransport = CoopSessionManager.Instance.Settings.DefaultTransportMode;
             }
 
-            var docGo = new GameObject("CoopMenuDocument");
+            var docGo = new GameObject("MainMenuDocument");
             docGo.SetActive(false);
             docGo.transform.SetParent(transform, false);
             document = docGo.AddComponent<UIDocument>();
@@ -100,59 +106,32 @@ namespace UpcycleCity.Networking
             docGo.SetActive(true);
 
             BuildUi();
-            ShowScreen(ScreenMode.Hidden);
+            ShowScreen(ScreenMode.Title);
+            RefreshTransportToggle();
         }
 
         void OnEnable()
         {
-            CharacterCreatorController.StartRequested += OnCharacterCreatorStart;
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
             BindSessionEvents(true);
 
-            // If we returned from a disconnect, open Mode Select immediately with the disconnect reason
+            // Returned from a disconnect / leave: show the reason on the title screen
             if (CoopSessionManager.ConsumeDisconnectNotice(out string notice))
             {
-                OpenModeSelect();
+                OpenTitle();
                 ShowBanner(notice, isError: true, offerDirectSwitch: false);
             }
-            else if (CoopSessionManager.Instance != null)
+            else
             {
-                CoopSessionState sessionState = CoopSessionManager.Instance.State;
-                if (sessionState == CoopSessionState.Lobby)
-                {
-                    ShowScreen(ScreenMode.Lobby);
-                    RefreshLobbyUi();
-                }
-                else if (sessionState == CoopSessionState.Connecting)
-                {
-                    screenBeforeConnecting = ScreenMode.JoinInput;
-                    ShowConnecting("Connecting to host...");
-                }
+                SyncScreenToSession();
             }
         }
 
         void Start()
         {
-            if (characterCreator == null)
-                characterCreator = FindAnyObjectByType<CharacterCreatorController>();
-
             BindSessionEvents(true);
-            if (CoopSessionManager.Instance != null)
-            {
-                CoopSessionState sessionState = CoopSessionManager.Instance.State;
-                if (sessionState == CoopSessionState.Lobby)
-                {
-                    ShowScreen(ScreenMode.Lobby);
-                    RefreshLobbyUi();
-                }
-                else if (sessionState == CoopSessionState.Connecting)
-                {
-                    screenBeforeConnecting = ScreenMode.JoinInput;
-                    ShowConnecting("Connecting to host...");
-                }
-            }
-
-            if (currentScreen != ScreenMode.Hidden)
-                characterCreator?.SetCreatorPanelVisible(false);
+            SyncScreenToSession();
         }
 
         void Update()
@@ -163,8 +142,24 @@ namespace UpcycleCity.Networking
 
         void OnDisable()
         {
-            CharacterCreatorController.StartRequested -= OnCharacterCreatorStart;
             BindSessionEvents(false);
+        }
+
+        void SyncScreenToSession()
+        {
+            CoopSessionManager sm = CoopSessionManager.Instance;
+            if (sm == null)
+                return;
+            if (sm.State == CoopSessionState.Lobby)
+            {
+                ShowScreen(ScreenMode.Room);
+                RefreshRoomUi();
+            }
+            else if (sm.State == CoopSessionState.Connecting)
+            {
+                screenBeforeConnecting = ScreenMode.JoinInput;
+                ShowConnecting("Connecting to host...");
+            }
         }
 
         void BindSessionEvents(bool bind)
@@ -174,37 +169,55 @@ namespace UpcycleCity.Networking
                 return;
 
             sm.StateChanged -= OnSessionStateChanged;
-            sm.LobbyChanged -= RefreshLobbyUi;
+            sm.LobbyChanged -= RefreshRoomUi;
             sm.StatusMessage -= OnSessionStatus;
             sm.ErrorOccurred -= OnSessionError;
 
             if (bind)
             {
                 sm.StateChanged += OnSessionStateChanged;
-                sm.LobbyChanged += RefreshLobbyUi;
+                sm.LobbyChanged += RefreshRoomUi;
                 sm.StatusMessage += OnSessionStatus;
                 sm.ErrorOccurred += OnSessionError;
             }
         }
 
-        bool OnCharacterCreatorStart(CharacterCreatorController creator)
-        {
-            characterCreator = creator;
-            OpenModeSelect();
-            return true;
-        }
+        // ---------------------------------------------------------------- Public actions (buttons + tests)
 
-        /// <summary>Opens the Play Solo / Host Co-op / Join Co-op choice screen over the character studio.</summary>
-        public void OpenModeSelect()
+        /// <summary>Shows the title screen (Play Solo / Host Room / Join Room / Quit).</summary>
+        public void OpenTitle()
         {
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
             ClearBanner();
-            ShowScreen(ScreenMode.ModeSelect);
+            ShowScreen(ScreenMode.Title);
             RefreshTransportToggle();
         }
 
-        /// <summary>Opens the Join Co-op screen for the selected transport mode (also usable by tests).</summary>
+        /// <summary>PLAY SOLO: no networking; loads the Character Creator offline.</summary>
+        public void PlaySolo()
+        {
+            if (busy)
+                return;
+            CoopSessionManager sm = CoopSessionManager.Instance;
+            if (sm != null)
+                sm.PlaySolo();
+            else
+                UnityEngine.SceneManagement.SceneManager.LoadScene("CharacterCreator");
+        }
+
+        /// <summary>HOST ROOM with the selected (or given) transport.</summary>
+        public void HostRoom(CoopTransportMode? transportOverride = null)
+        {
+            if (transportOverride.HasValue)
+            {
+                selectedTransport = transportOverride.Value;
+                RefreshTransportToggle();
+            }
+            OnHostClicked();
+        }
+
+        /// <summary>Opens the Join Room screen for the selected transport mode.</summary>
         public void OpenJoinInput(CoopTransportMode? transportOverride = null)
         {
             if (transportOverride.HasValue)
@@ -215,7 +228,7 @@ namespace UpcycleCity.Networking
             ShowScreen(ScreenMode.JoinInput);
         }
 
-        /// <summary>Submits a join attempt using the current or provided code/endpoint (also usable by tests).</summary>
+        /// <summary>Submits a join attempt using the current or provided code/endpoint.</summary>
         public void SubmitJoin(string codeOrEndpointOverride = null, CoopTransportMode? transportOverride = null)
         {
             if (transportOverride.HasValue)
@@ -228,13 +241,26 @@ namespace UpcycleCity.Networking
             OnJoinSubmitClicked();
         }
 
-        /// <summary>Cancels an in-flight connection attempt and returns cleanly to the previous menu screen.</summary>
+        /// <summary>Cancels an in-flight connection attempt and returns cleanly to the previous screen.</summary>
         public void CancelConnecting()
         {
             SetBusy(false);
             ClearBanner();
             CoopSessionManager.Instance?.LeaveSession();
-            ShowScreen(screenBeforeConnecting == ScreenMode.Hidden ? ScreenMode.JoinInput : screenBeforeConnecting);
+            ShowScreen(screenBeforeConnecting == ScreenMode.Connecting ? ScreenMode.Title : screenBeforeConnecting);
+        }
+
+        /// <summary>Host: moves the whole room on to Character Creation.</summary>
+        public void ContinueToCharacters()
+        {
+            CoopSessionManager.Instance?.GoToCharacterCreation();
+        }
+
+        /// <summary>Leaves the room and returns to the title screen.</summary>
+        public void LeaveRoom()
+        {
+            CoopSessionManager.Instance?.LeaveSession();
+            OpenTitle();
         }
 
         /// <summary>Copies the active session join code or Direct IP endpoint to the system clipboard.</summary>
@@ -267,11 +293,13 @@ namespace UpcycleCity.Networking
             }
         }
 
-        void BackToCreator()
+        static void QuitGame()
         {
-            ClearBanner();
-            ShowScreen(ScreenMode.Hidden);
-            characterCreator?.SetCreatorPanelVisible(true);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         // ---------------------------------------------------------------- UI Construction
@@ -283,23 +311,79 @@ namespace UpcycleCity.Networking
             if (styleSheet != null && !root.styleSheets.Contains(styleSheet))
                 root.styleSheets.Add(styleSheet);
             root.AddToClassList("coop-root");
+            root.AddToClassList("mm-root");
 
-            overlay = new VisualElement();
-            overlay.AddToClassList("coop-overlay");
-            root.Add(overlay);
+            // Soft dark scrims so text reads over the live 3D backdrop
+            root.Add(MakeBox("mm-scrim-right"));
+            root.Add(MakeBox("mm-scrim-bottom"));
 
-            panel = new VisualElement();
-            panel.AddToClassList("coop-panel");
-            overlay.Add(panel);
+            // ---- Top-left: player name chip
+            var nameChip = MakeBox("mm-chip mm-chip--name");
+            nameChip.Add(MakeLabel("CLEANER", "mm-badge"));
+            nameField = new TextField { maxLength = 20 };
+            nameField.AddToClassList("mm-name-field");
+            string initialName = CoopSessionManager.Instance != null ? CoopSessionManager.Instance.LocalPlayerName : "Cleaner";
+            nameField.SetValueWithoutNotify(initialName);
+            nameField.RegisterValueChangedCallback(e =>
+            {
+                if (CoopSessionManager.Instance != null)
+                    CoopSessionManager.Instance.LocalPlayerName = e.newValue;
+            });
+            nameChip.Add(nameField);
+            root.Add(nameChip);
 
-            var header = new VisualElement();
-            header.AddToClassList("coop-header");
-            headerTitle = MakeLabel("UPCYCLE CITY · PLAY", "coop-header-title");
-            header.Add(headerTitle);
-            panel.Add(header);
+            // ---- Top-right: co-op chip with the four stream colours
+            var infoChip = MakeBox("mm-chip mm-chip--info");
+            infoChip.Add(MakeIcon("ui_host", "mm-chip-icon"));
+            infoChip.Add(MakeLabel("Online co-op", "mm-chip-caption"));
+            infoChip.Add(MakeLabel("1-4", "mm-chip-value"));
+            infoChip.Add(MakeBox("mm-chip-divider"));
+            var streams = MakeBox("mm-streams");
+            foreach (string stream in new[] { "mm-stream--paper", "mm-stream--plastic", "mm-stream--glass", "mm-stream--cans" })
+                streams.Add(MakeBox("mm-stream " + stream));
+            infoChip.Add(streams);
+            root.Add(infoChip);
 
-            bannerBox = new VisualElement();
-            bannerBox.AddToClassList("coop-banner");
+            // ---- Right column: title, stage pill, slogan, pill buttons
+            var brand = MakeBox("mm-brand");
+            // Kit wordmark (Art/UI/Logo via USS); the text title shows only if that art is missing
+            VisualElement logo = MakeBox("mm-logo");
+            brand.Add(logo);
+            Label textTitle = MakeLabel("UPCYCLE CITY", "mm-title");
+            brand.Add(textTitle);
+            logo.RegisterCallback<CustomStyleResolvedEvent>(_ =>
+                textTitle.style.display = logo.resolvedStyle.backgroundImage.texture != null
+                    || logo.resolvedStyle.backgroundImage.sprite != null
+                        ? DisplayStyle.None : DisplayStyle.Flex);
+            var stage = MakeBox("mm-stage-pill");
+            stage.Add(MakeBox("mm-stage-dot"));
+            stage.Add(MakeLabel("AVENUE BOURGUIBA \u2022 TUNIS", "mm-stage-text"));
+            brand.Add(stage);
+            brand.Add(MakeLabel("Nettoie la ville, construis ton usine de recyclage.", "mm-slogan"));
+
+            titleButtons = MakeBox("mm-actions");
+            var coopRow = MakeBox("mm-button-row");
+            hostButton = MakeIconButton("HOST ROOM", "ui_host", "mm-pill mm-half", OnHostClicked);
+            joinButton = MakeIconButton("JOIN ROOM", "ui_join", "mm-pill mm-half", () => OpenJoinInput());
+            coopRow.Add(hostButton);
+            coopRow.Add(joinButton);
+            titleButtons.Add(coopRow);
+            titleButtons.Add(MakeIconButton("SETTINGS", "ui_settings", "mm-pill", ToggleSettings));
+            titleButtons.Add(MakeIconButton("QUIT", "ui_close", "mm-pill mm-pill--quiet", QuitGame));
+            brand.Add(titleButtons);
+            root.Add(brand);
+
+            // ---- Bottom-right: big round PLAY (solo)
+            soloButton = new Button(PlaySolo) { text = string.Empty };
+            soloButton.AddToClassList("mm-play");
+            var playTriangle = MakeBox("mm-play-icon");
+            soloButton.Add(playTriangle);
+            soloButton.Add(MakeLabel("PLAY", "mm-play-label"));
+            soloButton.Add(MakeLabel("SOLO", "mm-play-sub"));
+            root.Add(soloButton);
+
+            // ---- Status / error banner (top-centre)
+            bannerBox = MakeBox("coop-banner mm-banner");
             bannerLabel = MakeLabel(string.Empty, "coop-banner-text");
             bannerBox.Add(bannerLabel);
             switchToDirectButton = MakeButton("Switch to Direct IP", "coop-btn coop-btn--small coop-btn--amber", () =>
@@ -312,16 +396,25 @@ namespace UpcycleCity.Networking
             });
             bannerBox.Add(switchToDirectButton);
             bannerBox.style.display = DisplayStyle.None;
-            panel.Add(bannerBox);
+            root.Add(bannerBox);
+
+            // ---- Left card: settings / join / connecting / room
+            panel = MakeBox("coop-panel mm-panel");
+            root.Add(panel);
+
+            var header = MakeBox("coop-header");
+            headerTitle = MakeLabel("SETTINGS", "coop-header-title");
+            header.Add(headerTitle);
+            panel.Add(header);
 
             var body = new ScrollView(ScrollViewMode.Vertical);
             body.AddToClassList("coop-scroll");
             panel.Add(body);
 
-            BuildModeView(body);
+            BuildTitleView(body);
             BuildJoinView(body);
             BuildConnectingView(body);
-            BuildLobbyView(body);
+            BuildRoomView(body);
 
             root.RegisterCallback<GeometryChangedEvent>(_ =>
             {
@@ -329,53 +422,68 @@ namespace UpcycleCity.Networking
             });
         }
 
-        void BuildModeView(VisualElement parent)
+        /// <summary>Title-screen Settings card: connection mode (Online Code / Direct IP).</summary>
+        void BuildTitleView(VisualElement parent)
         {
-            modeView = new VisualElement();
-            modeView.AddToClassList("coop-section");
-            parent.Add(modeView);
+            titleView = new VisualElement();
+            titleView.AddToClassList("coop-section");
+            parent.Add(titleView);
 
-            modeView.Add(MakeLabel("Player Name", "coop-label"));
-            nameField = new TextField { maxLength = 20 };
-            nameField.AddToClassList("coop-input");
-            string initialName = CoopSessionManager.Instance != null ? CoopSessionManager.Instance.LocalPlayerName : "Cleaner";
-            nameField.SetValueWithoutNotify(initialName);
-            nameField.RegisterValueChangedCallback(e =>
-            {
-                if (CoopSessionManager.Instance != null)
-                    CoopSessionManager.Instance.LocalPlayerName = e.newValue;
-            });
-            modeView.Add(nameField);
-
-            var soloButton = MakeButton("PLAY SOLO (OFFLINE)", "coop-btn coop-btn--green", OnPlaySoloClicked);
-            modeView.Add(soloButton);
-
-            modeView.Add(MakeLabel("Online Co-op (Up to 4 Players)", "coop-label coop-label--spaced"));
-
+            titleView.Add(MakeLabel("Co-op connection", "coop-label"));
             var transportRow = new VisualElement();
             transportRow.AddToClassList("coop-toggle-row");
-            relayToggleButton = MakeButton("Online Code (Relay)", "coop-toggle", () =>
+            relayToggleButton = MakeButton("Online Code", "coop-toggle", () =>
             {
                 selectedTransport = CoopTransportMode.Relay;
                 RefreshTransportToggle();
             });
-            directToggleButton = MakeButton("Direct IP (LAN / Local)", "coop-toggle", () =>
+            directToggleButton = MakeButton("Direct IP (LAN)", "coop-toggle", () =>
             {
                 selectedTransport = CoopTransportMode.Direct;
                 RefreshTransportToggle();
             });
             transportRow.Add(relayToggleButton);
             transportRow.Add(directToggleButton);
-            modeView.Add(transportRow);
+            titleView.Add(transportRow);
+            titleView.Add(MakeLabel("Online Code works over the internet. Direct IP is for testing on the same Wi-Fi.", "coop-hint"));
+            titleView.Add(MakeButton("Done", "coop-btn coop-btn--muted", ToggleSettings));
+        }
 
-            hostButton = MakeButton("HOST CO-OP SESSION", "coop-btn coop-btn--teal", OnHostClicked);
-            modeView.Add(hostButton);
+        void ToggleSettings()
+        {
+            settingsOpen = !settingsOpen;
+            if (currentScreen == ScreenMode.Title)
+                ShowScreen(ScreenMode.Title);
+        }
 
-            var joinButton = MakeButton("JOIN CO-OP SESSION", "coop-btn coop-btn--amber", () => OpenJoinInput());
-            modeView.Add(joinButton);
+        static VisualElement MakeBox(string cls)
+        {
+            var e = new VisualElement();
+            foreach (string c in cls.Split(' '))
+            {
+                if (!string.IsNullOrEmpty(c))
+                    e.AddToClassList(c);
+            }
+            return e;
+        }
 
-            var backBtn = MakeButton("Back to Character Creator", "coop-btn coop-btn--muted", BackToCreator);
-            modeView.Add(backBtn);
+        static VisualElement MakeIcon(string key, string cls)
+        {
+            VisualElement e = MakeBox(cls);
+            Sprite s = UpcycleCity.UI.IconLibrary.Active != null ? UpcycleCity.UI.IconLibrary.Active.Get(key) : null;
+            if (s != null)
+                e.style.backgroundImage = new StyleBackground(s);
+            else
+                e.style.display = DisplayStyle.None;
+            return e;
+        }
+
+        static Button MakeIconButton(string text, string iconKey, string cls, System.Action onClick)
+        {
+            Button b = MakeButton(string.Empty, cls, onClick);
+            b.Add(MakeIcon(iconKey, "mm-pill-icon"));
+            b.Add(MakeLabel(text, "mm-pill-label"));
+            return b;
         }
 
         void BuildJoinView(VisualElement parent)
@@ -384,7 +492,7 @@ namespace UpcycleCity.Networking
             joinView.AddToClassList("coop-section");
             parent.Add(joinView);
 
-            joinInputHint = MakeLabel("Enter the 6-character Join Code from the host:", "coop-label");
+            joinInputHint = MakeLabel("Enter the Join Code from the host:", "coop-label");
             joinView.Add(joinInputHint);
 
             joinInputField = new TextField { maxLength = 32 };
@@ -392,15 +500,14 @@ namespace UpcycleCity.Networking
             joinInputField.AddToClassList("coop-input--code");
             joinView.Add(joinInputField);
 
-            joinSubmitButton = MakeButton("CONNECT TO SESSION", "coop-btn coop-btn--teal", OnJoinSubmitClicked);
+            joinSubmitButton = MakeButton("JOIN ROOM", "coop-btn coop-btn--teal", OnJoinSubmitClicked);
             joinView.Add(joinSubmitButton);
 
-            var backBtn = MakeButton("Back", "coop-btn coop-btn--muted", () =>
+            joinView.Add(MakeButton("Back", "coop-btn coop-btn--muted", () =>
             {
                 ClearBanner();
-                ShowScreen(ScreenMode.ModeSelect);
-            });
-            joinView.Add(backBtn);
+                ShowScreen(ScreenMode.Title);
+            }));
         }
 
         void BuildConnectingView(VisualElement parent)
@@ -416,62 +523,46 @@ namespace UpcycleCity.Networking
             connectingView.Add(cancelConnectingButton);
         }
 
-        void BuildLobbyView(VisualElement parent)
+        void BuildRoomView(VisualElement parent)
         {
-            lobbyView = new VisualElement();
-            lobbyView.AddToClassList("coop-section");
-            parent.Add(lobbyView);
+            roomView = new VisualElement();
+            roomView.AddToClassList("coop-section");
+            parent.Add(roomView);
 
             var codeRow = new VisualElement();
             codeRow.AddToClassList("coop-code-row");
-            joinCodeBadge = MakeLabel("SESSION CODE: —", "coop-code-badge");
+            joinCodeBadge = MakeLabel("JOIN CODE: —", "coop-code-badge");
             codeRow.Add(joinCodeBadge);
             copyCodeButton = MakeButton("Copy", "coop-code-copy-btn", () => CopySessionCode());
             codeRow.Add(copyCodeButton);
-            lobbyView.Add(codeRow);
+            roomView.Add(codeRow);
 
-            lobbyView.Add(MakeLabel("Connected Cleaners", "coop-label"));
+            roomView.Add(MakeLabel("Cleaners in the room", "coop-label"));
             rosterContainer = new VisualElement();
             rosterContainer.AddToClassList("coop-roster");
-            lobbyView.Add(rosterContainer);
+            roomView.Add(rosterContainer);
 
-            lobbyHintLabel = MakeLabel("Waiting for players...", "coop-hint");
-            lobbyView.Add(lobbyHintLabel);
+            roomHintLabel = MakeLabel("Waiting for players...", "coop-hint");
+            roomView.Add(roomHintLabel);
 
-            startCoopButton = MakeButton("START CITY CLEANUP", "coop-btn coop-btn--green", OnStartCoopClicked);
-            lobbyView.Add(startCoopButton);
+            continueButton = MakeButton("CHOOSE CHARACTERS", "coop-btn coop-btn--green", ContinueToCharacters);
+            roomView.Add(continueButton);
 
-            var leaveBtn = MakeButton("Leave Lobby", "coop-btn coop-btn--danger", OnLeaveLobbyClicked);
-            lobbyView.Add(leaveBtn);
+            roomView.Add(MakeButton("Leave Room", "coop-btn coop-btn--danger", LeaveRoom));
         }
 
         // ---------------------------------------------------------------- Actions
-
-        void OnPlaySoloClicked()
-        {
-            if (busy)
-                return;
-            string creatorScene = characterCreator != null && !string.IsNullOrWhiteSpace(characterCreator.GameplayScene)
-                ? characterCreator.GameplayScene
-                : "PlayerGym";
-
-            CoopSessionManager sm = CoopSessionManager.Instance;
-            if (sm != null)
-                sm.PlaySolo(creatorScene);
-            else
-                UnityEngine.SceneManagement.SceneManager.LoadScene(creatorScene);
-        }
 
         async void OnHostClicked()
         {
             if (busy || CoopSessionManager.Instance == null)
                 return;
 
-            screenBeforeConnecting = ScreenMode.ModeSelect;
+            screenBeforeConnecting = ScreenMode.Title;
             SetBusy(true);
             ClearBanner();
             ShowConnecting(selectedTransport == CoopTransportMode.Relay
-                ? "Creating online Relay session..."
+                ? "Creating online room..."
                 : "Starting Direct Host...");
 
             (bool ok, string err) = await CoopSessionManager.Instance.HostCoopAsync(selectedTransport);
@@ -482,15 +573,15 @@ namespace UpcycleCity.Networking
             if (!ok)
             {
                 if (currentScreen == ScreenMode.Connecting)
-                    ShowScreen(ScreenMode.ModeSelect);
+                    ShowScreen(ScreenMode.Title);
                 if (!string.IsNullOrEmpty(err))
                     ShowBanner(err, isError: true, offerDirectSwitch: selectedTransport == CoopTransportMode.Relay);
                 return;
             }
 
             ClearBanner();
-            ShowScreen(ScreenMode.Lobby);
-            RefreshLobbyUi();
+            ShowScreen(ScreenMode.Room);
+            RefreshRoomUi();
         }
 
         async void OnJoinSubmitClicked()
@@ -517,29 +608,18 @@ namespace UpcycleCity.Networking
                 return;
             }
 
-            // Do not jump to Lobby until the host actually approves the connection
+            // Do not jump to the Room until the host actually approves the connection
             CoopSessionState currentState = CoopSessionManager.Instance.State;
             if (currentState == CoopSessionState.Lobby)
             {
                 ClearBanner();
-                ShowScreen(ScreenMode.Lobby);
-                RefreshLobbyUi();
+                ShowScreen(ScreenMode.Room);
+                RefreshRoomUi();
             }
             else if (currentState == CoopSessionState.Connecting)
             {
                 ShowConnecting("Connecting to host...");
             }
-        }
-
-        void OnStartCoopClicked()
-        {
-            CoopSessionManager.Instance?.StartCoopGameplay();
-        }
-
-        void OnLeaveLobbyClicked()
-        {
-            CoopSessionManager.Instance?.LeaveSession();
-            OpenModeSelect();
         }
 
         // ---------------------------------------------------------------- State & Visual Refresh
@@ -548,19 +628,13 @@ namespace UpcycleCity.Networking
         {
             if (nextState == CoopSessionState.Connecting)
             {
-                if (currentScreen == ScreenMode.Hidden)
-                    screenBeforeConnecting = ScreenMode.JoinInput;
                 ShowConnecting("Connecting to host...");
             }
             else if (nextState == CoopSessionState.Lobby)
             {
                 ClearBanner();
-                ShowScreen(ScreenMode.Lobby);
-                RefreshLobbyUi();
-            }
-            else if (nextState == CoopSessionState.LoadingGame || nextState == CoopSessionState.InGame)
-            {
-                ShowScreen(ScreenMode.Hidden);
+                ShowScreen(ScreenMode.Room);
+                RefreshRoomUi();
             }
             else if (nextState == CoopSessionState.Offline)
             {
@@ -568,24 +642,16 @@ namespace UpcycleCity.Networking
                 bool hasNotice = CoopSessionManager.ConsumeDisconnectNotice(out string notice);
                 if (currentScreen == ScreenMode.Connecting)
                 {
-                    ScreenMode target = screenBeforeConnecting == ScreenMode.Hidden
-                        ? ScreenMode.JoinInput
-                        : screenBeforeConnecting;
-                    ShowScreen(target);
+                    ShowScreen(screenBeforeConnecting == ScreenMode.Connecting ? ScreenMode.Title : screenBeforeConnecting);
                     if (hasNotice)
                         ShowBanner(notice, isError: true, offerDirectSwitch: selectedTransport == CoopTransportMode.Relay);
                 }
-                else if (currentScreen == ScreenMode.Lobby)
+                else
                 {
-                    ShowScreen(ScreenMode.ModeSelect);
+                    if (currentScreen == ScreenMode.Room)
+                        ShowScreen(ScreenMode.Title);
                     if (hasNotice)
                         ShowBanner(notice, isError: true, offerDirectSwitch: false);
-                }
-                else if (hasNotice)
-                {
-                    if (currentScreen == ScreenMode.Hidden)
-                        ShowScreen(ScreenMode.ModeSelect);
-                    ShowBanner(notice, isError: true, offerDirectSwitch: selectedTransport == CoopTransportMode.Relay);
                 }
             }
         }
@@ -596,13 +662,13 @@ namespace UpcycleCity.Networking
                 return;
             if (currentScreen == ScreenMode.Connecting && connectingStatusLabel != null)
                 connectingStatusLabel.text = msg;
-            else if (currentScreen != ScreenMode.Hidden)
+            else
                 ShowBanner(msg, isError: false, offerDirectSwitch: false);
         }
 
         void OnSessionError(string err)
         {
-            if (!string.IsNullOrEmpty(err) && currentScreen != ScreenMode.Hidden)
+            if (!string.IsNullOrEmpty(err))
                 ShowBanner(err, isError: true, offerDirectSwitch: selectedTransport == CoopTransportMode.Relay);
         }
 
@@ -615,29 +681,33 @@ namespace UpcycleCity.Networking
 
         void ShowScreen(ScreenMode mode)
         {
-            if (mode != ScreenMode.Lobby && showingCopiedFeedback)
+            if (mode != ScreenMode.Room && showingCopiedFeedback)
                 ResetCopyButtonVisual();
 
             currentScreen = mode;
-            bool visible = mode != ScreenMode.Hidden;
-            root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!visible)
-                return;
+            root.style.display = DisplayStyle.Flex;
+            if (mode != ScreenMode.Title)
+                settingsOpen = false;
 
-            // Keep the underlying Character Creator panel hidden whenever any co-op menu screen is shown
-            characterCreator?.SetCreatorPanelVisible(false);
+            // The left card only appears for Settings / Join / Connecting / Room; the title buttons + PLAY otherwise
+            bool cardVisible = mode != ScreenMode.Title || settingsOpen;
+            panel.style.display = cardVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (titleButtons != null)
+                titleButtons.style.display = mode == ScreenMode.Title ? DisplayStyle.Flex : DisplayStyle.None;
+            if (soloButton != null)
+                soloButton.style.display = mode == ScreenMode.Title ? DisplayStyle.Flex : DisplayStyle.None;
 
-            modeView.style.display = mode == ScreenMode.ModeSelect ? DisplayStyle.Flex : DisplayStyle.None;
+            titleView.style.display = mode == ScreenMode.Title ? DisplayStyle.Flex : DisplayStyle.None;
             joinView.style.display = mode == ScreenMode.JoinInput ? DisplayStyle.Flex : DisplayStyle.None;
             connectingView.style.display = mode == ScreenMode.Connecting ? DisplayStyle.Flex : DisplayStyle.None;
-            lobbyView.style.display = mode == ScreenMode.Lobby ? DisplayStyle.Flex : DisplayStyle.None;
+            roomView.style.display = mode == ScreenMode.Room ? DisplayStyle.Flex : DisplayStyle.None;
 
             headerTitle.text = mode switch
             {
-                ScreenMode.JoinInput => "JOIN CO-OP SESSION",
+                ScreenMode.JoinInput => "JOIN ROOM",
                 ScreenMode.Connecting => "CONNECTING...",
-                ScreenMode.Lobby => "CO-OP LOBBY",
-                _ => "UPCYCLE CITY · PLAY",
+                ScreenMode.Room => "CO-OP ROOM",
+                _ => "SETTINGS",
             };
         }
 
@@ -659,12 +729,12 @@ namespace UpcycleCity.Networking
             {
                 string addr = sm != null && sm.Settings != null ? sm.Settings.DefaultDirectAddress : "127.0.0.1";
                 ushort port = sm != null && sm.Settings != null ? sm.Settings.DefaultDirectPort : (ushort)7777;
-                joinInputHint.text = "Enter Host IP:Port (for LAN or local testing):";
+                joinInputHint.text = "Enter Host IP:Port (LAN or local testing):";
                 joinInputField.SetValueWithoutNotify($"{addr}:{port}");
             }
         }
 
-        void RefreshLobbyUi()
+        void RefreshRoomUi()
         {
             CoopSessionManager sm = CoopSessionManager.Instance;
             if (sm == null || rosterContainer == null)
@@ -690,19 +760,16 @@ namespace UpcycleCity.Networking
                 CoopLobbyPlayer p = players[i];
                 var row = new VisualElement();
                 row.AddToClassList("coop-roster-row");
-                string hostSuffix = p.IsHost ? "  (HOST)" : string.Empty;
-                var slotLabel = MakeLabel(p.FormattedTag, "coop-roster-slot");
-                var playerName = MakeLabel($"{p.displayName}{hostSuffix}", "coop-roster-name");
-                row.Add(slotLabel);
-                row.Add(playerName);
+                row.Add(MakeLabel(p.FormattedTag, "coop-roster-slot"));
+                row.Add(MakeLabel(p.IsHost ? $"{p.displayName}  (HOST)" : p.displayName.ToString(), "coop-roster-name"));
                 rosterContainer.Add(row);
             }
 
             bool isHost = NetSession.IsHost;
-            startCoopButton.style.display = isHost ? DisplayStyle.Flex : DisplayStyle.None;
-            lobbyHintLabel.text = isHost
-                ? $"{players.Count}/{sm.MaxPlayers} cleaners ready. Share the code or tap Start anytime."
-                : $"{players.Count}/{sm.MaxPlayers} cleaners in lobby. Waiting for host to start...";
+            continueButton.style.display = isHost ? DisplayStyle.Flex : DisplayStyle.None;
+            roomHintLabel.text = isHost
+                ? $"{players.Count}/{sm.MaxPlayers} cleaners. Share the code, then choose characters together."
+                : $"{players.Count}/{sm.MaxPlayers} cleaners. Waiting for the host to continue...";
         }
 
         void ShowBanner(string message, bool isError, bool offerDirectSwitch)
@@ -724,7 +791,9 @@ namespace UpcycleCity.Networking
         void SetBusy(bool value)
         {
             busy = value;
+            soloButton?.SetEnabled(!value);
             hostButton?.SetEnabled(!value);
+            joinButton?.SetEnabled(!value);
             joinSubmitButton?.SetEnabled(!value);
         }
 

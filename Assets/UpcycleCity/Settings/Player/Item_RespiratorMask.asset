@@ -26,7 +26,11 @@ MonoBehaviour:
   grantsSmogImmunity: 1
   useBehavior:
     rid: -2
+  grabTool: 0
   heldVisualPrefab: {fileID: 0}
+  heldLocalPosition: {x: 0, y: 0, z: 0}
+  heldLocalEuler: {x: 0, y: 0, z: 0}
+  heldUniformScale: 1
   references:
     version: 2
     RefIds:

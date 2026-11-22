@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5105eb4e2ee9441b68d1a7b482bb426c, type: 3}
+  m_Name: Card_Refining_PlasticThermalReclaim
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Crafting.CraftingCard
+  cardId: refining_plastic_thermal_reclaim
+  displayName: Plastic Thermal Reclaim
+  description: Basic low-temp melt & extrusion from sorted plastic waste.
+  category: 0
+  cardArtwork: {fileID: 21300000, guid: 10b5f632871684164822ba8ce73a9f6c, type: 3}
+  requiredMachineType: {fileID: 11400000, guid: 6421a5910d45c495cafdf58314ed8450, type: 2}
+  complexityLevel: 0
+  energyCost: 10
+  temperatureCelsius: 180
+  processingSeconds: 2.5
+  inputs:
+  - material: {fileID: 11400000, guid: 0eb35ab5b522844eb99da770e93b8f6c, type: 2}
+    amount: 4
+  - material: {fileID: 11400000, guid: 05f0387fa505442119ce6a988164706a, type: 2}
+    amount: 0.2
+  outputs:
+  - material: {fileID: 11400000, guid: 1b7aecc8d0963417b930ce1f1146383b, type: 2}
+    amount: 3.2
+  outputPrefab: {fileID: 0}

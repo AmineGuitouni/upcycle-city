@@ -15,8 +15,11 @@ namespace UpcycleCity.Networking
         public FixedString32Bytes displayName;
         public byte isHost;
         public NetworkCharacterAppearance appearance;
+        /// <summary>1 once the player confirmed their look in the co-op Character Creator.</summary>
+        public byte isReady;
 
         public bool IsHost => isHost != 0;
+        public bool IsReady => isReady != 0;
 
         public string FormattedTag => $"P{(slotNumber > 0 ? slotNumber : 1)}";
 
@@ -27,6 +30,7 @@ namespace UpcycleCity.Networking
             serializer.SerializeValue(ref displayName);
             serializer.SerializeValue(ref isHost);
             serializer.SerializeValue(ref appearance);
+            serializer.SerializeValue(ref isReady);
         }
 
         public bool Equals(CoopLobbyPlayer o) =>
@@ -34,7 +38,8 @@ namespace UpcycleCity.Networking
             && slotNumber == o.slotNumber
             && displayName.Equals(o.displayName)
             && isHost == o.isHost
-            && appearance.Equals(o.appearance);
+            && appearance.Equals(o.appearance)
+            && isReady == o.isReady;
 
         public override bool Equals(object obj) => obj is CoopLobbyPlayer o && Equals(o);
 

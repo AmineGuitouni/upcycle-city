@@ -65,6 +65,8 @@ namespace UpcycleCity.Editor
             new ModelImportRule("UpcycleProps/Character/",     1f,    RigType.None,     0f,          0f,    0f),
             // The player's gear (litter picker in the fist, shopping cart) stays readable: only a light film of dirt
             new ModelImportRule("UpcycleProps/Tools/",         1f,    RigType.None,     0.2f,        0.15f, 0f),
+            // Manual crafting machines keep readable stream & brand colours with light workshop grime
+            new ModelImportRule("UpcycleProps/Machines/Manual/", 1f,  RigType.None,     0.25f,       0.2f,  0f),
             new ModelImportRule("UpcycleProps/",               1f,    RigType.None,     1f,          0.8f,  0f),
         };
 

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2368270c8e75d2c184d1931df346498, type: 3}
   m_Name: IntroConfig
   m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Cinematics.IntroConfig
-  nextScene: CharacterCreator
+  nextScene: MainMenu
   skipHoldSeconds: 1.2
   letterbox: 0.12
   walkAlongShore: 11

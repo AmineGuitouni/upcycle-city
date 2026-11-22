@@ -17,7 +17,7 @@ namespace UpcycleCity.Networking
         /// <summary>Raised whenever the balance changes: (newBalance, delta).</summary>
         public event Action<int, int> BalanceChanged;
 
-        public SharedTeamWallet(int initialBalance = 25)
+        public SharedTeamWallet(int initialBalance = 0)
         {
             balance = initialBalance < 0 ? 0 : initialBalance;
         }

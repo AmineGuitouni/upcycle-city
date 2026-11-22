@@ -50,6 +50,18 @@ namespace UpcycleCity.Inventory
     }
 
     /// <summary>
+    /// Optional interface implemented by shop-bought crafting consumables (such as Catalyst)
+    /// that credit directly into the shared team Material Stock on purchase rather than occupying the gear hotbar.
+    /// </summary>
+    public interface IMaterialStockCreditBehavior
+    {
+        string MaterialId { get; }
+        float Amount { get; }
+        bool CreditOnPurchase { get; }
+        bool CreditAuthoritativeStock(int quantity, out string summary);
+    }
+
+    /// <summary>
     /// Sweeps nearby physical grabbable litter in front of the player (e.g. Broom tool).
     /// </summary>
     [Serializable]

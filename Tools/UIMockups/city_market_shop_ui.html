@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upcycle City — City Market & Shop UI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for crisp icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <style>
+        /* =====================================================================
+           UPCYCLE CITY — CLEAN LOW-POLY SHOP THEME
+           ===================================================================== */
+        :root {
+            --terracotta: #C8643B;
+            --terracotta-dark: #9E4927;
+            --copper-frame: #8B4A2B;
+            --slate-dark: #1E2124;
+            --slate-panel: #282C31;
+            --slate-card: #32373D;
+            --parchment: #F3E5AB;
+            --parchment-edge: #D6C37E;
+            --emerald: #28965A;
+            --emerald-bright: #2ECC71;
+            --gold: #F1C40F;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #14171A;
+            color: #F8FAFC;
+            user-select: none;
+        }
+
+        /* Main Wooden/Copper Bordered Shop Frame */
+        .shop-outer-frame {
+            background-color: var(--slate-dark);
+            border: 4px solid var(--copper-frame);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), inset 0 0 0 2px #4A2716;
+        }
+
+        /* Clean Parchment Scroll Banner */
+        .parchment-scroll {
+            background-color: var(--parchment);
+            color: #3A2618;
+            border-top: 3px solid #FFF7D6;
+            border-bottom: 3px solid var(--parchment-edge);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+        }
+        .parchment-roll {
+            background-color: #DFC98A;
+            border: 2px solid #8B4A2B;
+        }
+
+        /* Striped Awning for Active Folder Tab */
+        .shop-awning {
+            background: repeating-linear-gradient(
+                90deg,
+                #C8643B 0px,
+                #C8643B 12px,
+                #F8F1E5 12px,
+                #F8F1E5 24px
+            );
+            border-bottom: 3px solid #8B4A2B;
+        }
+
+        /* Clean Low-Poly Item Card */
+        .lowpoly-card {
+            background-color: var(--slate-card);
+            border: 2px solid #444B53;
+            transition: transform 0.14s ease, border-color 0.14s ease;
+        }
+        .lowpoly-card:hover {
+            transform: translateY(-2px);
+            border-color: #C8643B;
+        }
+
+        /* Tactile Flat-3D Button */
+        .tactile-btn {
+            transition: transform 0.1s ease, filter 0.15s ease;
+        }
+        .tactile-btn:hover:not(:disabled) {
+            filter: brightness(1.08);
+        }
+        .tactile-btn:active:not(:disabled) {
+            transform: translateY(2px);
+        }
+
+        /* Fullscreen Helper */
+        .shop-outer-frame.is-fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <!-- Minimal Top Utility Bar -->
+    <div class="w-full max-w-5xl flex items-center justify-between mb-2 px-1 text-xs text-slate-400">
+        <span class="font-semibold text-slate-300">
+            <i class="fa-solid fa-recycle text-[#2ECC71] mr-1.5"></i>Upcycle City — Market UI
+        </span>
+        <div class="flex items-center gap-2">
+            <button onclick="resetShop()" class="px-2.5 py-1 rounded-lg bg-[#282C31] hover:bg-[#32373D] text-slate-300 border border-white/10 font-medium cursor-pointer">
+                Reset
+            </button>
+            <button onclick="toggleFullscreen()" id="fs-btn" class="px-2.5 py-1 rounded-lg bg-[#282C31] hover:bg-[#32373D] text-slate-300 border border-white/10 font-medium cursor-pointer">
+                <i class="fa-solid fa-expand mr-1"></i>Fullscreen
+            </button>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MAIN SHOP WINDOW (INSPIRED BY RPG SHOP LAYOUT + UPCYCLE CITY PALETTE)
+         ===================================================================== -->
+    <main id="shop-window" class="shop-outer-frame relative w-full max-w-5xl rounded-2xl flex flex-col overflow-hidden">
+
+        <!-- =================================================================
+             1. TOP HEADER BAR: LVL BADGE | PARCHMENT SCROLL | COINS & CLOSE
+             ================================================================= -->
+        <header class="bg-[#25292E] border-b-2 border-[#8B4A2B] px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+
+            <!-- Left: LVL 1 Badge + UPCYCLER XP Progress Bar -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-11 h-11 rounded-full bg-[#32373D] border-[3px] border-[#C8643B] flex flex-col items-center justify-center shadow">
+                    <span class="text-[9px] font-extrabold text-[#F3E5AB] leading-none">LVL</span>
+                    <span id="player-level" class="text-base font-black text-white leading-tight">1</span>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between gap-3 text-[11px] font-extrabold tracking-wide text-white">
+                        <span>UPCYCLER</span>
+                        <span id="xp-text" class="text-slate-400 font-bold">150 / 500</span>
+                    </div>
+                    <div class="w-28 sm:w-32 h-2.5 mt-1 rounded-full bg-[#16181B] border border-white/10 overflow-hidden">
+                        <div id="xp-bar" class="h-full bg-[#28965A] transition-all duration-300" style="width: 30%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Clean Parchment Scroll Banner -->
+            <div class="order-3 md:order-2 w-full md:w-auto flex items-center justify-center">
+                <div class="flex items-center">
+                    <div class="parchment-roll w-3 h-12 rounded-l-md"></div>
+                    <div class="parchment-scroll px-5 sm:px-8 py-1.5 text-center">
+                        <h1 class="font-black text-base sm:text-xl tracking-wide uppercase leading-tight">
+                            CITY MARKET &amp; SHOP
+                        </h1>
+                        <p class="text-[10px] sm:text-[11px] font-semibold text-[#6E4D32] leading-tight">
+                            Clean the city, build your recycling factory
+                        </p>
+                    </div>
+                    <div class="parchment-roll w-3 h-12 rounded-r-md"></div>
+                </div>
+            </div>
+
+            <!-- Right: Gold Coin Counter (+100 Test) & Circular Terracotta Close Button -->
+            <div class="order-2 md:order-3 flex items-center gap-2">
+                <div class="bg-[#16181B] border-2 border-[#5C3A24] rounded-xl px-2.5 py-1 flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-[#F1C40F] text-[#3A2618] font-black text-xs flex items-center justify-center">
+                        $
+                    </span>
+                    <span id="coin-display" class="font-black text-sm sm:text-base text-white">183</span>
+                    <button onclick="addCoins(100)" class="tactile-btn px-1.5 py-0.5 rounded bg-[#28965A] text-white font-extrabold text-[10px] cursor-pointer" title="Add 100 test coins">
+                        +100
+                    </button>
+                </div>
+
+                <button onclick="showToast('Closed Market — Returning to Garage!')" class="tactile-btn w-9 h-9 rounded-full bg-[#C8643B] border-2 border-[#F3E5AB]/70 text-white font-black text-sm flex items-center justify-center shadow cursor-pointer" title="Close Shop">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- =================================================================
+             2. FOLDER-STYLE TABS BAR (WITH STRIPED AWNING ON ACTIVE TAB)
+             ================================================================= -->
+        <nav class="bg-[#1A1D20] px-3 sm:px-5 pt-3 flex items-end gap-1.5 overflow-x-auto border-b-2 border-[#8B4A2B]">
+            <button onclick="selectTab('upgrades')" id="tab-upgrades" class="tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#C8643B] text-white border-t-2 border-x-2 border-[#8B4A2B] shrink-0 cursor-pointer">
+                <div class="awning-cap shop-awning absolute -top-2 left-0 right-0 h-2.5 rounded-t-lg"></div>
+                UPGRADES
+            </button>
+            <button onclick="selectTab('gear')" id="tab-gear" class="tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#282C31] text-slate-300 hover:text-white border-t-2 border-x-2 border-[#444B53] shrink-0 cursor-pointer">
+                <div class="awning-cap hidden shop-awning absolute -top-2 left-0 right-0 h-2.5 rounded-t-lg"></div>
+                TOOLS &amp; GEAR
+            </button>
+            <button onclick="selectTab('blueprints')" id="tab-blueprints" class="tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#282C31] text-slate-300 hover:text-white border-t-2 border-x-2 border-[#444B53] shrink-0 cursor-pointer">
+                <div class="awning-cap hidden shop-awning absolute -top-2 left-0 right-0 h-2.5 rounded-t-lg"></div>
+                BLUEPRINTS
+            </button>
+            <button onclick="selectTab('cleantech')" id="tab-cleantech" class="tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#282C31] text-slate-300 hover:text-white border-t-2 border-x-2 border-[#444B53] shrink-0 cursor-pointer">
+                <div class="awning-cap hidden shop-awning absolute -top-2 left-0 right-0 h-2.5 rounded-t-lg"></div>
+                CLEAN TECH
+            </button>
+            <button onclick="selectTab('sell')" id="tab-sell" class="tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#282C31] text-slate-300 hover:text-white border-t-2 border-x-2 border-[#444B53] shrink-0 cursor-pointer">
+                <div class="awning-cap hidden shop-awning absolute -top-2 left-0 right-0 h-2.5 rounded-t-lg"></div>
+                SELL GOODS
+            </button>
+        </nav>
+
+        <!-- =================================================================
+             3. MAIN SHOP BODY: 2-COLUMN SPLIT (CHARACTER SIDEBAR + ITEM GRID)
+             ================================================================= -->
+        <div class="bg-[#23272B] p-3 sm:p-4 grid grid-cols-1 md:grid-cols-12 gap-3.5 items-stretch">
+
+            <!-- LEFT SIDEBAR (4 COLS): LOW-POLY CHARACTER CARD (MATCHING STARTUP UI) -->
+            <aside class="md:col-span-4 bg-[#2A2E34] border-2 border-[#5C3A24] rounded-xl p-3 flex flex-col items-center justify-between">
+                <!-- Simple Status Header -->
+                <div class="w-full flex items-center justify-between text-[11px] font-extrabold text-slate-300">
+                    <span class="px-2 py-0.5 rounded bg-[#1A1D20] text-[#2ECC71]">
+                        <i class="fa-solid fa-leaf mr-1"></i>Air: <span id="stat-air">35%</span>
+                    </span>
+                    <span class="px-2 py-0.5 rounded bg-[#1A1D20] text-[#F1C40F]">
+                        <i class="fa-solid fa-bolt mr-1"></i>Energy: <span id="stat-energy">3/5</span>
+                    </span>
+                </div>
+
+                <!-- Clean Low-Poly Character Canvas -->
+                <div class="relative w-full h-56 sm:h-64 my-2 rounded-xl bg-[#1C1F23] border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="character-canvas" class="w-full h-full block"></canvas>
+                </div>
+
+                <!-- Backpack Slot Pill + Quick Outfit Toggle -->
+                <div class="w-full space-y-2">
+                    <div class="w-full py-1.5 px-3 rounded-lg bg-[#1A1D20] border border-white/10 flex items-center justify-between text-xs font-extrabold">
+                        <span class="text-slate-300"><i class="fa-solid fa-backpack text-[#C8643B] mr-1.5"></i>Backpack</span>
+                        <span id="stat-slots" class="text-white">17 / 20 Slots</span>
+                    </div>
+
+                    <button onclick="cycleCharacterOutfit()" class="tactile-btn w-full py-2 rounded-lg bg-[#383E45] hover:bg-[#434A52] text-white font-extrabold text-xs border border-white/10 cursor-pointer">
+                        <i class="fa-solid fa-shirt mr-1.5 text-[#2ECC71]"></i>Swap Outfit
+                    </button>
+                </div>
+            </aside>
+
+            <!-- RIGHT COLUMN (8 COLS): SUB-BANNER + CLEAN 3x2 LOW-POLY ITEM GRID -->
+            <section class="md:col-span-8 flex flex-col justify-between gap-3">
+                <!-- Ribbon Subheader -->
+                <div class="bg-[#1A1D20] border border-[#5C3A24] rounded-xl px-3.5 py-2 flex items-center justify-between text-xs">
+                    <span id="section-ribbon-text" class="font-extrabold uppercase tracking-wider text-[#F3E5AB]">
+                        UPGRADE YOUR GARAGE MACHINES
+                    </span>
+                    <span class="font-bold text-[#2ECC71]">
+                        Purity: <span id="stat-purity">75%</span>
+                    </span>
+                </div>
+
+                <!-- Clean 2x3 / 3x2 Item Cards Grid -->
+                <div id="items-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 flex-1">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Subtle Toast Notification -->
+        <div id="shop-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#16181B] border-2 border-[#2ECC71] text-white font-extrabold text-xs shadow-2xl flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-[#2ECC71]"></i>
+            <span id="shop-toast-msg">Purchased!</span>
+        </div>
+
+    </main>
+
+    <!-- =========================================================================
+         CLEAN LOW-POLY SHOP LOGIC & CHARACTER CANVAS RENDERER
+         ========================================================================= -->
+    <script>
+        // 1. GAME ECONOMY & PLAYER STATE
+        const defaultState = () => ({
+            coins: 183,
+            xp: 150,
+            level: 1,
+            slotsUsed: 17,
+            slotsMax: 20,
+            airQuality: 35,
+            energyUsed: 2,
+            energyMax: 5,
+            purity: 75,
+            owned: {
+                pro_picker: false,
+                big_backpack: false,
+                conveyor: false,
+                optical_sorter: false,
+                compatibilizer: false,
+                shredder: false,
+                solar_panel: 1,
+                air_filter: 0,
+                city_tree: 1,
+                bp_eco_bench: false,
+                bp_glass_lamp: false,
+                bp_fabric_tote: false
+            },
+            sellStock: {
+                pallet_bench: 2,
+                hdpe_planter: 3,
+                cardboard_bale: 4,
+                crushed_cans: 5,
+                eco_bench: 1,
+                glass_lamp: 1
+            }
+        });
+
+        let gameState = defaultState();
+        let currentTab = 'upgrades';
+        let toastTimer = null;
+
+        // 2. CLEAN LOW-POLY SVG ICONS
+        const svgIcons = {
+            picker: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><path d="M14 50 L44 20" stroke="#94A3B8" stroke-width="5" stroke-linecap="round"/><path d="M12 52 L22 42" stroke="#C8643B" stroke-width="7" stroke-linecap="round"/><path d="M44 20 L54 14 M44 20 L50 30" stroke="#2ECC71" stroke-width="4" stroke-linecap="round"/></svg>`,
+            backpack: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="18" y="16" width="28" height="36" rx="8" fill="#5D7359" stroke="#243022" stroke-width="2.5"/><rect x="22" y="32" width="20" height="14" rx="4" fill="#C8643B"/><path d="M24 16 V11 H40 V16" fill="none" stroke="#D6C37E" stroke-width="3"/></svg>`,
+            conveyor: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="10" y="28" width="44" height="14" rx="7" fill="#475569" stroke="#1E293B" stroke-width="2.5"/><circle cx="18" cy="35" r="4" fill="#F1C40F"/><circle cx="32" cy="35" r="4" fill="#F1C40F"/><circle cx="46" cy="35" r="4" fill="#F1C40F"/><rect x="22" y="20" width="8" height="8" rx="2" fill="#2980B9"/><rect x="36" y="18" width="8" height="10" rx="2" fill="#E67E22"/></svg>`,
+            sorter: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="14" y="26" width="36" height="24" rx="5" fill="#3B82F6" stroke="#1E3A8A" stroke-width="2.5"/><circle cx="32" cy="38" r="7" fill="#E0F2FE" stroke="#0284C7" stroke-width="2.5"/><rect x="24" y="14" width="16" height="12" rx="3" fill="#64748B"/></svg>`,
+            compatibilizer: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="20" y="18" width="24" height="34" rx="5" fill="#2ECC71" stroke="#14532D" stroke-width="2.5"/><rect x="26" y="11" width="12" height="7" rx="2" fill="#C8643B"/><polygon points="32,26 38,36 26,36" fill="#F3E5AB"/></svg>`,
+            shredder: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><polygon points="18,14 46,14 40,28 24,28" fill="#94A3B8"/><rect x="16" y="28" width="32" height="22" rx="4" fill="#C8643B" stroke="#5C2814" stroke-width="2.5"/><circle cx="32" cy="39" r="6" fill="#1E293B"/></svg>`,
+            solar: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><polygon points="14,22 50,16 54,40 18,46" fill="#1D4ED8" stroke="#93C5FD" stroke-width="2.5"/><line x1="32" y1="19" x2="36" y2="43" stroke="#93C5FD" stroke-width="2"/><line x1="16" y1="34" x2="52" y2="28" stroke="#93C5FD" stroke-width="2"/><rect x="28" y="44" width="8" height="8" fill="#64748B"/></svg>`,
+            filter: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="16" y="16" width="32" height="32" rx="6" fill="#CBD5E1" stroke="#475569" stroke-width="2.5"/><circle cx="32" cy="32" r="10" fill="#334155"/><path d="M32 22 V42 M22 32 H42" stroke="#38BDF8" stroke-width="3"/></svg>`,
+            tree: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="28" y="38" width="8" height="14" fill="#78350F"/><polygon points="32,12 14,40 50,40" fill="#28965A"/><polygon points="32,20 18,42 46,42" fill="#2ECC71"/></svg>`,
+            blueprint: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="14" y="16" width="36" height="32" rx="4" fill="#2563EB" stroke="#93C5FD" stroke-width="2.5"/><rect x="22" y="26" width="20" height="12" rx="2" fill="none" stroke="#F3E5AB" stroke-width="2.5"/></svg>`,
+            bench: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="14" y="24" width="36" height="12" rx="2" fill="#2A9D8F"/><rect x="12" y="36" width="40" height="8" rx="2" fill="#21867A"/><rect x="18" y="28" width="12" height="8" rx="2" fill="#F1C40F"/><rect x="34" y="28" width="12" height="8" rx="2" fill="#C8643B"/></svg>`,
+            bale: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="16" y="20" width="32" height="26" rx="4" fill="#D4A359" stroke="#78350F" stroke-width="2.5"/><line x1="26" y1="20" x2="26" y2="46" stroke="#475569" stroke-width="2.5"/><line x1="38" y1="20" x2="38" y2="46" stroke="#475569" stroke-width="2.5"/></svg>`,
+            cans: `<svg viewBox="0 0 64 64" class="w-12 h-12 mx-auto"><rect x="20" y="22" width="12" height="22" rx="3" fill="#C0392B"/><rect x="34" y="26" width="12" height="18" rx="3" fill="#E67E22"/></svg>`
+        };
+
+        // 3. SHOP ITEMS DATA BY TAB
+        const shopTabsData = {
+            upgrades: {
+                ribbon: 'GARAGE MACHINES & AUTOMATION',
+                items: [
+                    { id: 'conveyor', name: 'Conveyor Belt', stat: 'Sort while walking', price: 300, icon: svgIcons.conveyor, isBought: () => gameState.owned.conveyor },
+                    { id: 'optical_sorter', name: 'Optical Sorter', stat: '+25% Purity', price: 500, icon: svgIcons.sorter, isBought: () => gameState.owned.optical_sorter },
+                    { id: 'compatibilizer', name: 'Compatibilizer', stat: 'Bonds PET & HDPE', price: 250, icon: svgIcons.compatibilizer, isBought: () => gameState.owned.compatibilizer },
+                    { id: 'shredder', name: 'Shredder Machine', stat: 'Crushes hard plastic', price: 600, icon: svgIcons.shredder, isBought: () => gameState.owned.shredder },
+                    { id: 'big_backpack', name: 'Big Backpack', stat: '+10 Slots', price: 200, icon: svgIcons.backpack, isBought: () => gameState.owned.big_backpack },
+                    { id: 'pro_picker', name: 'Pro Picker', stat: 'Faster grab range', price: 120, icon: svgIcons.picker, isBought: () => gameState.owned.pro_picker }
+                ]
+            },
+            gear: {
+                ribbon: 'FIELD COLLECTION TOOLS & GEAR',
+                items: [
+                    { id: 'pro_picker', name: 'Pro Picker', stat: 'Faster grab range', price: 120, icon: svgIcons.picker, isBought: () => gameState.owned.pro_picker },
+                    { id: 'big_backpack', name: 'Big Backpack', stat: '+10 Slots', price: 200, icon: svgIcons.backpack, isBought: () => gameState.owned.big_backpack }
+                ]
+            },
+            blueprints: {
+                ribbon: 'PERMANENT CRAFTING BLUEPRINTS',
+                items: [
+                    { id: 'bp_eco_bench', name: 'Eco-Bench Recipe', stat: 'Sells for 120c', price: 180, icon: svgIcons.blueprint, isBought: () => gameState.owned.bp_eco_bench },
+                    { id: 'bp_glass_lamp', name: 'Glass Lantern Recipe', stat: 'Sells for 165c', price: 240, icon: svgIcons.blueprint, isBought: () => gameState.owned.bp_glass_lamp },
+                    { id: 'bp_fabric_tote', name: 'Fabric Tote Recipe', stat: 'Sells for 140c', price: 200, icon: svgIcons.blueprint, isBought: () => gameState.owned.bp_fabric_tote }
+                ]
+            },
+            cleantech: {
+                ribbon: 'CLEAN ENERGY & GREEN CITY',
+                items: [
+                    { id: 'solar_panel', name: 'Solar Panel', stat: '+5 Clean Energy', price: 400, icon: svgIcons.solar, repeatable: true },
+                    { id: 'air_filter', name: 'Air Filter', stat: '+20% Air Quality', price: 350, icon: svgIcons.filter, repeatable: true },
+                    { id: 'city_tree', name: 'City Tree', stat: '+12% Air Quality', price: 150, icon: svgIcons.tree, repeatable: true }
+                ]
+            },
+            sell: {
+                ribbon: 'SELL CRAFTED PRODUCTS & BALES',
+                items: [
+                    { id: 'pallet_bench', name: 'Teal Pallet Bench', stat: 'Crafted Furniture', price: 45, icon: svgIcons.bench, isSell: true },
+                    { id: 'hdpe_planter', name: 'HDPE Planter', stat: 'Recycled Plastic', price: 35, icon: svgIcons.tree, isSell: true },
+                    { id: 'cardboard_bale', name: 'Cardboard Bale', stat: 'Pressed Paper', price: 25, icon: svgIcons.bale, isSell: true },
+                    { id: 'crushed_cans', name: 'Crushed Cans', stat: 'Sorted Metal', price: 30, icon: svgIcons.cans, isSell: true },
+                    { id: 'eco_bench', name: 'Eco-Bench', stat: 'Composite Polymer', price: 120, icon: svgIcons.bench, isSell: true },
+                    { id: 'glass_lamp', name: 'Glass Lantern', stat: 'Multi-Stream Craft', price: 165, icon: svgIcons.filter, isSell: true }
+                ]
+            }
+        };
+
+        // 4. RENDER & INTERACTION LOGIC
+        function updateHUD() {
+            document.getElementById('coin-display').textContent = gameState.coins;
+            document.getElementById('player-level').textContent = gameState.level;
+            document.getElementById('xp-text').textContent = `${gameState.xp} / 500`;
+            document.getElementById('xp-bar').style.width = `${Math.min(100, (gameState.xp / 500) * 100)}%`;
+
+            document.getElementById('stat-air').textContent = `${gameState.airQuality}%`;
+            document.getElementById('stat-energy').textContent = `${gameState.energyUsed}/${gameState.energyMax}`;
+            document.getElementById('stat-slots').textContent = `${gameState.slotsUsed} / ${gameState.slotsMax} Slots`;
+            document.getElementById('stat-purity').textContent = `${gameState.purity}%`;
+        }
+
+        function selectTab(tabKey) {
+            currentTab = tabKey;
+
+            ['upgrades', 'gear', 'blueprints', 'cleantech', 'sell'].forEach(key => {
+                const btn = document.getElementById(`tab-${key}`);
+                const awning = btn.querySelector('.awning-cap');
+                if (key === tabKey) {
+                    btn.className = 'tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#C8643B] text-white border-t-2 border-x-2 border-[#8B4A2B] shrink-0 cursor-pointer';
+                    awning.classList.remove('hidden');
+                } else {
+                    btn.className = 'tab-btn relative px-3.5 py-2 rounded-t-xl font-extrabold text-xs uppercase tracking-wide bg-[#282C31] text-slate-300 hover:text-white border-t-2 border-x-2 border-[#444B53] shrink-0 cursor-pointer';
+                    awning.classList.add('hidden');
+                }
+            });
+
+            renderItemsGrid();
+        }
+
+        function renderItemsGrid() {
+            const tabInfo = shopTabsData[currentTab];
+            document.getElementById('section-ribbon-text').textContent = tabInfo.ribbon;
+
+            const grid = document.getElementById('items-grid');
+            grid.innerHTML = '';
+
+            tabInfo.items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'lowpoly-card rounded-xl p-3 flex flex-col items-center justify-between text-center';
+
+                if (item.isSell) {
+                    const count = gameState.sellStock[item.id] || 0;
+                    card.innerHTML = `
+                        <div class="w-full flex justify-end">
+                            <span class="px-2 py-0.5 rounded bg-[#1A1D20] text-[10px] font-extrabold text-slate-300">x${count}</span>
+                        </div>
+                        <div class="my-1">${item.icon}</div>
+                        <div>
+                            <h3 class="font-extrabold text-xs text-white leading-tight">${item.name}</h3>
+                            <p class="text-[10px] font-semibold text-[#2ECC71] mt-0.5">${item.stat}</p>
+                        </div>
+                        <button onclick="handleItemAction('${item.id}')" class="tactile-btn mt-2.5 w-full py-1.5 px-2 rounded-lg bg-[#28965A] text-white font-black text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer">
+                            <span class="w-4 h-4 rounded-full bg-[#F1C40F] text-[#3A2618] text-[10px] flex items-center justify-center font-black">$</span>
+                            <span>+${item.price}</span>
+                        </button>
+                    `;
+                } else {
+                    const bought = item.isBought ? item.isBought() : false;
+                    const btnHtml = bought
+                        ? `<button disabled class="mt-2.5 w-full py-1.5 px-2 rounded-lg bg-[#1E2124] text-[#2ECC71] border border-[#2ECC71]/40 font-black text-xs uppercase cursor-default">OWNED</button>`
+                        : `<button onclick="handleItemAction('${item.id}')" class="tactile-btn mt-2.5 w-full py-1.5 px-2 rounded-lg ${item.repeatable ? 'bg-[#28965A]' : 'bg-[#C8643B]'} text-white font-black text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer">
+                               <span class="w-4 h-4 rounded-full bg-[#F1C40F] text-[#3A2618] text-[10px] flex items-center justify-center font-black">$</span>
+                               <span>${item.price}</span>
+                           </button>`;
+
+                    card.innerHTML = `
+                        <div class="mt-1">${item.icon}</div>
+                        <div class="mt-1">
+                            <h3 class="font-extrabold text-xs text-white leading-tight">${item.name}</h3>
+                            <p class="text-[10px] font-semibold text-slate-300 mt-0.5">${item.stat}</p>
+                        </div>
+                        ${btnHtml}
+                    `;
+                }
+
+                grid.appendChild(card);
+            });
+        }
+
+        function handleItemAction(itemId) {
+            const tabInfo = shopTabsData[currentTab];
+            const item = tabInfo.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            // Sell flow
+            if (item.isSell) {
+                if ((gameState.sellStock[item.id] || 0) > 0) {
+                    gameState.sellStock[item.id]--;
+                }
+                gameState.coins += item.price;
+                gainXP(25);
+                showToast(`Sold ${item.name} for +${item.price} Coins!`);
+                updateHUD();
+                renderItemsGrid();
+                return;
+            }
+
+            // Buy flow
+            if (gameState.coins < item.price) {
+                showToast(`Need ${item.price - gameState.coins} more Coins!`);
+                return;
+            }
+
+            gameState.coins -= item.price;
+            gainXP(60);
+
+            if (item.id === 'big_backpack') {
+                gameState.owned.big_backpack = true;
+                gameState.slotsMax += 10;
+            } else if (item.id === 'pro_picker') {
+                gameState.owned.pro_picker = true;
+            } else if (item.id === 'conveyor') {
+                gameState.owned.conveyor = true;
+                gameState.energyUsed += 1;
+            } else if (item.id === 'optical_sorter') {
+                gameState.owned.optical_sorter = true;
+                gameState.purity = 100;
+                gameState.energyUsed += 1;
+            } else if (item.id === 'compatibilizer') {
+                gameState.owned.compatibilizer = true;
+                gameState.airQuality = Math.max(10, gameState.airQuality - 10);
+            } else if (item.id === 'shredder') {
+                gameState.owned.shredder = true;
+                gameState.energyUsed += 1;
+            } else if (item.id === 'solar_panel') {
+                gameState.owned.solar_panel++;
+                gameState.energyMax += 5;
+            } else if (item.id === 'air_filter') {
+                gameState.owned.air_filter++;
+                gameState.energyUsed += 2;
+                gameState.airQuality = Math.min(100, gameState.airQuality + 20);
+            } else if (item.id === 'city_tree') {
+                gameState.owned.city_tree++;
+                gameState.airQuality = Math.min(100, gameState.airQuality + 12);
+            } else if (item.id.startsWith('bp_')) {
+                gameState.owned[item.id] = true;
+            }
+
+            showToast(`Unlocked ${item.name}!`);
+            updateHUD();
+            renderItemsGrid();
+        }
+
+        function gainXP(amount) {
+            gameState.xp += amount;
+            if (gameState.xp >= 500) {
+                gameState.xp -= 500;
+                gameState.level++;
+            }
+        }
+
+        function addCoins(amount) {
+            gameState.coins += amount;
+            updateHUD();
+            showToast(`+${amount} Test Coins added!`);
+        }
+
+        function resetShop() {
+            gameState = defaultState();
+            updateHUD();
+            renderItemsGrid();
+            showToast('Shop reset to starting state!');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('shop-toast');
+            document.getElementById('shop-toast-msg').textContent = msg;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2000);
+        }
+
+        function toggleFullscreen() {
+            const win = document.getElementById('shop-window');
+            const btn = document.getElementById('fs-btn');
+            win.classList.toggle('is-fullscreen');
+            const active = win.classList.contains('is-fullscreen');
+            btn.innerHTML = active
+                ? '<i class="fa-solid fa-compress mr-1"></i>Exit'
+                : '<i class="fa-solid fa-expand mr-1"></i>Fullscreen';
+            setTimeout(resizeCharCanvas, 50);
+        }
+
+        // 5. STYLIZED LOW-POLY CHARACTER RENDERER (MATCHING STARTUP UI & SCREENSHOTS)
+        const charPresets = [
+            { coat: '#E66829', pants: '#34495E', skin: '#F0C5A8', accent: '#C8643B', beanie: true, male: true },
+            { coat: '#515D6B', pants: '#4A4E54', skin: '#F9DFCE', accent: '#D95B43', beanie: true, male: false },
+            { coat: '#7C4838', pants: '#585B60', skin: '#E2AE88', accent: '#28965A', beanie: false, male: true },
+            { coat: '#346975', pants: '#3A3D42', skin: '#BC7E52', accent: '#F1C40F', beanie: true, male: false }
+        ];
+        let presetIdx = 0;
+        let bobTime = 0;
+
+        function cycleCharacterOutfit() {
+            presetIdx = (presetIdx + 1) % charPresets.length;
+            showToast('Character appearance updated!');
+        }
+
+        const charCanvas = document.getElementById('character-canvas');
+        const charCtx = charCanvas.getContext('2d');
+
+        function resizeCharCanvas() {
+            const rect = charCanvas.parentElement.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            charCanvas.width = rect.width * dpr;
+            charCanvas.height = rect.height * dpr;
+            charCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function renderCharacterLoop() {
+            try {
+                const w = charCanvas.parentElement.clientWidth;
+                const h = charCanvas.parentElement.clientHeight;
+                const p = charPresets[presetIdx];
+                bobTime += 0.04;
+
+                charCtx.clearRect(0, 0, w, h);
+
+                const cx = w * 0.5;
+                const groundY = h * 0.88;
+                const s = Math.min(w, h) * 0.68;
+                const bob = Math.sin(bobTime) * 2.5;
+
+                charCtx.save();
+                charCtx.translate(cx, groundY);
+
+                // Floor Disc
+                charCtx.fillStyle = '#2B3036';
+                charCtx.beginPath();
+                charCtx.ellipse(0, 0, s * 0.36, s * 0.08, 0, 0, Math.PI * 2);
+                charCtx.fill();
+
+                // Boots
+                charCtx.fillStyle = '#5D4037';
+                charCtx.beginPath();
+                charCtx.roundRect(-s * 0.14, -s * 0.08, s * 0.12, s * 0.08, 4);
+                charCtx.roundRect(s * 0.02, -s * 0.08, s * 0.12, s * 0.08, 4);
+                charCtx.fill();
+
+                // Trousers
+                charCtx.fillStyle = p.pants;
+                charCtx.fillRect(-s * 0.12, -s * 0.44, s * 0.10, s * 0.37);
+                charCtx.fillRect(s * 0.02, -s * 0.44, s * 0.10, s * 0.37);
+
+                // Inner Shirt
+                charCtx.fillStyle = '#E6D7B9';
+                charCtx.beginPath();
+                charCtx.roundRect(-s * 0.14, -s * 0.78 + bob, s * 0.28, s * 0.36, 8);
+                charCtx.fill();
+
+                // Long Coat / Jacket
+                charCtx.fillStyle = p.coat;
+                charCtx.beginPath();
+                charCtx.roundRect(-s * 0.16, -s * 0.79 + bob, s * 0.13, s * 0.48, 5);
+                charCtx.roundRect(s * 0.03, -s * 0.79 + bob, s * 0.13, s * 0.48, 5);
+                charCtx.fill();
+
+                // High-Vis Stripe on Orange Jacket
+                if (presetIdx === 0) {
+                    charCtx.fillStyle = '#F1F5F9';
+                    charCtx.fillRect(-s * 0.155, -s * 0.56 + bob, s * 0.12, 4);
+                    charCtx.fillRect(s * 0.035, -s * 0.56 + bob, s * 0.12, 4);
+                }
+
+                // Arms
+                charCtx.fillStyle = p.coat;
+                charCtx.beginPath();
+                charCtx.roundRect(-s * 0.22, -s * 0.76 + bob, s * 0.065, s * 0.32, 5);
+                charCtx.roundRect(s * 0.155, -s * 0.76 + bob, s * 0.065, s * 0.32, 5);
+                charCtx.fill();
+
+                // Hands
+                charCtx.fillStyle = p.skin;
+                charCtx.beginPath();
+                charCtx.arc(-s * 0.188, -s * 0.42 + bob, s * 0.035, 0, Math.PI * 2);
+                charCtx.arc(s * 0.188, -s * 0.42 + bob, s * 0.035, 0, Math.PI * 2);
+                charCtx.fill();
+
+                // Scarf
+                charCtx.fillStyle = p.accent;
+                charCtx.beginPath();
+                charCtx.roundRect(-s * 0.10, -s * 0.82 + bob, s * 0.20, s * 0.055, 4);
+                charCtx.fill();
+                charCtx.fillRect(s * 0.04, -s * 0.78 + bob, s * 0.045, s * 0.14);
+
+                // Head
+                const headY = -s * 0.95 + bob;
+                const headR = s * 0.13;
+                charCtx.fillStyle = p.skin;
+                charCtx.beginPath();
+                charCtx.arc(0, headY, headR, 0, Math.PI * 2);
+                charCtx.fill();
+
+                // Eyes
+                charCtx.fillStyle = '#FFFFFF';
+                charCtx.beginPath();
+                charCtx.arc(-headR * 0.32, headY - 2, headR * 0.24, 0, Math.PI * 2);
+                charCtx.arc(headR * 0.32, headY - 2, headR * 0.24, 0, Math.PI * 2);
+                charCtx.fill();
+
+                charCtx.fillStyle = '#1E2124';
+                charCtx.beginPath();
+                charCtx.arc(-headR * 0.28, headY - 2, headR * 0.11, 0, Math.PI * 2);
+                charCtx.arc(headR * 0.36, headY - 2, headR * 0.11, 0, Math.PI * 2);
+                charCtx.fill();
+
+                // Mustache / Smile
+                charCtx.strokeStyle = p.male ? '#94A3B8' : '#7C4A3A';
+                charCtx.lineWidth = p.male ? 3 : 2;
+                charCtx.beginPath();
+                charCtx.arc(0, headY + headR * 0.42, headR * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+                charCtx.stroke();
+
+                // Beanie
+                if (p.beanie) {
+                    charCtx.fillStyle = p.accent;
+                    charCtx.beginPath();
+                    charCtx.arc(0, headY - headR * 0.15, headR * 1.03, Math.PI, 0);
+                    charCtx.fill();
+                    charCtx.beginPath();
+                    charCtx.arc(0, headY - headR * 1.25, headR * 0.32, 0, Math.PI * 2);
+                    charCtx.fill();
+                }
+
+                charCtx.restore();
+            } catch (e) {}
+
+            requestAnimationFrame(renderCharacterLoop);
+        }
+
+        // Initialize on Window Load
+        window.onload = function () {
+            resizeCharCanvas();
+            updateHUD();
+            selectTab('upgrades');
+            renderCharacterLoop();
+        };
+
+        window.addEventListener('resize', resizeCharCanvas);
+    </script>
+</body>
+</html>
