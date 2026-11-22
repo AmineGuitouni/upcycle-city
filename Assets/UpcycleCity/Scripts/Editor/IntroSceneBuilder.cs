@@ -34,6 +34,10 @@ namespace UpcycleCity.Editor
         const string GrimProfilePath = SettingsFolder + "/IntroGrim.asset";
         const string DreamProfilePath = SettingsFolder + "/IntroDream.asset";
         const string WaterMeshPath = SettingsFolder + "/IntroWaterGrid.asset";
+        const string FocusProfilePath = SettingsFolder + "/IntroFocus.asset";
+        const string TransitionProfilePath = SettingsFolder + "/IntroTransition.asset";
+        const string CausticsPath = SettingsFolder + "/IntroCaustics.png";
+        const string FootprintTexPath = SettingsFolder + "/IntroFootprint.png";
         const string Art = "Assets/UpcycleCity/Art/";
         const string Props = Art + "UpcycleProps/";
 
@@ -82,11 +86,15 @@ namespace UpcycleCity.Editor
             IntroConfig config = CreateOrFillConfig();
             VolumeProfile grim = CreateOrFillGrimProfile();
             VolumeProfile dream = CreateOrFillDreamProfile();
+            VolumeProfile focus = CreateOrFillFocusProfile();
+            VolumeProfile transition = CreateOrFillTransitionProfile();
             Mesh waterMesh = CreateOrLoadWaterMesh();
-            var mats = new Materials();
+            Texture2D caustics = CreateOrLoadTexture(CausticsPath, 256, CausticsPixel, TextureWrapMode.Repeat);
+            Texture2D footprint = CreateOrLoadTexture(FootprintTexPath, 64, FootprintPixel, TextureWrapMode.Clamp);
+            var mats = new Materials(footprint);
 
             var ctx = new Context { mats = mats, waterMesh = waterMesh, anchors = new GameObject("Anchors").transform };
-            BuildCore(ctx, grim, dream);
+            BuildCore(ctx, grim, dream, focus, transition, caustics);
             BuildBeach(ctx);
             BuildUnderwater(ctx);
             BuildHome(ctx);
@@ -112,8 +120,13 @@ namespace UpcycleCity.Editor
             public readonly List<Renderer> water = new List<Renderer>();
             public GameObject litter, deadTurtle;
             public SeaTurtle shoreTurtle, underwaterTurtle;
-            public Transform bag, coin;
-            public Light lamp;
+            public Transform tangledBag, heldBag, coin;
+            public Light lamp, windowLight;
+            public Volume transitionVolume;
+            public GameObject memoryOnly, presentOnly;
+            public CausticsCookie caustics;
+            public FootprintTrail footprints;
+            public ParticleSystem sandPuff, coinGlint;
             public CinematicActor actor;
         }
 
@@ -133,6 +146,15 @@ namespace UpcycleCity.Editor
                 config.dreamMusic = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/UpcycleCity/Audio/Music/Intro/intro_catmint.ogg");
             if (config.coinClip == null)
                 config.coinClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/UpcycleCity/Audio/SFX/Economy/seller_getting_money.wav");
+            const string sfx = "Assets/UpcycleCity/Audio/SFX/Intro/";
+            if (config.windLoop == null) config.windLoop = AssetDatabase.LoadAssetAtPath<AudioClip>(sfx + "ambience_wind_loop.wav");
+            if (config.underwaterLoop == null) config.underwaterLoop = AssetDatabase.LoadAssetAtPath<AudioClip>(sfx + "ambience_underwater_loop.wav");
+            if (config.heartbeat == null) config.heartbeat = AssetDatabase.LoadAssetAtPath<AudioClip>(sfx + "heartbeat.wav");
+            if (config.sting == null) config.sting = AssetDatabase.LoadAssetAtPath<AudioClip>(sfx + "sting.wav");
+            if (config.gullCries == null || config.gullCries.Length == 0)
+                config.gullCries = LoadClips("Assets/UpcycleCity/Audio/SFX/Intro", "gull_");
+            if (config.footsteps == null || config.footsteps.Length == 0)
+                config.footsteps = LoadClips("Assets/UpcycleCity/Audio/SFX/Footsteps", "walk_");
             if (config.waveClips == null || config.waveClips.Length == 0)
             {
                 var waves = new List<AudioClip>();
@@ -143,6 +165,19 @@ namespace UpcycleCity.Editor
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssetIfDirty(config);
             return config;
+        }
+
+        static AudioClip[] LoadClips(string folder, string prefix)
+        {
+            var clips = new List<AudioClip>();
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { folder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileName(path).StartsWith(prefix))
+                    clips.Add(AssetDatabase.LoadAssetAtPath<AudioClip>(path));
+            }
+            clips.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            return clips.ToArray();
         }
 
         static VolumeProfile LoadOrCreateProfile(string path)
@@ -211,9 +246,9 @@ namespace UpcycleCity.Editor
             }
             if (AddIfMissing<ColorAdjustments>(p) is { } color)
             {
-                color.postExposure.Override(-0.25f);
-                color.contrast.Override(6f);
-                color.saturation.Override(32f);
+                color.postExposure.Override(-0.45f);
+                color.contrast.Override(20f);
+                color.saturation.Override(42f);
                 color.colorFilter.Override(new Color(1f, 0.98f, 0.94f));
             }
             if (AddIfMissing<SplitToning>(p) is { } split)
@@ -238,10 +273,105 @@ namespace UpcycleCity.Editor
             if (AddIfMissing<ChromaticAberration>(p) is { } chroma)
                 chroma.intensity.Override(0.18f);
             if (AddIfMissing<Tonemapping>(p) is { } tone)
-                tone.mode.Override(TonemappingMode.Neutral);
+                tone.mode.Override(TonemappingMode.ACES);
             EditorUtility.SetDirty(p);
             AssetDatabase.SaveAssetIfDirty(p);
             return p;
+        }
+
+        /// <summary>Bokeh depth of field whose focus distance CinematicCamera drives shot by shot.</summary>
+        static VolumeProfile CreateOrFillFocusProfile()
+        {
+            VolumeProfile p = LoadOrCreateProfile(FocusProfilePath);
+            if (AddIfMissing<DepthOfField>(p) is { } dof)
+            {
+                dof.mode.Override(DepthOfFieldMode.Bokeh);
+                dof.focusDistance.Override(5f);
+                dof.focalLength.Override(55f);
+                dof.aperture.Override(3.2f);
+                dof.bladeCount.Override(6);
+            }
+            EditorUtility.SetDirty(p);
+            AssetDatabase.SaveAssetIfDirty(p);
+            return p;
+        }
+
+        /// <summary>The ripple as the memory begins: lens warp, colour fringes and a bloom swell (weight pulsed).</summary>
+        static VolumeProfile CreateOrFillTransitionProfile()
+        {
+            VolumeProfile p = LoadOrCreateProfile(TransitionProfilePath);
+            if (AddIfMissing<LensDistortion>(p) is { } lens)
+            {
+                lens.intensity.Override(-0.55f);
+                lens.scale.Override(0.92f);
+            }
+            if (AddIfMissing<ChromaticAberration>(p) is { } chroma)
+                chroma.intensity.Override(1f);
+            if (AddIfMissing<Bloom>(p) is { } bloom)
+            {
+                bloom.intensity.Override(4f);
+                bloom.threshold.Override(0.55f);
+                bloom.scatter.Override(0.85f);
+            }
+            EditorUtility.SetDirty(p);
+            AssetDatabase.SaveAssetIfDirty(p);
+            return p;
+        }
+
+        /// <summary>Writes a generated greyscale texture once (then keeps it, so it can be painted over).</summary>
+        static Texture2D CreateOrLoadTexture(string path, int size, System.Func<float, float, float> pixel, TextureWrapMode wrap)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null)
+                return existing;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float v = Mathf.Clamp01(pixel(x / (float)size, y / (float)size));
+                pixels[y * size + x] = new Color(v, v, v, v);
+            }
+            tex.SetPixels(pixels);
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.wrapMode = wrap;
+            importer.alphaSource = TextureImporterAlphaSource.FromInput;
+            importer.alphaIsTransparency = wrap == TextureWrapMode.Clamp;
+            importer.mipmapEnabled = true;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        /// <summary>Tileable caustics: bright wavy lines where cells of a Voronoi pattern meet.</summary>
+        static float CausticsPixel(float u, float v)
+        {
+            float best = 9f, second = 9f;
+            for (int cx = -1; cx <= 4; cx++)
+            for (int cy = -1; cy <= 4; cy++)
+            {
+                // A 4x4 grid of jittered points, wrapped so the texture tiles
+                int hx = (cx + 4) % 4, hy = (cy + 4) % 4;
+                float jx = Mathf.Repeat(Mathf.Sin(hx * 12.9898f + hy * 78.233f) * 43758.5453f, 1f);
+                float jy = Mathf.Repeat(Mathf.Sin(hx * 39.3468f + hy * 11.135f) * 24634.6345f, 1f);
+                float px = (cx + 0.15f + jx * 0.7f) / 4f, py = (cy + 0.15f + jy * 0.7f) / 4f;
+                float d = Vector2.Distance(new Vector2(u, v), new Vector2(px, py));
+                if (d < best) { second = best; best = d; }
+                else if (d < second) second = d;
+            }
+            float edge = second - best;
+            return 0.25f + 0.75f * Mathf.Pow(Mathf.Clamp01(1f - edge * 9f), 3f);
+        }
+
+        /// <summary>A soft oval, a shoe print pressed into sand.</summary>
+        static float FootprintPixel(float u, float v)
+        {
+            float x = (u - 0.5f) * 2f, y = (v - 0.5f) * 2f;
+            float sole = Mathf.Clamp01(1f - (x * x / 0.55f + y * y / 0.95f));
+            float waist = 1f - 0.45f * Mathf.Exp(-y * y * 18f) * Mathf.Clamp01(x * x * 6f);
+            return Mathf.SmoothStep(0f, 1f, sole * 2.2f) * waist;
         }
 
         /// <summary>A 200 x 120 m grid; UV is in metres (u along the shore, v out to sea), as Stylized Water expects.</summary>
@@ -293,9 +423,27 @@ namespace UpcycleCity.Editor
         sealed class Materials
         {
             public readonly Material water, sand, seaFloor, shaft, motes, plywood, concrete, roof, gold, fabric;
+            public readonly Material plastic, footprint, particles, smog, bulb;
 
-            public Materials()
+            public Materials(Texture2D footprintTex)
             {
+                plastic = Get("Intro_PlasticBag", "UpcycleCity/Plastic Bag", null);
+                footprint = Get("Intro_Footprint", "Universal Render Pipeline/Particles/Unlit", m =>
+                {
+                    Transparent(m, BlendMode.SrcAlpha, BlendMode.OneMinusSrcAlpha);
+                    m.SetColor("_BaseColor", new Color(0.18f, 0.15f, 0.12f, 0.5f));
+                    m.SetTexture("_BaseMap", footprintTex);
+                });
+                particles = Get("Intro_ParticlesAlpha", "Universal Render Pipeline/Particles/Unlit", m =>
+                {
+                    Transparent(m, BlendMode.SrcAlpha, BlendMode.OneMinusSrcAlpha);
+                    m.SetColor("_BaseColor", Color.white);
+                    var tex = AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd");
+                    if (tex != null)
+                        m.SetTexture("_BaseMap", tex);
+                });
+                smog = AssetDatabase.LoadAssetAtPath<Material>("Assets/UpcycleCity/Materials/SmogDeck.mat");
+                bulb = Get("Intro_StreetBulb", "Universal Render Pipeline/Unlit", m => m.SetColor("_BaseColor", new Color(1f, 0.8f, 0.5f)));
                 water = Get("Intro_Water", "UpcycleCity/Stylized Water", null);
                 sand = Lit("Intro_Sand", "#D6C29A", 0.1f, 1f, 0.75f);
                 seaFloor = Lit("Intro_SeaFloor", "#B9AE8A", 0.15f, 0f, 0f);
@@ -308,18 +456,23 @@ namespace UpcycleCity.Editor
                 motes = Get("Intro_Motes", "Universal Render Pipeline/Particles/Unlit", m =>
                 {
                     // Additive, soft white specks
-                    m.SetFloat("_Surface", 1f);
+                    Transparent(m, BlendMode.One, BlendMode.One);
                     m.SetFloat("_Blend", 2f);
-                    m.SetFloat("_SrcBlend", (float)BlendMode.One);
-                    m.SetFloat("_DstBlend", (float)BlendMode.One);
-                    m.SetFloat("_ZWrite", 0f);
-                    m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                    m.renderQueue = (int)RenderQueue.Transparent;
                     m.SetColor("_BaseColor", new Color(0.75f, 0.95f, 1f, 0.6f));
                     var tex = AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd");
                     if (tex != null)
                         m.SetTexture("_BaseMap", tex);
                 });
+            }
+
+            static void Transparent(Material m, BlendMode src, BlendMode dst)
+            {
+                m.SetFloat("_Surface", 1f);
+                m.SetFloat("_SrcBlend", (float)src);
+                m.SetFloat("_DstBlend", (float)dst);
+                m.SetFloat("_ZWrite", 0f);
+                m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                m.renderQueue = (int)RenderQueue.Transparent;
             }
 
             static Material Get(string name, string shaderName, System.Action<Material> setup)
@@ -357,7 +510,8 @@ namespace UpcycleCity.Editor
 
         // ---------------------------------------------------------------- core: camera, sun, grades, UI
 
-        static void BuildCore(Context ctx, VolumeProfile grim, VolumeProfile dream)
+        static void BuildCore(Context ctx, VolumeProfile grim, VolumeProfile dream, VolumeProfile focus, VolumeProfile transition,
+            Texture2D caustics)
         {
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/UpcycleCity/Materials/Sky_Pollution.mat");
             if (sky != null)
@@ -379,7 +533,8 @@ namespace UpcycleCity.Editor
             using (var so = new SerializedObject(ctx.pollution))
             {
                 so.FindProperty("pollution").floatValue = 1f;
-                so.FindProperty("transitionTime").floatValue = 2f;
+                // The memory heals the beach over this long: litter dissolves, the sky clears
+                so.FindProperty("transitionTime").floatValue = 2.6f;
                 so.FindProperty("profile").objectReferenceValue =
                     AssetDatabase.LoadAssetAtPath<PollutionProfile>("Assets/UpcycleCity/Settings/PollutionProfile.asset");
                 so.FindProperty("sun").objectReferenceValue = ctx.sun;
@@ -390,6 +545,17 @@ namespace UpcycleCity.Editor
 
             ctx.grimVolume = AddVolume(env, "Volume_Grim", grim, 1f, 1f);
             ctx.dreamVolume = AddVolume(env, "Volume_Dream", dream, 0f, 2f);
+            ctx.transitionVolume = AddVolume(env, "Volume_Transition", transition, 0f, 4f);
+            Volume focusVolume = AddVolume(env, "Volume_Focus", focus, 1f, 5f);
+
+            ctx.caustics = sunGo.AddComponent<CausticsCookie>();
+            using (var so = new SerializedObject(ctx.caustics))
+            {
+                so.FindProperty("sun").objectReferenceValue = ctx.sun;
+                so.FindProperty("caustics").objectReferenceValue = caustics;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            ctx.caustics.enabled = false;
 
             var camGo = new GameObject("IntroCamera") { tag = "MainCamera" };
             camGo.transform.position = new Vector3(-6f, 1.9f, -6.5f);
@@ -401,7 +567,12 @@ namespace UpcycleCity.Editor
             UniversalAdditionalCameraData data = ctx.camera.GetUniversalAdditionalCameraData();
             data.renderPostProcessing = true;
             data.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
-            camGo.AddComponent<CinematicCamera>();
+            var cinematic = camGo.AddComponent<CinematicCamera>();
+            using (var so = new SerializedObject(cinematic))
+            {
+                so.FindProperty("focusVolume").objectReferenceValue = focusVolume;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         static Volume AddVolume(Transform parent, string name, VolumeProfile profile, float weight, float priority)
@@ -430,9 +601,9 @@ namespace UpcycleCity.Editor
             for (int i = 0; i < 9; i++)
             {
                 var pos = new Vector3(Range(random, -34f, 26f), 0f, Range(random, -16f, -7f));
-                Place(Art + $"QuaterniusNature/PalmTree_{1 + i % 4}.fbx", root, pos, Range(random, 0f, 360f), Range(random, 1.6f, 2.2f));
+                AddSway(Place(Art + $"QuaterniusNature/PalmTree_{1 + i % 4}.fbx", root, pos, Range(random, 0f, 360f), Range(random, 1.6f, 2.2f)), 1.4f, 0.22f);
             }
-            Place(Art + "QuaterniusNature/PalmTree_2.fbx", root, new Vector3(8.5f, 0f, -2.5f), 210f, 2f);
+            AddSway(Place(Art + "QuaterniusNature/PalmTree_2.fbx", root, new Vector3(8.5f, 0f, -2.5f), 210f, 2f), 1.4f, 0.22f);
             for (int i = 0; i < 18; i++)
             {
                 var pos = new Vector3(Range(random, -30f, 24f), 0f, Range(random, -14f, -4f));
@@ -467,12 +638,17 @@ namespace UpcycleCity.Editor
                 Transform item = Place(Props + LitterModels[random.Next(LitterModels.Length)] + ".fbx", ctx.litter.transform,
                     pos, Range(random, 0f, 360f), Range(random, 0.9f, 1.2f), tiltRandom: random);
                 if (item != null)
+                {
                     SettleOnGround(item, 0f);
+                    Visibility(item.gameObject, PollutionVisibilityMode.WhenPolluted, Range(random, 0.3f, 0.85f));
+                }
             }
             for (int i = 0; i < 4; i++)
             {
                 var pos = new Vector3(Range(random, -26f, 20f), 0f, Range(random, -9f, -3f));
-                Place(Props + "Bourguiba/Litter/bag_pile.fbx", ctx.litter.transform, pos, Range(random, 0f, 360f), 1f);
+                Transform pile = Place(Props + "Bourguiba/Litter/bag_pile.fbx", ctx.litter.transform, pos, Range(random, 0f, 360f), 1f);
+                if (pile != null)
+                    Visibility(pile.gameObject, PollutionVisibilityMode.WhenPolluted, Range(random, 0.4f, 0.7f));
             }
             for (int i = 0; i < 16; i++)
             {
@@ -480,7 +656,10 @@ namespace UpcycleCity.Editor
                 Transform item = Place(Props + FloatingLitter[random.Next(FloatingLitter.Length)] + ".fbx", ctx.litter.transform,
                     pos, Range(random, 0f, 360f), 1f, tiltRandom: random);
                 if (item != null)
-                    SettleOnGround(item, 0.06f);
+                {
+                    SettleOnGround(item, 0.16f);
+                    Visibility(item.gameObject, PollutionVisibilityMode.WhenPolluted, Range(random, 0.3f, 0.85f));
+                }
             }
 
             // The dead turtle on its side at the waterline, a plastic bag caught around its head
@@ -496,42 +675,292 @@ namespace UpcycleCity.Editor
             }
             var dead = ctx.deadTurtle.AddComponent<SeaTurtle>();
             SetTurtle(dead, model, SeaTurtle.TurtleMode.Dead, new Transform[0], 1f, 0f);
-            ctx.bag = Place(Props + "Litter/bag_white.fbx", ctx.deadTurtle.transform, Vector3.zero, 0f, 0.6f);
-            if (ctx.bag != null)
+            Visibility(ctx.deadTurtle, PollutionVisibilityMode.WhenPolluted, 0.55f);
+            // The plastic caught round its neck, wrapped around the head bone so it follows the limp pose
+            Transform turtleHead = model != null ? model.Find("Head") : null;
+            ctx.tangledBag = Place(Props + "Intro/bag_tangled.fbx", turtleHead != null ? turtleHead : ctx.deadTurtle.transform, Vector3.zero, 0f, 1.25f);
+            if (ctx.tangledBag != null)
             {
-                ctx.bag.name = "TangledBag";
-                ctx.bag.localPosition = new Vector3(0.06f, 0.12f, 0.6f);
-                ctx.bag.localRotation = Quaternion.Euler(15f, 30f, 35f);
+                ctx.tangledBag.name = "TangledBag";
+                ctx.tangledBag.localPosition = new Vector3(0f, 0f, 0.05f);
+                ctx.tangledBag.localRotation = Quaternion.Euler(0f, 0f, 25f);
+                Plastic(ctx.tangledBag, ctx.mats.plastic);
             }
+            // The same bag as he carries it, hidden until he frees it; it swings from his hand
+            ctx.heldBag = Place(Props + "Intro/bag_held.fbx", root, new Vector3(0f, -5f, 0f), 0f, 1f);
+            if (ctx.heldBag != null)
+            {
+                ctx.heldBag.name = "HeldBag";
+                Plastic(ctx.heldBag, ctx.mats.plastic);
+                var swing = ctx.heldBag.gameObject.AddComponent<Pendulum>();
+                using (var so = new SerializedObject(swing))
+                {
+                    so.FindProperty("amplitudeDegrees").vector2Value = new Vector2(6f, 4f);
+                    so.FindProperty("frequency").floatValue = 0.9f;
+                    so.FindProperty("inertia").floatValue = 9f;
+                    so.FindProperty("hangUpright").boolValue = true;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                ctx.heldBag.gameObject.SetActive(false);
+            }
+            ctx.sandPuff = Particles(root, "SandPuff", new Vector3(1.6f, 0.1f, 3.4f), ctx.mats.particles, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.3f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1.1f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.16f);
+                main.startColor = new Color(0.68f, 0.6f, 0.47f, 0.7f);
+                main.gravityModifier = 0.5f;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Hemisphere;
+                shape.radius = 0.15f;
+                Fade(ps);
+            });
 
             // The memory: the same turtle alive, playing in the shallows (hidden in the present)
-            Transform[] loop = Loop(ctx.anchors, "Path_ShoreTurtle", new Vector3(1.6f, 0f, 8.2f), new Vector2(2.8f, 1.5f), 8,
+            Transform[] loop = Loop(ctx.anchors, "Path_ShoreTurtle", new Vector3(1.4f, 0f, 7.7f), new Vector2(3.4f, 1.3f), 8,
                 i => i % 2 == 0 ? 0.02f : -0.16f);
             var shoreGo = new GameObject("MemoryTurtle_Shore");
             shoreGo.transform.SetParent(root);
             shoreGo.transform.position = loop[0].position;
-            Transform shoreModel = Place(Props + "Intro/sea_turtle.fbx", shoreGo.transform, Vector3.zero, 0f, 1.4f);
+            Transform shoreModel = Place(Props + "Intro/sea_turtle.fbx", shoreGo.transform, Vector3.zero, 0f, 1.7f);
             ResetLocal(shoreModel);
             ctx.shoreTurtle = shoreGo.AddComponent<SeaTurtle>();
             SetTurtle(ctx.shoreTurtle, shoreModel, SeaTurtle.TurtleMode.Swim, loop, 1.3f, 0f);
-            shoreGo.SetActive(false);
+            using (var so = new SerializedObject(ctx.shoreTurtle))
+            {
+                so.FindProperty("bankDegrees").floatValue = 9f; // stays flat in the shallows, shell to the sky
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Visibility(shoreGo, PollutionVisibilityMode.WhenClean, 0.35f);
+
+            BuildBeachPresent(ctx, root);
+            BuildBeachMemory(ctx, root);
 
             // Shots and marks
             Mark(ctx.anchors, "Mark_ShoreStart", new Vector3(-16f, 0f, 1.8f), 90f);
-            PathPoints(ctx.anchors, "Path_Shore", new Vector3(-9f, 0f, 2.3f), new Vector3(-3f, 0f, 1.9f), new Vector3(0.4f, 0f, 2.3f));
+            PathPoints(ctx.anchors, "Path_Shore", new Vector3(-9f, 0f, 2.3f), new Vector3(-3f, 0f, 1.9f), new Vector3(0.9f, 0f, 2.63f));
             Shot(ctx.anchors, "B1_From", new Vector3(-5.5f, 1.9f, -6.5f), new Vector3(-12f, 1.1f, 2f), 38f);
             Shot(ctx.anchors, "B1_To", new Vector3(-2.8f, 1.75f, -6f), new Vector3(-4.5f, 1.0f, 2.4f), 36f);
             // The turtle low in the foreground, the man walking up behind it
             Shot(ctx.anchors, "B2_From", new Vector3(5.4f, 0.95f, 6.6f), new Vector3(-0.8f, 0.75f, 2.2f), 34f);
             Shot(ctx.anchors, "B2_To", new Vector3(4.8f, 0.85f, 6.1f), new Vector3(0.5f, 0.7f, 2.6f), 31f);
             // Three-quarter front of the kneeling man, the turtle at the bottom of frame
-            Shot(ctx.anchors, "B3_From", new Vector3(2.5f, 1.15f, 5.6f), new Vector3(0.7f, 0.7f, 2.6f), 36f);
-            Shot(ctx.anchors, "B3_To", new Vector3(2.2f, 1.1f, 5.1f), new Vector3(0.65f, 0.8f, 2.5f), 31f);
+            // Three-quarter front, low: his face, his hand on the shell, the turtle in the foreground
+            Shot(ctx.anchors, "B3_From", new Vector3(2.7f, 1.6f, 5.0f), new Vector3(1.15f, 0.55f, 2.95f), 42f);
+            Shot(ctx.anchors, "B3_To", new Vector3(2.45f, 1.5f, 4.7f), new Vector3(1.15f, 0.6f, 2.95f), 37f);
             Shot(ctx.anchors, "B4_From", new Vector3(0.4f, 1.55f, 2.3f), new Vector3(2.2f, 0.1f, 9.5f), 46f);
             Shot(ctx.anchors, "B4_To", new Vector3(0.6f, 1.45f, 3.1f), new Vector3(2.2f, 0.05f, 9.5f), 40f);
             // Side-on: the man and the turtle in profile as he frees the bag
-            Shot(ctx.anchors, "B6_From", new Vector3(-1.4f, 1.15f, 5.3f), new Vector3(1.0f, 0.55f, 2.85f), 34f);
-            Shot(ctx.anchors, "B6_To", new Vector3(-1.0f, 1.1f, 4.9f), new Vector3(1.0f, 0.6f, 2.85f), 30f);
+            // From his right, the hand that frees the bag: him and the turtle side by side
+            Shot(ctx.anchors, "B6_From", new Vector3(3.5f, 1.35f, 0.25f), new Vector3(0.95f, 0.8f, 2.75f), 40f);
+            Shot(ctx.anchors, "B6_To", new Vector3(3.3f, 1.35f, 0.45f), new Vector3(0.95f, 0.95f, 2.7f), 40f);
+        }
+
+        /// <summary>Only in the grey present: flies over the turtle, blowing grit, a bag tumbling in the wind.</summary>
+        static void BuildBeachPresent(Context ctx, Transform root)
+        {
+            ctx.presentOnly = new GameObject("PresentOnly");
+            ctx.presentOnly.transform.SetParent(root);
+
+            Particles(ctx.presentOnly.transform, "Flies", new Vector3(1.6f, 0.45f, 3.4f), ctx.mats.particles, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = 4f;
+                main.startSpeed = 0f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.02f);
+                main.startColor = new Color(0.05f, 0.05f, 0.05f, 1f);
+                main.maxParticles = 12;
+                main.prewarm = true;
+                var emission = ps.emission;
+                emission.rateOverTime = 3f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 0.35f;
+                var velocity = ps.velocityOverLifetime;
+                velocity.enabled = true;
+                velocity.space = ParticleSystemSimulationSpace.Local;
+                velocity.orbitalX = new ParticleSystem.MinMaxCurve(-2f, 2f);
+                velocity.orbitalY = new ParticleSystem.MinMaxCurve(2f, 4f);
+                velocity.orbitalZ = new ParticleSystem.MinMaxCurve(-2f, 2f);
+                var noise = ps.noise;
+                noise.enabled = true;
+                noise.strength = 1.2f;
+                noise.frequency = 2f;
+            });
+
+            Particles(ctx.presentOnly.transform, "BlowingGrit", new Vector3(-8f, 0.3f, 0f), ctx.mats.particles, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = 5f;
+                main.startSpeed = 0f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.05f);
+                main.startColor = new Color(0.55f, 0.5f, 0.42f, 0.45f);
+                main.maxParticles = 300;
+                main.prewarm = true;
+                var emission = ps.emission;
+                emission.rateOverTime = 45f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(30f, 0.5f, 14f);
+                var velocity = ps.velocityOverLifetime;
+                velocity.enabled = true;
+                velocity.space = ParticleSystemSimulationSpace.World;
+                velocity.x = new ParticleSystem.MinMaxCurve(1.5f, 3f);
+                velocity.y = new ParticleSystem.MinMaxCurve(-0.1f, 0.3f);
+                velocity.z = new ParticleSystem.MinMaxCurve(0.2f, 0.6f);
+                Fade(ps);
+            });
+
+            Transform tumbler = Place(Props + "Intro/bag_held.fbx", ctx.presentOnly.transform, new Vector3(-14f, 0.1f, -1.5f), 0f, 0.85f);
+            if (tumbler != null)
+            {
+                tumbler.name = "TumblingBag";
+                Plastic(tumbler, ctx.mats.plastic);
+                tumbler.gameObject.AddComponent<TumblingLitter>();
+            }
+        }
+
+        /// <summary>Only in the memory: gulls wheeling over the clean bay, splashes when the turtle surfaces.</summary>
+        static void BuildBeachMemory(Context ctx, Transform root)
+        {
+            ctx.memoryOnly = new GameObject("MemoryOnly");
+            ctx.memoryOnly.transform.SetParent(root);
+            var gullModel = AssetDatabase.LoadAssetAtPath<GameObject>(Props + "Intro/gull.fbx");
+            AudioClip[] cries = LoadClips("Assets/UpcycleCity/Audio/SFX/Intro", "gull_");
+            var gulls = new[]
+            {
+                (new Vector3(3f, 0f, 16f), new Vector2(12f, 7f), 8.5f, 13f),
+                (new Vector3(-4f, 0f, 22f), new Vector2(16f, 9f), 11f, -10f),
+                (new Vector3(8f, 0f, 26f), new Vector2(9f, 6f), 13f, 16f),
+            };
+            for (int i = 0; i < gulls.Length && gullModel != null; i++)
+            {
+                var go = new GameObject($"Gull_{i}");
+                go.transform.SetParent(ctx.memoryOnly.transform);
+                var model = (GameObject)PrefabUtility.InstantiatePrefab(gullModel, go.transform);
+                var gull = go.AddComponent<Gull>();
+                using var so = new SerializedObject(gull);
+                so.FindProperty("model").objectReferenceValue = model.transform;
+                so.FindProperty("center").vector3Value = gulls[i].Item1;
+                so.FindProperty("radii").vector2Value = gulls[i].Item2;
+                so.FindProperty("height").floatValue = gulls[i].Item3;
+                so.FindProperty("degreesPerSecond").floatValue = gulls[i].Item4;
+                SerializedProperty c = so.FindProperty("cries");
+                c.arraySize = i == 0 ? cries.Length : 0; // one bird calls; three would be a racket
+                for (int k = 0; k < c.arraySize; k++)
+                    c.GetArrayElementAtIndex(k).objectReferenceValue = cries[k];
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            var splashGo = new GameObject("TurtleSplash");
+            splashGo.transform.SetParent(ctx.memoryOnly.transform);
+            ParticleSystem droplets = Particles(splashGo.transform, "Droplets", Vector3.zero, ctx.mats.particles, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 2.4f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.08f);
+                main.startColor = new Color(0.9f, 0.98f, 1f, 0.9f);
+                main.gravityModifier = 1.2f;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 30f;
+                shape.radius = 0.25f;
+                shape.rotation = new Vector3(-90f, 0f, 0f);
+            });
+            ParticleSystem ripples = Particles(splashGo.transform, "Ripples", Vector3.zero, ctx.mats.particles, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = 1.6f;
+                main.startSpeed = 0f;
+                main.startSize = 0.3f;
+                main.startColor = new Color(1f, 1f, 1f, 0.5f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.enabled = false;
+                var size = ps.sizeOverLifetime;
+                size.enabled = true;
+                size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 7f));
+                Fade(ps);
+                ps.GetComponent<ParticleSystemRenderer>().renderMode = ParticleSystemRenderMode.HorizontalBillboard;
+            });
+            var splash = splashGo.AddComponent<SplashOnSurface>();
+            using (var so = new SerializedObject(splash))
+            {
+                so.FindProperty("tracked").objectReferenceValue = ctx.shoreTurtle != null ? ctx.shoreTurtle.transform : null;
+                so.FindProperty("surfaceHeight").floatValue = 0.22f;
+                so.FindProperty("probeHeight").floatValue = 0.3f;
+                so.FindProperty("droplets").objectReferenceValue = droplets;
+                so.FindProperty("ripples").objectReferenceValue = ripples;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            ctx.memoryOnly.SetActive(false);
+        }
+
+        static void Visibility(GameObject go, PollutionVisibilityMode mode, float threshold)
+        {
+            var visibility = go.GetComponent<PollutionVisibility>();
+            if (visibility == null)
+                visibility = go.AddComponent<PollutionVisibility>();
+            using var so = new SerializedObject(visibility);
+            so.FindProperty("mode").enumValueIndex = (int)mode;
+            so.FindProperty("threshold").floatValue = threshold;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void Plastic(Transform t, Material plastic)
+        {
+            foreach (Renderer r in t.GetComponentsInChildren<Renderer>(true))
+            {
+                r.sharedMaterial = plastic;
+                r.shadowCastingMode = ShadowCastingMode.Off;
+            }
+        }
+
+        static void AddSway(Transform t, float degrees, float frequency)
+        {
+            if (t == null)
+                return;
+            var sway = t.gameObject.AddComponent<Sway>();
+            using var so = new SerializedObject(sway);
+            so.FindProperty("degrees").floatValue = degrees;
+            so.FindProperty("frequency").floatValue = frequency;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static ParticleSystem Particles(Transform parent, string name, Vector3 position, Material material, System.Action<ParticleSystem> setup)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent);
+            go.transform.position = position;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            setup(ps);
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = material;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            return ps;
+        }
+
+        static void Fade(ParticleSystem ps)
+        {
+            var color = ps.colorOverLifetime;
+            color.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+            color.color = g;
         }
 
         // ---------------------------------------------------------------- underwater dream
@@ -560,7 +989,9 @@ namespace UpcycleCity.Editor
                     _ => $"QuaterniusNature/Plant_{1 + (i + 2) % 5}",
                 };
                 float scale = model.Contains("Rock") ? Range(random, 1.5f, 4f) : Range(random, 1.4f, 2.6f);
-                Place(Art + model + ".fbx", root, pos, Range(random, 0f, 360f), scale);
+                Transform placed = Place(Art + model + ".fbx", root, pos, Range(random, 0f, 360f), scale);
+                if (model.Contains("Plant"))
+                    AddSway(placed, 7f, 0.18f);
             }
 
             // God rays from the surface
@@ -624,6 +1055,28 @@ namespace UpcycleCity.Editor
             ResetLocal(turtleModel);
             ctx.underwaterTurtle = turtleGo.AddComponent<SeaTurtle>();
             SetTurtle(ctx.underwaterTurtle, turtleModel,SeaTurtle.TurtleMode.Swim, loop, 1.7f, 11f);
+            // A trail of bubbles rising from the turtle as it swims
+            ParticleSystem bubbles = Particles(turtleGo.transform, "Bubbles", turtleGo.transform.position + Vector3.up * 0.2f, ctx.mats.motes, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.5f, 3f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.06f);
+                main.startColor = new Color(0.85f, 1f, 1f, 0.8f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.gravityModifier = -0.08f;
+                var emission = ps.emission;
+                emission.rateOverTime = 7f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 0.12f;
+                var noise = ps.noise;
+                noise.enabled = true;
+                noise.strength = 0.25f;
+                noise.frequency = 1.2f;
+                Fade(ps);
+            });
+            bubbles.transform.localPosition = new Vector3(0f, 0.25f, 0.3f);
 
             Shot(ctx.anchors, "B5_From", o + new Vector3(0f, 2.5f, 3.6f), o + new Vector3(0f, 3.4f, 8.5f), 52f);
             Shot(ctx.anchors, "B5_To", o + new Vector3(0.2f, 2.8f, 4.4f), o + new Vector3(0f, 3.4f, 8.5f), 46f);
@@ -649,6 +1102,28 @@ namespace UpcycleCity.Editor
             for (int i = 0; i < 6; i++)
                 Place(Art + $"KayKitCityBits/building_{buildings[i]}.fbx", root, o + new Vector3(-11f, 0f, -18f + i * 9.5f), 90f, 1f);
             Place(Art + "KayKitCityBits/streetlight.fbx", root, o + new Vector3(4.8f, 0f, -4f), 270f, 1f);
+            var streetLampGo = new GameObject("StreetLampLight");
+            streetLampGo.transform.SetParent(root);
+            streetLampGo.transform.position = o + new Vector3(4.1f, 3.9f, -4f);
+            var streetLamp = streetLampGo.AddComponent<Light>();
+            streetLamp.type = LightType.Point;
+            streetLamp.range = 11f;
+            streetLamp.intensity = 6f;
+            streetLamp.color = new Color(1f, 0.72f, 0.42f);
+            streetLamp.shadows = LightShadows.None;
+            var bulbGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bulbGo.name = "Bulb";
+            Object.DestroyImmediate(bulbGo.GetComponent<Collider>());
+            bulbGo.transform.SetParent(streetLampGo.transform, false);
+            bulbGo.transform.localScale = Vector3.one * 0.14f;
+            bulbGo.GetComponent<MeshRenderer>().sharedMaterial = ctx.mats.bulb;
+            var flicker = streetLampGo.AddComponent<LightFlicker>();
+            using (var so = new SerializedObject(flicker))
+            {
+                so.FindProperty("bulb").objectReferenceValue = bulbGo.GetComponent<MeshRenderer>();
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             Place(Art + "KayKitCityBits/dumpster.fbx", root, o + new Vector3(5.5f, 0f, 3f), 200f, 1f);
             Place(Props + "Bourguiba/Litter/bag_pile.fbx", root, o + new Vector3(6.2f, 0f, 5f), 30f, 1f);
             Place(Props + "Bourguiba/Litter/skip_full.fbx", root, o + new Vector3(6.5f, 0f, -10f), 90f, 1f);
@@ -696,22 +1171,48 @@ namespace UpcycleCity.Editor
             Place(Props + "Garage/crate_plastic_blank.fbx", root, o + new Vector3(0.2f, 0f, -0.55f), 0f, 1f);
             Place(Props + "Garage/crate_paper_blank.fbx", root, o + new Vector3(1.3f, 0f, 1.1f), 0f, 1f);
             Place(Props + "Garage/crt_tv.fbx", root, o + new Vector3(1.3f, 0.3f, 1.15f), 200f, 1f);
-            Place(Props + "Garage/armchair_old.fbx", root, o + new Vector3(1.25f, 0f, -0.75f), 300f, 1f);
+            Place(Props + "Garage/armchair_old.fbx", root, o + new Vector3(-1.3f, 0f, -0.95f), 45f, 1f);
             Place(Props + "Garage/shelf_unit.fbx", root, o + new Vector3(1.55f, 0f, 0.15f), 270f, 1f);
             Place(Props + "Garage/item_jar.fbx", root, o + new Vector3(1.55f, 1.02f, 0.3f), 0f, 1.2f);
             Place(Props + "Garage/item_can_red.fbx", root, o + new Vector3(1.55f, 1.02f, -0.05f), 0f, 1f);
             Place(Props + "Garage/item_newspapers.fbx", root, o + new Vector3(-0.2f, 0f, -1.05f), 30f, 1f);
 
             // The coin tin on the crate, with a few coins beside it
-            Place(Props + "Garage/item_tin.fbx", root, o + new Vector3(0.32f, 0.3f, -0.55f), 0f, 1.6f);
+            Place(Props + "Garage/item_tin.fbx", root, o + new Vector3(0.4f, 0.3f, -0.45f), 0f, 1.6f);
             for (int i = 0; i < 3; i++)
-                Coin(root, $"Coin_Spare_{i}", o + new Vector3(0.47f + i * 0.03f, 0.302f + i * 0.004f, -0.45f + i * 0.02f), ctx.mats.gold);
-            ctx.coin = Coin(root, "Coin_Promise", o + new Vector3(0.1f, 0.62f, -0.35f), ctx.mats.gold);
+                Coin(root, $"Coin_Spare_{i}", o + new Vector3(0.42f + i * 0.03f, 0.302f + i * 0.004f, -0.68f + i * 0.015f), ctx.mats.gold);
+            ctx.coin = Coin(root, "Coin_Promise", o + new Vector3(0.25f, 0.68f, -0.3f), ctx.mats.gold);
+            ctx.coinGlint = Particles(root, "CoinGlint", o + new Vector3(0.4f, 0.5f, -0.45f), ctx.mats.motes, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(0.2f, 0.6f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.04f);
+                main.startColor = new Color(1f, 0.82f, 0.35f, 1f);
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                var emission = ps.emission;
+                emission.rateOverTime = 0f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = 0.03f;
+                Fade(ps);
+            });
 
-            // The only light: a bare work lamp hanging from the roof, plus cold dusk through the window
-            Transform lampModel = Place(Props + "Garage/work_lamp.fbx", root, o + new Vector3(0.1f, h, -0.1f), 0f, 1f);
+            // The only light: a bare work lamp hanging from the roof on its cable, drifting slowly so the
+            // shadows move; plus cold night through the window (it turns to dawn as he makes his promise)
+            var lampRig = new GameObject("LampRig").transform;
+            lampRig.SetParent(root);
+            lampRig.position = o + new Vector3(0.1f, h, -0.1f);
+            var lampSwing = lampRig.gameObject.AddComponent<Pendulum>();
+            using (var so = new SerializedObject(lampSwing))
+            {
+                so.FindProperty("amplitudeDegrees").vector2Value = new Vector2(3.5f, 2.5f);
+                so.FindProperty("frequency").floatValue = 0.28f;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Transform lampModel = Place(Props + "Garage/work_lamp.fbx", lampRig, o + new Vector3(0.1f, h, -0.1f), 0f, 1f);
             var lampGo = new GameObject("LampLight");
-            lampGo.transform.SetParent(root);
+            lampGo.transform.SetParent(lampRig);
             lampGo.transform.position = o + new Vector3(0.1f, h - 0.85f, -0.1f);
             ctx.lamp = lampGo.AddComponent<Light>();
             ctx.lamp.type = LightType.Point;
@@ -733,15 +1234,40 @@ namespace UpcycleCity.Editor
             window.intensity = 4f;
             window.color = new Color(0.55f, 0.62f, 0.95f);
             window.shadows = LightShadows.Soft;
+            ctx.windowLight = window;
 
-            Mark(ctx.anchors, "Mark_Interior", o + new Vector3(-0.35f, 0f, 0.42f), 180f);
-            Mark(ctx.anchors, "Mark_BagRest", o + new Vector3(0.05f, 0.34f, -0.6f), 30f);
-            Mark(ctx.anchors, "Mark_CoinStart", o + new Vector3(0.1f, 0.62f, -0.35f), 0f);
-            Mark(ctx.anchors, "Mark_CoinDrop", o + new Vector3(0.32f, 0.46f, -0.55f), 0f);
+            Particles(root, "LampDust", o + new Vector3(0.1f, 1.3f, -0.1f), ctx.mats.motes, ps =>
+            {
+                var main = ps.main;
+                main.startLifetime = 8f;
+                main.startSpeed = 0.02f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.006f, 0.015f);
+                main.startColor = new Color(1f, 0.9f, 0.7f, 0.5f);
+                main.maxParticles = 120;
+                main.prewarm = true;
+                var emission = ps.emission;
+                emission.rateOverTime = 14f;
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(1.6f, 1.2f, 1.6f);
+                var noise = ps.noise;
+                noise.enabled = true;
+                noise.strength = 0.04f;
+                noise.frequency = 0.3f;
+                Fade(ps);
+            });
+
+            Mark(ctx.anchors, "Mark_Interior", o + new Vector3(-0.35f, 0f, 0.3f), 180f);
+            // The bag is laid down on its side on the crate (its pivot is the handles)
+            Transform bagRest = new GameObject("Mark_BagRest").transform;
+            bagRest.SetParent(ctx.anchors);
+            bagRest.SetPositionAndRotation(o + new Vector3(-0.08f, 0.36f, -0.6f), Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(-84f, 0f, 0f));
+            Mark(ctx.anchors, "Mark_CoinStart", o + new Vector3(0.36f, 0.62f, -0.42f), 0f);
+            Mark(ctx.anchors, "Mark_CoinDrop", o + new Vector3(0.4f, 0.46f, -0.45f), 0f);
             Shot(ctx.anchors, "B8_From", o + new Vector3(0.95f, 1.3f, -1.35f), o + new Vector3(-0.35f, 0.85f, 0.42f), 52f);
             Shot(ctx.anchors, "B8_To", o + new Vector3(0.8f, 1.25f, -1.25f), o + new Vector3(-0.3f, 0.8f, 0.35f), 47f);
-            Shot(ctx.anchors, "B8b_From", o + new Vector3(1.0f, 0.95f, -1.4f), o + new Vector3(0.15f, 0.38f, -0.5f), 36f);
-            Shot(ctx.anchors, "B8b_To", o + new Vector3(0.85f, 0.88f, -1.25f), o + new Vector3(0.18f, 0.38f, -0.52f), 31f);
+            Shot(ctx.anchors, "B8b_From", o + new Vector3(1.05f, 0.95f, -1.45f), o + new Vector3(0.2f, 0.45f, -0.4f), 38f);
+            Shot(ctx.anchors, "B8b_To", o + new Vector3(0.9f, 0.9f, -1.3f), o + new Vector3(0.22f, 0.45f, -0.4f), 33f);
         }
 
         static Transform Coin(Transform parent, string name, Vector3 position, Material gold)
@@ -785,6 +1311,22 @@ namespace UpcycleCity.Editor
             Transform start = ctx.anchors.Find("Mark_ShoreStart");
             if (start != null)
                 actorGo.transform.SetPositionAndRotation(start.position, start.rotation);
+
+            // Footprints in the sand (beach only) and soft footsteps everywhere
+            var printsGo = new GameObject("Footprints");
+            ctx.footprints = printsGo.AddComponent<FootprintTrail>();
+            using (var so = new SerializedObject(ctx.footprints))
+            {
+                so.FindProperty("poser").objectReferenceValue = poser;
+                so.FindProperty("material").objectReferenceValue = ctx.mats.footprint;
+                so.FindProperty("xRange").vector2Value = new Vector2(-60f, 60f);
+                AudioClip[] steps = LoadClips("Assets/UpcycleCity/Audio/SFX/Footsteps", "walk_");
+                SerializedProperty list = so.FindProperty("steps");
+                list.arraySize = steps.Length;
+                for (int i = 0; i < steps.Length; i++)
+                    list.GetArrayElementAtIndex(i).objectReferenceValue = steps[i];
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         static void BuildDirector(Context ctx, IntroConfig config)
@@ -817,15 +1359,23 @@ namespace UpcycleCity.Editor
                 so.FindProperty("sun").objectReferenceValue = ctx.sun;
                 so.FindProperty("grimVolume").objectReferenceValue = ctx.grimVolume;
                 so.FindProperty("dreamVolume").objectReferenceValue = ctx.dreamVolume;
+                so.FindProperty("transitionVolume").objectReferenceValue = ctx.transitionVolume;
+                so.FindProperty("memoryOnly").objectReferenceValue = ctx.memoryOnly;
+                so.FindProperty("presentOnly").objectReferenceValue = ctx.presentOnly;
+                so.FindProperty("caustics").objectReferenceValue = ctx.caustics;
+                so.FindProperty("footprints").objectReferenceValue = ctx.footprints;
                 SerializedProperty water = so.FindProperty("waterRenderers");
                 water.arraySize = ctx.water.Count;
                 for (int i = 0; i < ctx.water.Count; i++)
                     water.GetArrayElementAtIndex(i).objectReferenceValue = ctx.water[i];
-                so.FindProperty("litter").objectReferenceValue = ctx.litter;
                 so.FindProperty("deadTurtle").objectReferenceValue = ctx.deadTurtle;
                 so.FindProperty("shoreTurtle").objectReferenceValue = ctx.shoreTurtle;
                 so.FindProperty("underwaterTurtle").objectReferenceValue = ctx.underwaterTurtle;
-                so.FindProperty("bag").objectReferenceValue = ctx.bag;
+                so.FindProperty("tangledBag").objectReferenceValue = ctx.tangledBag;
+                so.FindProperty("heldBag").objectReferenceValue = ctx.heldBag;
+                so.FindProperty("sandPuff").objectReferenceValue = ctx.sandPuff;
+                so.FindProperty("coinGlint").objectReferenceValue = ctx.coinGlint;
+                so.FindProperty("windowLight").objectReferenceValue = ctx.windowLight;
                 so.FindProperty("coin").objectReferenceValue = ctx.coin;
                 so.FindProperty("lamp").objectReferenceValue = ctx.lamp;
                 so.ApplyModifiedPropertiesWithoutUndo();

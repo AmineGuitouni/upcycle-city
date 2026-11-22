@@ -40,6 +40,14 @@ namespace UpcycleCity.Cinematics
         [Header("Actor")]
         [Min(0.1f)] public float walkSpeed = 1.15f;
         [Min(0.1f)] public float tiredWalkSpeed = 0.8f;
+        public CharacterRigPoser.WalkStyle shoreWalk = CharacterRigPoser.WalkStyle.Tired;
+        public CharacterRigPoser.WalkStyle homeWalk = CharacterRigPoser.WalkStyle.Steady;
+
+        [Header("The memory")]
+        [Tooltip("Seconds for the grey grade to bleed into the dream colours.")]
+        [Min(0.1f)] public float colourBleedSeconds = 2f;
+        [Tooltip("Seconds of the lens ripple when the memory begins.")]
+        [Min(0.1f)] public float rippleSeconds = 1.4f;
 
         [Header("Sea turtle")]
         [Min(0.1f)] public float turtleSwimSpeed = 1.6f;
@@ -90,6 +98,12 @@ namespace UpcycleCity.Cinematics
         [Range(0f, 1f)] public float shackGrimWeight = 0.6f;
         [Range(0f, 1f)] public float promiseGrimWeight = 0.2f;
 
+        [Header("Shack window (cold night to warm dawn as he makes the promise)")]
+        public Color windowColdColor = new Color(0.55f, 0.62f, 0.95f);
+        public Color windowDawnColor = new Color(1f, 0.72f, 0.42f);
+        [Min(0f)] public float windowColdIntensity = 4f;
+        [Min(0f)] public float windowDawnIntensity = 9f;
+
         [Header("Shack lamp")]
         public Color lampColdColor = new Color(1f, 0.82f, 0.6f);
         public Color lampWarmColor = new Color(1f, 0.7f, 0.38f);
@@ -101,8 +115,18 @@ namespace UpcycleCity.Cinematics
         public AudioClip dreamMusic;
         public AudioClip[] waveClips = new AudioClip[0];
         public AudioClip coinClip;
+        public AudioClip windLoop;
+        public AudioClip underwaterLoop;
+        public AudioClip heartbeat;
+        public AudioClip sting;
+        public AudioClip[] footsteps = new AudioClip[0];
+        public AudioClip[] gullCries = new AudioClip[0];
         [Range(0f, 1f)] public float musicVolume = 0.7f;
         [Range(0f, 1f)] public float wavesVolume = 0.55f;
+        [Range(0f, 1f)] public float windVolume = 0.32f;
+        [Range(0f, 1f)] public float underwaterVolume = 0.55f;
+        [Range(0f, 1f)] public float heartbeatVolume = 0.85f;
+        [Range(0f, 1f)] public float stingVolume = 0.9f;
         [Tooltip("Seconds between wave crashes (random in range).")]
         public Vector2 waveInterval = new Vector2(1.6f, 3.4f);
     }

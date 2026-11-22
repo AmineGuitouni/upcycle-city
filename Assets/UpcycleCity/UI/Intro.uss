@@ -4,7 +4,6 @@
 .intro-line {
     padding-left: 12%;
     padding-right: 12%;
-    padding-top: 36%;
     font-size: 38px;
     -unity-font-style: italic;
     color: rgb(244, 238, 226);

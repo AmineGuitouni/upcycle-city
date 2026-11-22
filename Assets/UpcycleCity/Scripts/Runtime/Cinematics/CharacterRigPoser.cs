@@ -294,8 +294,8 @@ namespace UpcycleCity.Cinematics
             Mix("Hips", Pitch(8f), k);
             Mix("Spine", Pitch(14f + slump * 0.35f), k);
             Mix("Chest", Pitch(10f + slump * 0.4f), k);
-            Mix("Neck", Pitch(12f + slump * 0.15f), k);
-            Mix("Head", Pitch(14f + slump * 0.2f), k);
+            Mix("Neck", Pitch(3f + slump * 0.08f), k);
+            Mix("Head", Pitch(4f + slump * 0.1f), k);
             Mix("UpperLeg_L", Pitch(-78f) * Roll(-6f), k);
             Mix("LowerLeg_L", Pitch(84f), k);
             Mix("Foot_L", Pitch(-6f), k);
@@ -402,7 +402,8 @@ namespace UpcycleCity.Cinematics
                     // Desired direction in the chest's frame, as yaw and pitch from the body's forward
                     Vector3 local = Quaternion.Inverse(space.rotation) * dirWorld.normalized;
                     float yaw = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -65f, 65f);
-                    float pitch = Mathf.Clamp(-Mathf.Asin(Mathf.Clamp(local.y, -1f, 1f)) * Mathf.Rad2Deg, -35f, 45f);
+                    // Looking down is mostly the spine's job (kneel, slump): the head only adds a little
+                    float pitch = Mathf.Clamp(-Mathf.Asin(Mathf.Clamp(local.y, -1f, 1f)) * Mathf.Rad2Deg, -35f, 22f);
                     target = Quaternion.Slerp(Quaternion.identity, Yaw(yaw) * Pitch(pitch), lookWeight);
                 }
             }

@@ -11,25 +11,24 @@ namespace UpcycleCity.Cinematics
     /// <summary>
     /// Runs the intro cinematic "The Turtle" as a sequence of timed beats:
     /// <list type="number">
-    /// <item>A poor man walks a grey, littered beach at dawn.</item>
-    /// <item>He finds a dead sea turtle tangled in a plastic bag.</item>
-    /// <item>He kneels beside it.</item>
-    /// <item>Flashback (his memory, the same beach before it was ruined): the turtle playing in clear water.</item>
-    /// <item>The memory dives underwater: colour, light and fish.</item>
-    /// <item>Snap back to grey. He frees the bag from the turtle and keeps it.</item>
-    /// <item>He walks home through a run-down street at dusk.</item>
-    /// <item>In his shack he sets the bag beside a tin of coins and drops one in.</item>
-    /// <item>The promise, the title, then the next scene (the character creator).</item>
+    /// <item>A poor man trudges along a grey, littered beach at dawn, wind in his coat.</item>
+    /// <item>He finds a dead sea turtle tangled in a plastic bag (rack focus, the music stops, a heartbeat).</item>
+    /// <item>He kneels, lays a hand on its shell, wipes his eyes.</item>
+    /// <item>The memory: the lens ripples, colour bleeds back and the beach heals in front of him: the litter
+    /// dissolves away, the sky clears, gulls wheel, and the turtle plays in turquoise shallows.</item>
+    /// <item>The memory dives: light, fish and caustics; the turtle rolls past and swims up into the light.</item>
+    /// <item>A hard cut back to grey. He works the bag free from the turtle and keeps it.</item>
+    /// <item>He walks home through a run-down street at dusk, the bag swinging from his hand.</item>
+    /// <item>In his shack he sets the bag beside a tin of coins and drops one in. Dawn reaches the window.</item>
+    /// <item>The promise, word by word; the title; then the next scene (the character creator).</item>
     /// </list>
-    /// Shots, marks and paths are named children of <see cref="anchors"/> (placed by IntroSceneBuilder and
-    /// free to move by hand); timings and looks come from <see cref="IntroConfig"/>, read live.
+    /// Shots, marks and paths are named children of <see cref="anchors"/> (placed by IntroSceneBuilder and free
+    /// to move by hand); timings and looks come from <see cref="IntroConfig"/>, read live.
     /// Hold Space / Enter / Esc / gamepad South / touch to skip (one press once the intro has been seen).
     /// </summary>
     [AddComponentMenu("Upcycle City/Cinematics/Intro Director")]
     public sealed class IntroDirector : MonoBehaviour
     {
-        enum World { Grim, Memory }
-
         [SerializeField] IntroConfig config;
 
         [Header("Cast and crew")]
@@ -44,16 +43,29 @@ namespace UpcycleCity.Cinematics
         [SerializeField] Light sun;
         [SerializeField] Volume grimVolume;
         [SerializeField] Volume dreamVolume;
+        [Tooltip("Lens distortion, chromatic aberration and bloom, pulsed as the memory begins.")]
+        [SerializeField] Volume transitionVolume;
         [SerializeField] Renderer[] waterRenderers = new Renderer[0];
+        [Tooltip("Shown only during the memory (gulls, splashes, sparkles).")]
+        [SerializeField] GameObject memoryOnly;
+        [Tooltip("Shown only in the grey present (flies, blowing grit, the tumbling bag).")]
+        [SerializeField] GameObject presentOnly;
+        [SerializeField] CausticsCookie caustics;
+        [SerializeField] FootprintTrail footprints;
 
         [Header("Props")]
-        [SerializeField] GameObject litter;
         [SerializeField] GameObject deadTurtle;
         [SerializeField] SeaTurtle shoreTurtle;
         [SerializeField] SeaTurtle underwaterTurtle;
-        [SerializeField] Transform bag;
+        [Tooltip("The bag caught round the dead turtle's neck.")]
+        [SerializeField] Transform tangledBag;
+        [Tooltip("The same bag as he carries it (hidden until he frees it).")]
+        [SerializeField] Transform heldBag;
+        [SerializeField] ParticleSystem sandPuff;
         [SerializeField] Transform coin;
+        [SerializeField] ParticleSystem coinGlint;
         [SerializeField] Light lamp;
+        [SerializeField] Light windowLight;
 
         static readonly int DreamId = Shader.PropertyToID("_Dream");
 
@@ -74,13 +86,14 @@ namespace UpcycleCity.Cinematics
         float overrideWeight;
 
         // Audio
-        AudioSource grimMusic, dreamMusic, wavesSource, sfxSource;
+        AudioSource grimMusic, dreamMusic, wavesSource, sfxSource, windSource, underwaterSource, heartbeatSource;
         AudioLowPassFilter wavesLowPass;
-        float grimTarget, dreamTarget, wavesGain;
+        float grimTarget, dreamTarget, wavesGain, windTarget, underwaterTarget, heartbeatTarget;
         float musicFadeSpeed = 0.5f;
         float nextWave;
         bool audioTaken;
         bool ambienceWasMuted;
+        Gull[] gulls = new Gull[0];
 
         MaterialPropertyBlock block;
 
@@ -114,6 +127,8 @@ namespace UpcycleCity.Cinematics
                 LoadNext();
                 return;
             }
+            if (memoryOnly != null)
+                gulls = memoryOnly.GetComponentsInChildren<Gull>(true);
             CreateAudio();
             sequence = StartCoroutine(Sequence());
         }
@@ -134,101 +149,184 @@ namespace UpcycleCity.Cinematics
 
         IEnumerator Sequence()
         {
-            // Opening state: black screen, grey beach
-            SetWorld(World.Grim);
+            var L = CharacterRigPoser.Side.Left;
+            var R = CharacterRigPoser.Side.Right;
+
+            // Opening state: black screen, grey beach, wind
+            SetPresent();
             SetAtmosphere(null);
             overlay.SetLetterbox(config.letterbox);
             overlay.SetFade(1f);
-            if (coin != null)
-                coin.gameObject.SetActive(false);
+            SetActive(coin, false);
+            SetActive(heldBag, false);
             SetLamp(0f);
+            SetWindow(0f);
             actor.Place(Mark("Mark_ShoreStart"));
-            actor.SetPose(0f, 0f, 4f);
+            actor.SetPose(0f, 0f, 6f);
+            actor.SetWalkStyle(config.shoreWalk);
             SetMusic(grim: 1f, dream: 0f, fadeSpeed: 0.35f);
             wavesGain = 1f;
+            windTarget = 1f;
 
-            // 1. Walk along the shore
+            // 1. Trudging along the shore
             BeginBeat(1, "Walk along the shore");
             Vector3[] shorePath = Path("Path_Shore");
-            float shoreWalkTime = config.walkAlongShore + config.discovery * 0.55f;
+            float shoreWalkTime = config.walkAlongShore + config.discovery * 0.5f;
             float shoreSpeed = Mathf.Max(0.2f, actor.PathLength(shorePath) / shoreWalkTime);
             Coroutine walking = StartWalk(shorePath, shoreSpeed);
             cinematicCamera.Shake = 0.6f;
             cinematicCamera.Move(Shot("B1_From"), Shot("B1_To"), config.walkAlongShore + 0.6f);
+            cinematicCamera.RackFocus(actor.transform, 0.1f);
             StartCoroutine(overlay.FadeTo(0f, config.fadeInSeconds));
             yield return Until(config.walkAlongShore);
 
-            // 2. Discovery: the turtle in the foreground, he stops and looks down
+            // 2. Discovery: he stops; focus pulls from him to the turtle; the music stops, a heartbeat
             BeginBeat(2, "Discovery");
             cinematicCamera.Shake = 0.8f;
             cinematicCamera.Move(Shot("B2_From"), Shot("B2_To"), config.discovery);
+            cinematicCamera.RackFocus(actor.transform, 0.1f);
             yield return walking;
-            if (deadTurtle != null)
-                StartCoroutine(actor.TurnTowards(deadTurtle.transform.position, 1.2f));
-            StartCoroutine(actor.Slump(14f, 1.6f));
+            Transform turtleBody = deadTurtle != null ? deadTurtle.transform : null;
+            if (turtleBody != null)
+            {
+                StartCoroutine(actor.TurnTowards(turtleBody.position, 1.1f));
+                StartCoroutine(actor.LookAt(turtleBody, 0.9f));
+                cinematicCamera.RackFocus(turtleBody, 1.6f);
+            }
+            StartCoroutine(actor.Slump(16f, 1.6f));
+            SetMusic(grim: 0f, dream: 0f, fadeSpeed: 0.8f);
+            heartbeatTarget = 1f;
+            wavesGain = 0.5f;
+            windTarget = 0.6f;
             yield return Until(config.discovery);
 
-            // 3. He kneels; the world goes quiet
+            // 3. He kneels, lays a hand on the shell, wipes his eyes
             BeginBeat(3, "Kneel");
-            cinematicCamera.Shake = 1.2f;
+            cinematicCamera.Shake = 1.1f;
             cinematicCamera.Move(Shot("B3_From"), Shot("B3_To"), config.kneel);
-            SetMusic(grim: 0.55f, dream: 0f, fadeSpeed: 0.4f);
-            wavesGain = 0.45f;
-            StartCoroutine(actor.Slump(6f, 1.8f));
-            yield return actor.Kneel(1.8f);
+            cinematicCamera.RackFocus(actor.transform, 0.8f);
+            StartCoroutine(actor.Slump(2f, 1.6f));
+            yield return actor.Kneel(1.6f);
+            Transform shell = TurtlePart("Shell");
+            if (shell != null)
+            {
+                // A hand on the near edge of the shell
+                Vector3 toMan = actor.transform.position - shell.position;
+                toMan.y = 0f;
+                yield return actor.Reach(L, shell.position + toMan.normalized * 0.28f + Vector3.up * 0.16f, 1.1f);
+            }
+            yield return Until(Mathf.Max(3.6f, config.kneel - 2.6f));
+            Transform head = actor.Poser.Bone("Head");
+            if (head != null)
+            {
+                yield return actor.Reach(R, head.position + actor.transform.forward * 0.16f + Vector3.up * 0.05f, 0.7f);
+                yield return new WaitForSeconds(0.5f);
+                StartCoroutine(actor.Release(R, 0.8f));
+            }
+            SetMusic(grim: 0.35f, dream: 0f, fadeSpeed: 0.3f);
             yield return Until(config.kneel);
 
-            // 4. The memory: the same shore, clean, the turtle playing in turquoise shallows
+            // 4. The memory: the lens ripples, colour bleeds in and the beach heals in front of his eyes
             BeginBeat(4, "Memory: the shore");
-            yield return overlay.Flash(config.flashSeconds, config.flashHoldSeconds, config.flashOutSeconds, () =>
+            heartbeatTarget = 0f;
+            StartCoroutine(Ripple(config.rippleSeconds));
+            yield return overlay.Flash(config.flashSeconds, config.flashHoldSeconds, 0.9f, () =>
             {
-                SetWorld(World.Memory);
+                actor.gameObject.SetActive(false);   // we now see through his eyes
                 cinematicCamera.Shake = 0.9f;
                 cinematicCamera.Move(Shot("B4_From"), Shot("B4_To"), config.memoryShore);
                 if (shoreTurtle != null)
+                {
                     cinematicCamera.LookAt(shoreTurtle.transform, Vector3.zero, 0.35f);
-                SetMusic(grim: 0f, dream: 1f, fadeSpeed: 1.5f);
+                    cinematicCamera.RackFocus(shoreTurtle.transform, 0.5f);
+                }
+                SetActive(memoryOnly, true);
+                SetActive(presentOnly, false);
+                SetActive(tangledBag, false);
+                SetMusic(grim: 0f, dream: 1f, fadeSpeed: 0.6f);
                 wavesGain = 0.8f;
+                windTarget = 0.25f;
+                pollution.SetPollution(0f); // blends over the controller's transition time: the litter dissolves
             });
+            StartCoroutine(BleedColour(1f, 0f, config.colourBleedSeconds));
             yield return Until(config.memoryShore);
 
-            // 5. Underwater dream: the turtle loops around the camera among fish and light
+            // 5. Underwater dream: the turtle loops around the camera among fish and light, then swims up into it
             BeginBeat(5, "Memory: underwater");
             yield return overlay.Flash(0.25f, 0.1f, 1.1f, () =>
             {
                 SetAtmosphere(config.underwater);
                 SetUnderwaterBackground(true);
+                if (caustics != null) caustics.enabled = true;
                 cinematicCamera.Shake = 1f;
                 cinematicCamera.Move(Shot("B5_From"), Shot("B5_To"), config.memoryUnderwater);
                 if (underwaterTurtle != null)
+                {
                     cinematicCamera.LookAt(underwaterTurtle.transform, Vector3.zero, 0.85f);
-                wavesGain = 0.5f;
+                    cinematicCamera.RackFocus(underwaterTurtle.transform, 0.3f);
+                }
+                wavesGain = 0.4f;
+                windTarget = 0f;
+                underwaterTarget = 1f;
                 SetUnderwaterAudio(true);
             });
-            yield return Until(config.memoryUnderwater);
+            yield return Until(config.memoryUnderwater - 1.2f);
+            // Into the light
+            yield return CinematicActor.Tween(1.2f, t => overlay.SetFlash(t * t));
 
-            // 6. Snap back to grey. He frees the bag and keeps it.
+            // 6. A hard cut back to grey, on a low boom. He works the bag free and keeps it.
             BeginBeat(6, "Snap back");
-            yield return overlay.Flash(0.08f, 0.05f, 0.45f, () =>
+            SetAtmosphere(null);
+            SetUnderwaterBackground(false);
+            if (caustics != null) caustics.enabled = false;
+            SetActive(memoryOnly, false);
+            SetActive(presentOnly, true);
+            SetPresent();
+            actor.gameObject.SetActive(true);
+            actor.SetPose(1f, 0f, 10f);
+            actor.Poser.reachLeftWeight = 0f;
+            actor.Poser.reachRightWeight = 0f;
+            if (turtleBody != null)
+                actor.Poser.lookTarget = turtleBody;
+            cinematicCamera.ClearLook();
+            cinematicCamera.Shake = 1.1f;
+            cinematicCamera.Move(Shot("B6_From"), Shot("B6_To"), config.snapBack);
+            cinematicCamera.RackFocus(actor.transform, 0.1f);
+            cinematicCamera.Jolt(2.2f);
+            SetUnderwaterAudio(false);
+            underwaterTarget = 0f;
+            SetMusic(grim: 0f, dream: 0f, fadeSpeed: 50f); // the dream cuts off
+            PlaySfx(config.sting, config.stingVolume);
+            wavesGain = 0.6f;
+            windTarget = 0.7f;
+            overlay.SetFlash(0f);
+
+            yield return Until(1.2f);
+            if (tangledBag != null)
             {
-                SetAtmosphere(null);
-                SetUnderwaterBackground(false);
-                SetWorld(World.Grim);
-                cinematicCamera.ClearLook();
-                cinematicCamera.Shake = 1.1f;
-                cinematicCamera.Move(Shot("B6_From"), Shot("B6_To"), config.snapBack);
-                SetUnderwaterAudio(false);
-                SetMusic(grim: 0.6f, dream: 0f, fadeSpeed: 50f); // the dream cuts off
-                wavesGain = 0.6f;
-            });
-            yield return Until(1.6f);
-            if (bag != null)
-            {
-                yield return CinematicActor.Toss(bag, actor.HandPosition, bag.rotation, 0.25f, 1.1f);
-                actor.Hold(bag);
+                // Both hands to the bag, a tug, and it comes free in his right hand
+                Vector3 bagAt = tangledBag.position;
+                StartCoroutine(actor.Reach(L, bagAt + actor.transform.right * -0.06f, 1f));
+                yield return actor.Reach(R, bagAt + actor.transform.right * 0.06f, 1f);
+                yield return new WaitForSeconds(0.25f);
+                Vector3 pull = actor.transform.position + actor.transform.forward * 0.35f + Vector3.up * 0.75f;
+                StartCoroutine(actor.Reach(L, pull - actor.transform.right * 0.08f, 0.7f));
+                StartCoroutine(actor.Reach(R, pull, 0.7f));
+                yield return CinematicActor.Follow(tangledBag, () => actor.Poser.Palm(R), 0.35f);
+                Burst(sandPuff, bagAt, 18);
+                SetActive(tangledBag, false);
+                SetActive(heldBag, true);
+                actor.Hold(heldBag, R);
+                if (heldBag != null && heldBag.TryGetComponent(out Pendulum swing))
+                    swing.ResetRest();
+                yield return new WaitForSeconds(0.45f);
+                StartCoroutine(actor.Release(L, 0.8f));
+                StartCoroutine(actor.Release(R, 1.2f));
             }
-            yield return Until(config.snapBack - 2f);
-            StartCoroutine(actor.Stand(1.6f));
+            yield return Until(config.snapBack - 1.9f);
+            StartCoroutine(actor.LookAway(1.2f));
+            StartCoroutine(actor.Stand(1.7f));
+            actor.SetCarry(14f);
             yield return Until(config.snapBack);
 
             // 7. Walk home at dusk
@@ -237,73 +335,96 @@ namespace UpcycleCity.Cinematics
             yield return overlay.FadeTo(1f, half);
             SetAtmosphere(config.dusk);
             SetGrim(config.duskGrimWeight);
-            if (pollution != null)
-                pollution.SetPollution(0.85f, instant: true);
+            pollution.SetPollution(0.85f, instant: true);
             wavesGain = 0f;
+            windTarget = 0.45f;
             SetMusic(grim: 0.8f, dream: 0f, fadeSpeed: 0.5f);
             actor.Place(Mark("Mark_HomeStart"));
             actor.SetPose(0f, 0f, 10f);
+            actor.SetWalkStyle(config.homeWalk);
             Vector3[] homePath = Path("Path_Home");
             float homeSpeed = Mathf.Max(0.2f, actor.PathLength(homePath) / Mathf.Max(1f, config.walkHome - half));
             StartWalk(homePath, homeSpeed);
             cinematicCamera.Shake = 0.5f;
             cinematicCamera.Move(Shot("B7_From"), Shot("B7_To"), config.walkHome);
+            cinematicCamera.RackFocus(actor.transform, 0.1f);
             yield return overlay.FadeTo(0f, half);
             yield return Until(config.walkHome - half);
             yield return overlay.FadeTo(1f, half);
 
-            // 8. Inside the shack: the bag beside the coin tin, one coin goes in, the lamp warms
+            // 8. The shack: the bag set down beside the coin tin, one coin from his pocket, dawn at the window
             BeginBeat(8, "The shack");
             StopWalk();
             SetAtmosphere(config.interior);
             SetGrim(config.shackGrimWeight);
+            windTarget = 0.15f;
             actor.Place(Mark("Mark_Interior"));
-            yield return actor.Sit(0f);
-            actor.SetSlump(10f);
-            if (bag != null)
-                actor.Hold(bag);
+            actor.SetPose(0f, 1f, 4f);
             float wide = config.shackInterior * 0.45f;
             cinematicCamera.Shake = 0.6f;
             cinematicCamera.Move(Shot("B8_From"), Shot("B8_To"), wide);
+            cinematicCamera.RackFocus(actor.transform, 0.1f);
             yield return overlay.FadeTo(0f, half);
-            yield return Until(2.2f);
+            yield return Until(1.6f);
             Transform bagRest = Mark("Mark_BagRest");
-            if (bag != null && bagRest != null)
-                yield return CinematicActor.Toss(bag, bagRest.position, bagRest.rotation, 0.2f, 1.1f);
+            if (heldBag != null && bagRest != null)
+            {
+                yield return actor.Reach(R, bagRest.position + Vector3.up * 0.08f, 1.1f);
+                actor.SetCarry(0f);
+                if (heldBag.TryGetComponent(out Pendulum bagSwing))
+                    bagSwing.enabled = false; // it lies still once it is set down
+                yield return CinematicActor.Toss(heldBag, bagRest.position, bagRest.rotation, 0.04f, 0.4f);
+                StartCoroutine(actor.Release(R, 1f));
+            }
             yield return Until(wide);
 
             cinematicCamera.Shake = 0.4f;
             cinematicCamera.Move(Shot("B8b_From"), Shot("B8b_To"), config.shackInterior - wide);
-            yield return Until(wide + 1.2f);
+            Transform tin = Mark("Mark_CoinDrop");
+            if (tin != null)
+                cinematicCamera.RackFocus(tin, 0.8f);
             Transform coinStart = Mark("Mark_CoinStart");
-            Transform coinDrop = Mark("Mark_CoinDrop");
-            if (coin != null && coinStart != null && coinDrop != null)
+            if (coin != null && coinStart != null && tin != null)
             {
-                coin.SetPositionAndRotation(coinStart.position, coinStart.rotation);
-                coin.gameObject.SetActive(true);
-                yield return CinematicActor.Toss(coin, coinDrop.position, coinDrop.rotation, 0.12f, 0.6f);
+                // A hand into the coat pocket, out with a coin, over the tin, and let go
+                Transform hips = actor.Poser.Bone("Hips");
+                Vector3 pocket = hips != null ? hips.position + actor.transform.right * -0.2f + actor.transform.forward * 0.08f : coinStart.position;
+                yield return actor.Reach(L, pocket, 0.8f);
+                SetActive(coin, true);
+                coin.SetParent(actor.Poser.Hand(L), true);
+                coin.position = actor.Poser.Palm(L);
+                yield return actor.Reach(L, coinStart.position, 1.1f);
+                yield return new WaitForSeconds(0.3f);
+                yield return CinematicActor.Toss(coin, tin.position, tin.rotation, 0.05f, 0.35f);
                 PlaySfx(config.coinClip, 0.9f);
-                coin.gameObject.SetActive(false);
+                Burst(coinGlint, tin.position + Vector3.up * 0.04f, 12);
+                SetActive(coin, false);
+                StartCoroutine(actor.Release(L, 1.2f));
             }
-            StartCoroutine(actor.Slump(0f, 2.5f));
-            // Hope: the lamp warms and a little colour comes back into the world
+            // Hope: the lamp warms, dawn reaches the window, a little colour comes back, he looks up
+            StartCoroutine(actor.Slump(-4f, 2.5f));
+            if (windowLight != null)
+                StartCoroutine(actor.LookAtPoint(windowLight.transform.position, 2.5f, 0.8f));
             float grimFrom = grimVolume != null ? grimVolume.weight : 0f;
-            StartCoroutine(CinematicActor.Tween(3.5f, t =>
+            StartCoroutine(CinematicActor.Tween(4f, t =>
             {
                 SetLamp(t);
+                SetWindow(t);
                 SetGrim(Mathf.Lerp(grimFrom, config.promiseGrimWeight, t));
             }));
+            SetMusic(grim: 0f, dream: 0.8f, fadeSpeed: 0.25f);
             yield return Until(config.shackInterior);
 
-            // 9. The promise, then the title
+            // 9. The promise, word by word, then the title
             BeginBeat(9, "Promise");
-            yield return overlay.ShowLine(config.promiseLine, 1.6f);
-            yield return Until(Mathf.Max(1.7f, config.promise - 1.5f));
-            SetMusic(grim: 0f, dream: 0f, fadeSpeed: 0.4f);
+            yield return overlay.ShowLineWords(config.promiseLine, 0.32f, 0.7f);
+            yield return Until(Mathf.Max(BeatTime + 0.8f, config.promise - 1.5f));
+            SetMusic(grim: 0f, dream: 0f, fadeSpeed: 0.35f);
+            windTarget = 0f;
             yield return overlay.FadeTo(1f, 1.5f);
             overlay.HideText();
-            yield return overlay.ShowTitle(config.titleText, 1.2f);
-            yield return new WaitForSeconds(Mathf.Max(0.2f, config.title - 2.2f));
+            yield return overlay.ShowTitleTracking(config.titleText, 1.6f);
+            yield return new WaitForSeconds(Mathf.Max(0.2f, config.title - 2.6f));
             yield return overlay.HideTitle(1f);
 
             Finish(skipped: false);
@@ -359,6 +480,18 @@ namespace UpcycleCity.Cinematics
             return null;
         }
 
+        Transform TurtlePart(string name)
+        {
+            if (deadTurtle == null)
+                return null;
+            foreach (Transform t in deadTurtle.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == name)
+                    return t;
+            }
+            return deadTurtle.transform;
+        }
+
         /// <summary>Starts a walk as its own coroutine, so the sequence can cut away while he is still walking.</summary>
         Coroutine StartWalk(Vector3[] path, float speed)
         {
@@ -375,26 +508,60 @@ namespace UpcycleCity.Cinematics
             actor.Halt();
         }
 
+        static void SetActive(Component c, bool on)
+        {
+            if (c != null)
+                c.gameObject.SetActive(on);
+        }
+
+        static void SetActive(GameObject go, bool on)
+        {
+            if (go != null)
+                go.SetActive(on);
+        }
+
+        static void Burst(ParticleSystem system, Vector3 at, int count)
+        {
+            if (system == null)
+                return;
+            system.transform.position = at;
+            system.Emit(count);
+        }
+
         // ---------------------------------------------------------------- world state
 
-        void SetWorld(World world)
+        /// <summary>The grey present, instantly: full pollution, grey grade, litter and the dead turtle back.</summary>
+        void SetPresent()
         {
-            bool memory = world == World.Memory;
-            if (pollution != null)
-                pollution.SetPollution(memory ? 0f : 1f, instant: true);
-            if (grimVolume != null)
-                grimVolume.weight = memory ? 0f : 1f;
+            pollution.SetPollution(1f, instant: true);
+            SetGrim(1f);
             if (dreamVolume != null)
-                dreamVolume.weight = memory ? 1f : 0f;
-            if (litter != null)
-                litter.SetActive(!memory);
-            if (deadTurtle != null)
-                deadTurtle.SetActive(!memory);
-            if (shoreTurtle != null)
-                shoreTurtle.gameObject.SetActive(memory);
-            if (actor != null)
-                actor.gameObject.SetActive(!memory);
-            SetWaterDream(memory ? 1f : 0f);
+                dreamVolume.weight = 0f;
+            if (transitionVolume != null)
+                transitionVolume.weight = 0f;
+            SetActive(memoryOnly, false);
+            SetActive(presentOnly, true);
+            SetActive(tangledBag, !(heldBag != null && heldBag.gameObject.activeSelf));
+            SetWaterDream(0f);
+        }
+
+        IEnumerator BleedColour(float grimFrom, float grimTo, float seconds)
+        {
+            yield return CinematicActor.Tween(seconds, t =>
+            {
+                SetGrim(Mathf.Lerp(grimFrom, grimTo, t));
+                if (dreamVolume != null)
+                    dreamVolume.weight = Mathf.Lerp(1f - grimFrom, 1f - grimTo, t);
+                SetWaterDream(Mathf.Lerp(1f - grimFrom, 1f - grimTo, t));
+            });
+        }
+
+        IEnumerator Ripple(float seconds)
+        {
+            if (transitionVolume == null)
+                yield break;
+            yield return CinematicActor.Tween(seconds, t => transitionVolume.weight = Mathf.Sin(t * Mathf.PI));
+            transitionVolume.weight = 0f;
         }
 
         void SetWaterDream(float dream)
@@ -420,7 +587,6 @@ namespace UpcycleCity.Cinematics
                 return;
             }
             overrideWeight = 0f;
-            // Let the controller re-apply its own atmosphere
             if (pollution != null)
                 pollution.SetPollution(pollution.TargetPollution, instant: true);
         }
@@ -467,6 +633,14 @@ namespace UpcycleCity.Cinematics
             lamp.intensity = Mathf.Lerp(config.lampColdIntensity, config.lampWarmIntensity, warmth);
         }
 
+        void SetWindow(float dawn)
+        {
+            if (windowLight == null)
+                return;
+            windowLight.color = Color.Lerp(config.windowColdColor, config.windowDawnColor, dawn);
+            windowLight.intensity = Mathf.Lerp(config.windowColdIntensity, config.windowDawnIntensity, dawn);
+        }
+
         // ---------------------------------------------------------------- skipping and leaving
 
         void TickSkip()
@@ -505,6 +679,7 @@ namespace UpcycleCity.Cinematics
             overlay.SetSkipProgress(0f);
             SetMusic(grim: 0f, dream: 0f, fadeSpeed: 1.2f);
             wavesGain = 0f;
+            windTarget = underwaterTarget = heartbeatTarget = 0f;
             if (skipped)
                 yield return overlay.FadeTo(1f, 0.6f);
             LoadNext();
@@ -528,6 +703,9 @@ namespace UpcycleCity.Cinematics
         {
             grimMusic = NewSource("Intro_GrimMusic", config.grimMusic, loop: true);
             dreamMusic = NewSource("Intro_DreamMusic", config.dreamMusic, loop: true);
+            windSource = NewSource("Intro_Wind", config.windLoop, loop: true);
+            underwaterSource = NewSource("Intro_Underwater", config.underwaterLoop, loop: true);
+            heartbeatSource = NewSource("Intro_Heartbeat", config.heartbeat, loop: true);
             wavesSource = NewSource("Intro_Waves", null, loop: false);
             wavesLowPass = wavesSource.gameObject.AddComponent<AudioLowPassFilter>();
             wavesLowPass.cutoffFrequency = 22000f;
@@ -606,15 +784,31 @@ namespace UpcycleCity.Cinematics
             return muted ? 0f : SoundManager.GetCategoryVolume(SoundCategory.Master) * SoundManager.GetCategoryVolume(category);
         }
 
+        static void Fade(AudioSource source, float target, float speed, float dt)
+        {
+            if (source != null)
+                source.volume = Mathf.MoveTowards(source.volume, target, speed * dt);
+        }
+
         void TickAudio(float dt)
         {
             if (config == null || grimMusic == null)
                 return;
 
             float music = config.musicVolume * Bus(SoundCategory.Music);
-            float step = musicFadeSpeed * dt;
-            grimMusic.volume = Mathf.MoveTowards(grimMusic.volume, grimTarget * music, step * Mathf.Max(music, 0.01f));
-            dreamMusic.volume = Mathf.MoveTowards(dreamMusic.volume, dreamTarget * music, step * Mathf.Max(music, 0.01f));
+            float step = musicFadeSpeed * Mathf.Max(music, 0.01f);
+            Fade(grimMusic, grimTarget * music, step, dt);
+            Fade(dreamMusic, dreamTarget * music, step, dt);
+
+            float ambience = Bus(SoundCategory.Ambience);
+            float sfx = Bus(SoundCategory.SFX);
+            Fade(windSource, windTarget * config.windVolume * ambience, 0.4f, dt);
+            Fade(underwaterSource, underwaterTarget * config.underwaterVolume * ambience, 0.8f, dt);
+            Fade(heartbeatSource, heartbeatTarget * config.heartbeatVolume * sfx, 0.5f, dt);
+            if (footprints != null)
+                footprints.VolumeScale = sfx;
+            foreach (Gull g in gulls)
+                if (g != null) g.VolumeScale = ambience;
 
             if (wavesGain > 0f && config.waveClips != null && config.waveClips.Length > 0 && Time.time >= nextWave)
             {
@@ -622,7 +816,7 @@ namespace UpcycleCity.Cinematics
                 if (clip != null)
                 {
                     wavesSource.pitch = Random.Range(0.9f, 1.05f);
-                    wavesSource.PlayOneShot(clip, config.wavesVolume * wavesGain * Random.Range(0.75f, 1f) * Bus(SoundCategory.Ambience));
+                    wavesSource.PlayOneShot(clip, config.wavesVolume * wavesGain * Random.Range(0.75f, 1f) * ambience);
                 }
                 nextWave = Time.time + Random.Range(config.waveInterval.x, Mathf.Max(config.waveInterval.x, config.waveInterval.y));
             }

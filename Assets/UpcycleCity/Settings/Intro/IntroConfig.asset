@@ -32,6 +32,22 @@ MonoBehaviour:
   blackCutSeconds: 0.9
   walkSpeed: 1.15
   tiredWalkSpeed: 0.8
+  shoreWalk:
+    stride: 0.5
+    hipSwing: 19
+    kneeSwing: 48
+    armSwing: 9
+    lean: 9
+    headDown: 12
+  homeWalk:
+    stride: 0.62
+    hipSwing: 24
+    kneeSwing: 55
+    armSwing: 16
+    lean: 4
+    headDown: 4
+  colourBleedSeconds: 2
+  rippleSeconds: 1.4
   turtleSwimSpeed: 1.6
   turtleStrokeRate: 0.75
   promiseLine: 'I promise.
@@ -68,6 +84,10 @@ MonoBehaviour:
   duskGrimWeight: 0.75
   shackGrimWeight: 0.6
   promiseGrimWeight: 0.2
+  windowColdColor: {r: 0.55, g: 0.62, b: 0.95, a: 1}
+  windowDawnColor: {r: 1, g: 0.72, b: 0.42, a: 1}
+  windowColdIntensity: 4
+  windowDawnIntensity: 9
   lampColdColor: {r: 1, g: 0.82, b: 0.6, a: 1}
   lampWarmColor: {r: 1, g: 0.7, b: 0.38, a: 1}
   lampColdIntensity: 5
@@ -80,6 +100,20 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 2fa85f79ccc19c871ac3662df98d0f28, type: 3}
   - {fileID: 8300000, guid: 9207969b4b436798f80941a62b9842e6, type: 3}
   coinClip: {fileID: 8300000, guid: c20bba616205345cba2f71a593a124a7, type: 3}
+  windLoop: {fileID: 8300000, guid: cf215eadf606c7920b93e4710e342820, type: 3}
+  underwaterLoop: {fileID: 8300000, guid: e20617fccc3647050a05984781161de9, type: 3}
+  heartbeat: {fileID: 8300000, guid: 432399fe29453f53f83ed004854271e8, type: 3}
+  sting: {fileID: 8300000, guid: c3fa938ad6921c70187abf822a379ff1, type: 3}
+  footsteps: []
+  gullCries:
+  - {fileID: 8300000, guid: eb3c200f9cab7ba3697825c5fb25fdc4, type: 3}
+  - {fileID: 8300000, guid: 9a7762aa6d1f0cd2f8da665e6715a935, type: 3}
+  - {fileID: 8300000, guid: 39ff89ac759ecf0e298242031ced4b1b, type: 3}
+  - {fileID: 8300000, guid: 30bcddcbe9b3c6bb992fb1aad437e4db, type: 3}
   musicVolume: 0.7
   wavesVolume: 0.55
+  windVolume: 0.32
+  underwaterVolume: 0.55
+  heartbeatVolume: 0.85
+  stingVolume: 0.9
   waveInterval: {x: 1.6, y: 3.4}

@@ -34,6 +34,9 @@ namespace UpcycleCity.Cinematics
             // Back to front: the promise line sits under the fade (it fades out with the picture);
             // the title card sits above it (shown on black)
             line = AddLabel("intro-line");
+            // The line sits in the lower third, just above the bottom letterbox bar
+            line.style.top = StyleKeyword.Auto;
+            line.style.height = StyleKeyword.Auto;
 
             topBar = AddLayer("intro-bar", Color.black);
             topBar.style.bottom = StyleKeyword.Auto;
@@ -107,6 +110,7 @@ namespace UpcycleCity.Cinematics
                 return;
             topBar.style.height = Length.Percent(fraction * 100f);
             bottomBar.style.height = Length.Percent(fraction * 100f);
+            line.style.bottom = Length.Percent(fraction * 100f + 7f);
         }
 
         public void SetFade(float alpha)
@@ -157,6 +161,48 @@ namespace UpcycleCity.Cinematics
         }
 
         public IEnumerator ShowLine(string text, float seconds) => ShowText(line, text, seconds);
+
+        /// <summary>Reveals the line word by word, each word fading in, as if it were being said.</summary>
+        public IEnumerator ShowLineWords(string text, float secondsPerWord, float fadePerWord = 0.6f)
+        {
+            if (line == null)
+                yield break;
+            string[] words = text.Replace("\n", " \n ").Split(' ');
+            line.style.opacity = 1f;
+            float total = (words.Length - 1) * secondsPerWord + fadePerWord;
+            var sb = new System.Text.StringBuilder(text.Length * 2);
+            for (float t = 0f; t <= total + Time.deltaTime; t += Time.deltaTime)
+            {
+                sb.Clear();
+                for (int i = 0; i < words.Length; i++)
+                {
+                    if (words[i] == "\n")
+                    {
+                        sb.Append('\n');
+                        continue;
+                    }
+                    float a = Mathf.Clamp01((t - i * secondsPerWord) / fadePerWord);
+                    int alpha = Mathf.RoundToInt(a * 255f);
+                    sb.Append("<alpha=#").Append(alpha.ToString("X2")).Append('>').Append(words[i]).Append(' ');
+                }
+                line.text = sb.ToString();
+                yield return null;
+            }
+            line.text = text;
+        }
+
+        /// <summary>Fades the title in while its letters drift apart.</summary>
+        public IEnumerator ShowTitleTracking(string text, float seconds, float fromSpacing = 2f, float toSpacing = 14f)
+        {
+            if (title == null)
+                yield break;
+            title.text = text;
+            yield return CinematicActor.Tween(seconds, t =>
+            {
+                title.style.opacity = t;
+                title.style.letterSpacing = Mathf.Lerp(fromSpacing, toSpacing, t);
+            });
+        }
         public IEnumerator HideLine(float seconds) => HideText(line, seconds);
         public IEnumerator ShowTitle(string text, float seconds) => ShowText(title, text, seconds);
         public IEnumerator HideTitle(float seconds) => HideText(title, seconds);
