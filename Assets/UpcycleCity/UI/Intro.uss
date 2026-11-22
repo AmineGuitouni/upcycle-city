@@ -1,0 +1,21 @@
+/* Intro cinematic overlay: letterbox, fades, the promise line and the title card.
+   Layout is set in code (CinematicOverlay); this sheet only styles the text. */
+
+.intro-line {
+    padding-left: 12%;
+    padding-right: 12%;
+    padding-top: 36%;
+    font-size: 38px;
+    -unity-font-style: italic;
+    color: rgb(244, 238, 226);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+    letter-spacing: 1px;
+}
+
+.intro-title {
+    font-size: 72px;
+    -unity-font-style: bold;
+    color: rgb(240, 240, 236);
+    letter-spacing: 12px;
+    text-shadow: 0 3px 14px rgba(46, 139, 87, 0.55);
+}

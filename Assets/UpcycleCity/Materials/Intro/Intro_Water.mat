@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Intro_Water
+  m_Shader: {fileID: 4800000, guid: 5003cd5414bcb6423bbfdeb34a6d7397, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _DeepAlpha: 0.93
+    - _DepthDistance: 18
+    - _Dream: 0
+    - _FoamWash: 0.8
+    - _FoamWidth: 1.6
+    - _Glints: 1
+    - _ShoreAlpha: 0.55
+    - _WaveHeight: 0.12
+    - _WaveLength: 7
+    - _WaveSpeed: 1.2
+    m_Colors:
+    - _DeepColor: {r: 0.049999982, g: 0.41999996, b: 0.62, a: 1}
+    - _FoamColor: {r: 0.95, g: 0.96999997, b: 0.95, a: 1}
+    - _MurkyDeepColor: {r: 0.19999996, g: 0.23999995, b: 0.21999997, a: 1}
+    - _MurkyShallowColor: {r: 0.41999996, g: 0.43999997, b: 0.35999998, a: 1}
+    - _ShallowColor: {r: 0.31999996, g: 0.86, b: 0.82, a: 1}
+    - _UndersideColor: {r: 0.45, g: 0.92, b: 0.95, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

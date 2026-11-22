@@ -48,6 +48,8 @@ namespace UpcycleCity.Editor
             new ModelImportRule("KayKitCityBits/",             4.4f,  RigType.None,     1f,          1f,    0f),
             new ModelImportRule("QuaterniusNature/",           1f,    RigType.None,     1f,          0.4f,  1f),
             new ModelImportRule("QuaterniusFarmAnimals/",      1f,    RigType.Generic,  0.6f,        0.3f,  0f),
+            // Intro flashback sea life: only seen in clean water, keeps its colours
+            new ModelImportRule("QuaterniusFish/",             1f,    RigType.Generic,  0.2f,        0f,    0f),
             new ModelImportRule("Rocks/",                      1f,    RigType.None,     0.8f,        0.7f,  1f),
             new ModelImportRule("RealisticCarPack/",           1f,    RigType.None,     1f,          0.8f,  0f),
             new ModelImportRule("Animations/",                 1f,    RigType.Humanoid, 1f,          0f,    0f),

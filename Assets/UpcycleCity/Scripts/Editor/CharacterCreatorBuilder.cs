@@ -19,6 +19,8 @@ namespace UpcycleCity.Editor
     {
         const string ScenePath = "Assets/UpcycleCity/Scenes/CharacterCreator.unity";
         const string GameplayScenePath = "Assets/UpcycleCity/Scenes/PlayerGym.unity";
+        // The intro cinematic (IntroSceneBuilder) plays before the creator when it has been built
+        const string IntroScenePath = "Assets/UpcycleCity/Scenes/Intro.unity";
         const string PartsFolder = "Assets/UpcycleCity/Art/UpcycleProps/Character";
         const string LibraryPath = "Assets/UpcycleCity/Settings/Character/CharacterPartsLibrary.asset";
         const string UiFolder = "Assets/UpcycleCity/UI";
@@ -265,21 +267,27 @@ namespace UpcycleCity.Editor
             return light;
         }
 
-        /// <summary>Creator first, then the Player Gym; drops entries whose scene file no longer exists.</summary>
+        /// <summary>
+        /// Creator first (right after the intro cinematic, when it exists), then the Player Gym; drops entries
+        /// whose scene file no longer exists.
+        /// </summary>
         static void UpdateBuildScenes()
         {
             var scenes = new List<EditorBuildSettingsScene>();
+            bool hasIntro = File.Exists(IntroScenePath);
+            if (hasIntro)
+                scenes.Add(new EditorBuildSettingsScene(IntroScenePath, true));
             scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
             bool hasGameplay = false;
             foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
             {
-                if (s.path == ScenePath || !File.Exists(s.path))
+                if (s.path == ScenePath || s.path == IntroScenePath || !File.Exists(s.path))
                     continue;
                 hasGameplay |= s.path == GameplayScenePath;
                 scenes.Add(s);
             }
             if (!hasGameplay)
-                scenes.Insert(1, new EditorBuildSettingsScene(GameplayScenePath, true));
+                scenes.Insert(hasIntro ? 2 : 1, new EditorBuildSettingsScene(GameplayScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
     }

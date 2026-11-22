@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2368270c8e75d2c184d1931df346498, type: 3}
+  m_Name: IntroConfig
+  m_EditorClassIdentifier: UpcycleCity.Runtime::UpcycleCity.Cinematics.IntroConfig
+  nextScene: CharacterCreator
+  skipHoldSeconds: 1.2
+  letterbox: 0.12
+  walkAlongShore: 11
+  discovery: 6.5
+  kneel: 6.5
+  memoryShore: 9
+  memoryUnderwater: 12
+  snapBack: 6.5
+  walkHome: 9
+  shackInterior: 12
+  promise: 6
+  title: 3.5
+  fadeInSeconds: 2.5
+  flashSeconds: 0.35
+  flashHoldSeconds: 0.25
+  flashOutSeconds: 1.4
+  blackCutSeconds: 0.9
+  walkSpeed: 1.15
+  tiredWalkSpeed: 0.8
+  turtleSwimSpeed: 1.6
+  turtleStrokeRate: 0.75
+  promiseLine: 'I promise.
+
+    Every coin I earn goes back into cleaning this city.'
+  titleText: UPCYCLE CITY
+  underwater:
+    sunColor: {r: 0.75, g: 1, b: 0.98, a: 1}
+    sunIntensity: 1.4
+    sunElevation: 70
+    ambientSky: {r: 0.35, g: 0.8, b: 0.9, a: 1}
+    ambientEquator: {r: 0.2, g: 0.55, b: 0.7, a: 1}
+    ambientGround: {r: 0.2, g: 0.35, b: 0.4, a: 1}
+    fogColor: {r: 0.1, g: 0.48, b: 0.6, a: 1}
+    fogDensity: 0.05
+  dusk:
+    sunColor: {r: 1, g: 0.55, b: 0.32, a: 1}
+    sunIntensity: 0.75
+    sunElevation: 7
+    ambientSky: {r: 0.36, g: 0.33, b: 0.42, a: 1}
+    ambientEquator: {r: 0.42, g: 0.32, b: 0.28, a: 1}
+    ambientGround: {r: 0.16, g: 0.14, b: 0.13, a: 1}
+    fogColor: {r: 0.52, g: 0.4, b: 0.36, a: 1}
+    fogDensity: 0.018
+  interior:
+    sunColor: {r: 0.55, g: 0.6, b: 0.85, a: 1}
+    sunIntensity: 0.12
+    sunElevation: 10
+    ambientSky: {r: 0.17, g: 0.17, b: 0.22, a: 1}
+    ambientEquator: {r: 0.15, g: 0.13, b: 0.13, a: 1}
+    ambientGround: {r: 0.08, g: 0.07, b: 0.07, a: 1}
+    fogColor: {r: 0.05, g: 0.05, b: 0.06, a: 1}
+    fogDensity: 0.001
+  duskGrimWeight: 0.75
+  shackGrimWeight: 0.6
+  promiseGrimWeight: 0.2
+  lampColdColor: {r: 1, g: 0.82, b: 0.6, a: 1}
+  lampWarmColor: {r: 1, g: 0.7, b: 0.38, a: 1}
+  lampColdIntensity: 5
+  lampWarmIntensity: 9
+  grimMusic: {fileID: 8300000, guid: ea9aa102ed3c872f4affec03f1580600, type: 3}
+  dreamMusic: {fileID: 8300000, guid: f48e598eda6b50ff3ae4108c082ea876, type: 3}
+  waveClips:
+  - {fileID: 8300000, guid: c1532d76f106004259164e7b806c4014, type: 3}
+  - {fileID: 8300000, guid: 1e16887b79fefa09e9ad5d40a0866836, type: 3}
+  - {fileID: 8300000, guid: 2fa85f79ccc19c871ac3662df98d0f28, type: 3}
+  - {fileID: 8300000, guid: 9207969b4b436798f80941a62b9842e6, type: 3}
+  coinClip: {fileID: 8300000, guid: c20bba616205345cba2f71a593a124a7, type: 3}
+  musicVolume: 0.7
+  wavesVolume: 0.55
+  waveInterval: {x: 1.6, y: 3.4}
