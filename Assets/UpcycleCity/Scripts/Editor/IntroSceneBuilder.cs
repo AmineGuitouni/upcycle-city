@@ -732,6 +732,7 @@ namespace UpcycleCity.Editor
             using (var so = new SerializedObject(ctx.shoreTurtle))
             {
                 so.FindProperty("bankDegrees").floatValue = 9f; // stays flat in the shallows, shell to the sky
+                so.FindProperty("strokeDegrees").floatValue = 22f; // short strokes: flippers stay under the surface
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
             Visibility(shoreGo, PollutionVisibilityMode.WhenClean, 0.35f);
@@ -741,18 +742,20 @@ namespace UpcycleCity.Editor
 
             // Shots and marks
             Mark(ctx.anchors, "Mark_ShoreStart", new Vector3(-16f, 0f, 1.8f), 90f);
-            PathPoints(ctx.anchors, "Path_Shore", new Vector3(-9f, 0f, 2.3f), new Vector3(-3f, 0f, 1.9f), new Vector3(0.9f, 0f, 2.63f));
+            PathPoints(ctx.anchors, "Path_Shore", new Vector3(-9f, 0f, 2.3f), new Vector3(-3f, 0f, 1.9f), new Vector3(0.5f, 0f, 2.2f));
+            Mark(ctx.anchors, "Mark_Kneel", new Vector3(1.02f, 0f, 2.76f), 45f);
             Shot(ctx.anchors, "B1_From", new Vector3(-5.5f, 1.9f, -6.5f), new Vector3(-12f, 1.1f, 2f), 38f);
             Shot(ctx.anchors, "B1_To", new Vector3(-2.8f, 1.75f, -6f), new Vector3(-4.5f, 1.0f, 2.4f), 36f);
             // The turtle low in the foreground, the man walking up behind it
-            Shot(ctx.anchors, "B2_From", new Vector3(5.4f, 0.95f, 6.6f), new Vector3(-0.8f, 0.75f, 2.2f), 34f);
-            Shot(ctx.anchors, "B2_To", new Vector3(4.8f, 0.85f, 6.1f), new Vector3(0.5f, 0.7f, 2.6f), 31f);
+            Shot(ctx.anchors, "B2_From", new Vector3(5.3f, 0.95f, 5.6f), new Vector3(-0.8f, 0.75f, 2.1f), 34f);
+            Shot(ctx.anchors, "B2_To", new Vector3(4.7f, 0.85f, 5.3f), new Vector3(0.5f, 0.75f, 2.5f), 31f);
             // Three-quarter front of the kneeling man, the turtle at the bottom of frame
             // Three-quarter front, low: his face, his hand on the shell, the turtle in the foreground
-            Shot(ctx.anchors, "B3_From", new Vector3(2.7f, 1.6f, 5.0f), new Vector3(1.15f, 0.55f, 2.95f), 42f);
-            Shot(ctx.anchors, "B3_To", new Vector3(2.45f, 1.5f, 4.7f), new Vector3(1.15f, 0.6f, 2.95f), 37f);
-            Shot(ctx.anchors, "B4_From", new Vector3(0.4f, 1.55f, 2.3f), new Vector3(2.2f, 0.1f, 9.5f), 46f);
-            Shot(ctx.anchors, "B4_To", new Vector3(0.6f, 1.45f, 3.1f), new Vector3(2.2f, 0.05f, 9.5f), 40f);
+            // From his left, a little ahead: the kneeling silhouette, his hand on the shell, his face
+            Shot(ctx.anchors, "B3_From", new Vector3(-1.0f, 1.0f, 5.95f), new Vector3(1.35f, 0.62f, 3.15f), 40f);
+            Shot(ctx.anchors, "B3_To", new Vector3(-0.75f, 0.98f, 5.65f), new Vector3(1.35f, 0.66f, 3.15f), 36f);
+            Shot(ctx.anchors, "B4_From", new Vector3(0.9f, 1.4f, 2.7f), new Vector3(1.6f, 0.1f, 8.2f), 40f);
+            Shot(ctx.anchors, "B4_To", new Vector3(1.0f, 1.3f, 3.4f), new Vector3(1.6f, 0.05f, 8.2f), 31f);
             // Side-on: the man and the turtle in profile as he frees the bag
             // From his right, the hand that frees the bag: him and the turtle side by side
             Shot(ctx.anchors, "B6_From", new Vector3(3.5f, 1.35f, 0.25f), new Vector3(0.95f, 0.8f, 2.75f), 40f);
@@ -841,6 +844,8 @@ namespace UpcycleCity.Editor
                 var go = new GameObject($"Gull_{i}");
                 go.transform.SetParent(ctx.memoryOnly.transform);
                 var model = (GameObject)PrefabUtility.InstantiatePrefab(gullModel, go.transform);
+                foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
+                    r.shadowCastingMode = ShadowCastingMode.Off; // its shadow would sweep the sand far below
                 var gull = go.AddComponent<Gull>();
                 using var so = new SerializedObject(gull);
                 so.FindProperty("model").objectReferenceValue = model.transform;
@@ -1168,7 +1173,7 @@ namespace UpcycleCity.Editor
             // Furniture: a mattress on a pallet, a crate for a table, an old TV, an armchair, a shelf
             Place(Props + "City/pallet.fbx", root, o + new Vector3(-0.8f, 0f, 0.7f), 90f, 1f);
             Place(Props + "City/mattress.fbx", root, o + new Vector3(-0.8f, 0.13f, 0.7f), 90f, 1f);
-            Place(Props + "Garage/crate_plastic_blank.fbx", root, o + new Vector3(0.2f, 0f, -0.55f), 0f, 1f);
+            Place(Props + "Garage/crate_plastic_blank.fbx", root, o + new Vector3(0.15f, 0f, -0.36f), 0f, 1f);
             Place(Props + "Garage/crate_paper_blank.fbx", root, o + new Vector3(1.3f, 0f, 1.1f), 0f, 1f);
             Place(Props + "Garage/crt_tv.fbx", root, o + new Vector3(1.3f, 0.3f, 1.15f), 200f, 1f);
             Place(Props + "Garage/armchair_old.fbx", root, o + new Vector3(-1.3f, 0f, -0.95f), 45f, 1f);
@@ -1178,11 +1183,11 @@ namespace UpcycleCity.Editor
             Place(Props + "Garage/item_newspapers.fbx", root, o + new Vector3(-0.2f, 0f, -1.05f), 30f, 1f);
 
             // The coin tin on the crate, with a few coins beside it
-            Place(Props + "Garage/item_tin.fbx", root, o + new Vector3(0.4f, 0.3f, -0.45f), 0f, 1.6f);
+            Place(Props + "Garage/item_tin.fbx", root, o + new Vector3(0.14f, 0.3f, -0.24f), 0f, 1.6f);
             for (int i = 0; i < 3; i++)
-                Coin(root, $"Coin_Spare_{i}", o + new Vector3(0.42f + i * 0.03f, 0.302f + i * 0.004f, -0.68f + i * 0.015f), ctx.mats.gold);
-            ctx.coin = Coin(root, "Coin_Promise", o + new Vector3(0.25f, 0.68f, -0.3f), ctx.mats.gold);
-            ctx.coinGlint = Particles(root, "CoinGlint", o + new Vector3(0.4f, 0.5f, -0.45f), ctx.mats.motes, ps =>
+                Coin(root, $"Coin_Spare_{i}", o + new Vector3(0.24f + i * 0.032f, 0.302f + i * 0.004f, -0.24f + i * 0.012f), ctx.mats.gold);
+            ctx.coin = Coin(root, "Coin_Promise", o + new Vector3(0.1f, 0.58f, -0.2f), ctx.mats.gold);
+            ctx.coinGlint = Particles(root, "CoinGlint", o + new Vector3(0.14f, 0.5f, -0.24f), ctx.mats.motes, ps =>
             {
                 var main = ps.main;
                 main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
@@ -1236,6 +1241,17 @@ namespace UpcycleCity.Editor
             window.shadows = LightShadows.Soft;
             ctx.windowLight = window;
 
+            // A soft warm fill from the camera side, so his face reads under the brim of his hat
+            var fillGo = new GameObject("FaceFill");
+            fillGo.transform.SetParent(root);
+            fillGo.transform.position = o + new Vector3(0.55f, 1.15f, -0.75f);
+            var fill = fillGo.AddComponent<Light>();
+            fill.type = LightType.Point;
+            fill.range = 2.6f;
+            fill.intensity = 0.9f;
+            fill.color = new Color(1f, 0.86f, 0.72f);
+            fill.shadows = LightShadows.None;
+
             Particles(root, "LampDust", o + new Vector3(0.1f, 1.3f, -0.1f), ctx.mats.motes, ps =>
             {
                 var main = ps.main;
@@ -1261,13 +1277,19 @@ namespace UpcycleCity.Editor
             // The bag is laid down on its side on the crate (its pivot is the handles)
             Transform bagRest = new GameObject("Mark_BagRest").transform;
             bagRest.SetParent(ctx.anchors);
-            bagRest.SetPositionAndRotation(o + new Vector3(-0.08f, 0.36f, -0.6f), Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(-84f, 0f, 0f));
-            Mark(ctx.anchors, "Mark_CoinStart", o + new Vector3(0.36f, 0.62f, -0.42f), 0f);
-            Mark(ctx.anchors, "Mark_CoinDrop", o + new Vector3(0.4f, 0.46f, -0.45f), 0f);
-            Shot(ctx.anchors, "B8_From", o + new Vector3(0.95f, 1.3f, -1.35f), o + new Vector3(-0.35f, 0.85f, 0.42f), 52f);
-            Shot(ctx.anchors, "B8_To", o + new Vector3(0.8f, 1.25f, -1.25f), o + new Vector3(-0.3f, 0.8f, 0.35f), 47f);
-            Shot(ctx.anchors, "B8b_From", o + new Vector3(1.05f, 0.95f, -1.45f), o + new Vector3(0.2f, 0.45f, -0.4f), 38f);
-            Shot(ctx.anchors, "B8b_To", o + new Vector3(0.9f, 0.9f, -1.3f), o + new Vector3(0.22f, 0.45f, -0.4f), 33f);
+            bagRest.SetPositionAndRotation(o + new Vector3(-0.12f, 0.36f, -0.46f), Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(-84f, 0f, 0f));
+            Mark(ctx.anchors, "Mark_CoinStart", o + new Vector3(0.12f, 0.56f, -0.21f), 0f);
+            Mark(ctx.anchors, "Mark_CoinDrop", o + new Vector3(0.14f, 0.46f, -0.24f), 0f);
+            // Face height, so his face shows under the hat
+            Shot(ctx.anchors, "B8_From", o + new Vector3(0.95f, 1.0f, -1.4f), o + new Vector3(-0.35f, 0.85f, 0.3f), 50f);
+            Shot(ctx.anchors, "B8_To", o + new Vector3(0.8f, 0.98f, -1.28f), o + new Vector3(-0.32f, 0.85f, 0.28f), 45f);
+            // The promise: close on his face as he looks up at the dawn in the window
+            // From the window side: he turns towards the dawn, and it lights his face
+            Shot(ctx.anchors, "B9_From", o + new Vector3(-1.3f, 1.02f, -0.6f), o + new Vector3(-0.4f, 1.2f, 0.3f), 38f);
+            Shot(ctx.anchors, "B9_To", o + new Vector3(-1.15f, 1.04f, -0.43f), o + new Vector3(-0.4f, 1.22f, 0.3f), 34f);
+            // The crate high in frame so the promise line falls on the dark floor below it
+            Shot(ctx.anchors, "B8b_From", o + new Vector3(1.1f, 0.95f, -1.45f), o + new Vector3(0.05f, 0.5f, -0.1f), 42f);
+            Shot(ctx.anchors, "B8b_To", o + new Vector3(0.98f, 0.92f, -1.32f), o + new Vector3(0.06f, 0.52f, -0.1f), 37f);
         }
 
         static Transform Coin(Transform parent, string name, Vector3 position, Material gold)
@@ -1277,7 +1299,7 @@ namespace UpcycleCity.Editor
             Object.DestroyImmediate(coin.GetComponent<Collider>());
             coin.transform.SetParent(parent);
             coin.transform.position = position;
-            coin.transform.localScale = new Vector3(0.026f, 0.0016f, 0.026f);
+            coin.transform.localScale = new Vector3(0.03f, 0.002f, 0.03f);
             coin.GetComponent<MeshRenderer>().sharedMaterial = gold;
             return coin.transform;
         }

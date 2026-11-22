@@ -17,7 +17,7 @@ MonoBehaviour:
   letterbox: 0.12
   walkAlongShore: 11
   discovery: 6.5
-  kneel: 6.5
+  kneel: 7.5
   memoryShore: 9
   memoryUnderwater: 12
   snapBack: 6.5

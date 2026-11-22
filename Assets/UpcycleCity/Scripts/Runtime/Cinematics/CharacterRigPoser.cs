@@ -66,6 +66,8 @@ namespace UpcycleCity.Cinematics
         [Range(0f, 1f)] public float reachLeftWeight, reachRightWeight;
         [Tooltip("Elbow bend while carrying something, degrees.")]
         [Range(0f, 90f)] public float carryRight;
+        [Tooltip("How far the spine leans into a reach (at full reach weight), degrees.")]
+        [Range(0f, 40f)] public float reachLean = 22f;
 
         [Header("Ground")]
         [Tooltip("Keep the lowest foot or knee on the ground plane (the actor's height plus this offset).")]
@@ -262,6 +264,15 @@ namespace UpcycleCity.Cinematics
                 BlendKneel(kneel);
             if (sit > 0f)
                 BlendSit(sit);
+
+            // ---- lean into a reach, as a person does, so the hand gets there
+            float lean = Mathf.Max(reachLeftWeight, reachRightWeight) * reachLean;
+            if (lean > 0.01f)
+            {
+                float twist = (reachLeftWeight - reachRightWeight) * 10f;   // turn the chest towards the reaching side
+                pose["Spine"] = pose["Spine"] * Pitch(lean * 0.55f) * Yaw(-twist * 0.5f);
+                pose["Chest"] = pose["Chest"] * Pitch(lean * 0.45f) * Yaw(-twist * 0.5f);
+            }
         }
 
         void Leg(string s, float sin, float cos, float w)
@@ -291,9 +302,9 @@ namespace UpcycleCity.Cinematics
         void BlendKneel(float k)
         {
             // Right knee down on the sand, left foot planted forward, leaning over what's in front of him
-            Mix("Hips", Pitch(8f), k);
-            Mix("Spine", Pitch(14f + slump * 0.35f), k);
-            Mix("Chest", Pitch(10f + slump * 0.4f), k);
+            Mix("Hips", Pitch(12f), k);
+            Mix("Spine", Pitch(18f + slump * 0.35f), k);
+            Mix("Chest", Pitch(14f + slump * 0.4f), k);
             Mix("Neck", Pitch(3f + slump * 0.08f), k);
             Mix("Head", Pitch(4f + slump * 0.1f), k);
             Mix("UpperLeg_L", Pitch(-78f) * Roll(-6f), k);

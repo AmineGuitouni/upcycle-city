@@ -205,6 +205,10 @@ namespace UpcycleCity.Cinematics
             cinematicCamera.Shake = 1.1f;
             cinematicCamera.Move(Shot("B3_From"), Shot("B3_To"), config.kneel);
             cinematicCamera.RackFocus(actor.transform, 0.8f);
+            // One slow step closer, then down onto one knee
+            Transform kneelMark = Mark("Mark_Kneel");
+            if (kneelMark != null)
+                yield return actor.WalkPath(new[] { kneelMark.position }, 0.45f);
             StartCoroutine(actor.Slump(2f, 1.6f));
             yield return actor.Kneel(1.6f);
             Transform shell = TurtlePart("Shell");
@@ -237,7 +241,7 @@ namespace UpcycleCity.Cinematics
                 cinematicCamera.Move(Shot("B4_From"), Shot("B4_To"), config.memoryShore);
                 if (shoreTurtle != null)
                 {
-                    cinematicCamera.LookAt(shoreTurtle.transform, Vector3.zero, 0.35f);
+                    cinematicCamera.LookAt(shoreTurtle.transform, Vector3.zero, 0.6f);
                     cinematicCamera.RackFocus(shoreTurtle.transform, 0.5f);
                 }
                 SetActive(memoryOnly, true);
@@ -417,6 +421,12 @@ namespace UpcycleCity.Cinematics
 
             // 9. The promise, word by word, then the title
             BeginBeat(9, "Promise");
+            cinematicCamera.Shake = 0.35f;
+            cinematicCamera.Move(Shot("B9_From"), Shot("B9_To"), config.promise + 1.5f);
+            Transform face = actor.Poser.Bone("Head");
+            if (face != null)
+                cinematicCamera.RackFocus(face, 0.1f);
+            yield return new WaitForSeconds(0.6f);
             yield return overlay.ShowLineWords(config.promiseLine, 0.32f, 0.7f);
             yield return Until(Mathf.Max(BeatTime + 0.8f, config.promise - 1.5f));
             SetMusic(grim: 0f, dream: 0f, fadeSpeed: 0.35f);
