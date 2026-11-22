@@ -3,9 +3,12 @@
     "rootNamespace": "UpcycleCity.Editor",
     "references": [
         "UpcycleCity.Runtime",
+        "UpcycleCity.Networking",
         "Unity.InputSystem",
         "Unity.RenderPipelines.Core.Runtime",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport"
     ],
     "includePlatforms": [
         "Editor"

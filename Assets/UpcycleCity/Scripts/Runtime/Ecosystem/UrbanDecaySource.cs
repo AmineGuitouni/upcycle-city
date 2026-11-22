@@ -66,7 +66,7 @@ namespace UpcycleCity.Ecosystem
 
         void Update()
         {
-            if (!IsDecaying)
+            if (!Core.GameAuthority.IsAuthoritative || !IsDecaying)
                 return;
 
             dumpTimer -= Time.deltaTime;

@@ -250,6 +250,8 @@ namespace UpcycleCity.Editor
                 so.FindProperty("gameplayScene").stringValue = Path.GetFileNameWithoutExtension(GameplayScenePath);
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            CoopMultiplayerSetup.WireCoopIntoActiveCreatorScene();
         }
 
         static Light AddLight(string name, LightType type, Vector3 position, Vector3 target, float intensity, Color color)

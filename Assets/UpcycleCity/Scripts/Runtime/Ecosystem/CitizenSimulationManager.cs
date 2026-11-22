@@ -161,6 +161,9 @@ namespace UpcycleCity.Ecosystem
 
         void Update()
         {
+            if (!Core.GameAuthority.IsAuthoritative)
+                return;
+
             float dt = Time.deltaTime;
 
             // Decay active floating reaction cues

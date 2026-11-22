@@ -41,6 +41,27 @@ namespace UpcycleCity.Character
             shadows = shadowMode;
         }
 
+        /// <summary>Runtime helper: stops or starts following local <see cref="CharacterAppearanceStore"/> edits.</summary>
+        public void SetFollowSavedAppearance(bool follow)
+        {
+            loadSavedOnAwake = follow;
+            CharacterAppearanceStore.Changed -= Apply;
+            if (follow && isActiveAndEnabled)
+                CharacterAppearanceStore.Changed += Apply;
+        }
+
+        /// <summary>Runtime helper: updates shadow casting mode on this avatar and all currently spawned body/hair parts.</summary>
+        public void SetShadowCastingMode(ShadowCastingMode shadowMode)
+        {
+            shadows = shadowMode;
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    renderers[i].shadowCastingMode = shadows;
+            }
+        }
+
         void Awake()
         {
             if (loadSavedOnAwake)

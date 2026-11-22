@@ -16,7 +16,7 @@ namespace UpcycleCity.Shops
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Shops/Recycling Buy-Back")]
-    public sealed class RecyclingBuyBack : MonoBehaviour, IInteractable, ITriggerReceiver
+    public sealed class RecyclingBuyBack : MonoBehaviour, IInteractable, ITriggerReceiver, ISyncedStateProvider
     {
         [Serializable]
         public struct Rates
@@ -48,6 +48,7 @@ namespace UpcycleCity.Shops
 
         int itemsBought;
         int coinsPaid;
+        string syncKey;
 
         /// <summary>(buy-back, item, coins paid) for HUDs and statistics.</summary>
         public static event Action<RecyclingBuyBack, TrashItem, int> ItemBought;
@@ -56,6 +57,7 @@ namespace UpcycleCity.Shops
         public int ItemsBought => itemsBought;
         public int CoinsPaid => coinsPaid;
         public Transform Transform => transform;
+        public string SyncKey => syncKey ??= SyncedStateRegistry.BuildSpatialKey("buyback", gameObject.name, transform.position);
 
         public string InteractionPrompt
         {
@@ -92,39 +94,84 @@ namespace UpcycleCity.Shops
             if (Held(interactor) == null)
                 return;
             TrashItem item = interactor.Grabber.ReleaseForDeposit() as TrashItem;
-            Buy(item, interactor);
+            if (item != null)
+                GameAuthority.Current.RequestSellTrash(this, item, interactor);
         }
 
         void Awake() => TriggerRelay.AttachToChildTriggers(this);
+
+        void OnEnable() => SyncedStateRegistry.Register(this);
+
+        void OnDisable() => SyncedStateRegistry.Unregister(this);
 
         public void OnRelayedTriggerEnter(Collider other) => OnTriggerEnter(other);
 
         void OnTriggerEnter(Collider other)
         {
+            if (!GameAuthority.IsAuthoritative)
+                return;
+
             TrashItem item = other.GetComponentInParent<TrashItem>();
             if (item == null || item.IsDisposed || item.IsHeld || item.IsContained)
                 return;
-            Buy(item, PlayerContext.ActiveInteractor);
+            GameAuthority.Current.RequestSellTrash(this, item, null);
         }
 
-        void Buy(TrashItem item, PlayerInteractor interactor)
+        /// <summary>Executes authoritative buy-back logic (invoked directly in solo or on the host in co-op).</summary>
+        public bool ExecuteAuthoritativeBuy(
+            TrashItem item,
+            PlayerInteractor interactor,
+            out int price,
+            out string message,
+            out Color colour,
+            bool creditLocalInventory = true,
+            bool emitLocalFeedback = true)
         {
-            if (item == null || item.IsDisposed)
-                return;
+            price = 0;
+            message = string.Empty;
+            colour = Color.white;
 
-            int price = PriceOf(item);
-            PlayerInventory inventory = interactor != null ? interactor.Inventory : PlayerContext.ActiveInventory;
-            inventory?.AddCoins(price);
+            if (item == null || item.IsDisposed)
+                return false;
+
+            price = PriceOf(item);
+            if (creditLocalInventory)
+            {
+                PlayerInventory inventory = interactor != null ? interactor.Inventory : PlayerContext.ActiveInventory;
+                inventory?.AddCoins(price);
+            }
             itemsBought++;
             coinsPaid += price;
 
-            Color colour = WasteStreamPalette.ColorFor(item.Stream);
-            string message = $"RÉCUP bought {item.DisplayName} · +{price} Coins";
-            interactor?.NotifyFeedback(message, colour);
-            PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupCoins, transform.position, 1f, message, colour);
+            colour = WasteStreamPalette.ColorFor(item.Stream);
+            message = $"RÉCUP bought {item.DisplayName} · +{price} Coins";
+            if (emitLocalFeedback)
+            {
+                interactor?.NotifyFeedback(message, colour);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupCoins, transform.position, 1f, message, colour);
+            }
 
             ItemBought?.Invoke(this, item, price);
             item.Dispose();
+            return true;
+        }
+
+        /// <summary>Convenience overload used by <see cref="LocalGameAuthority"/>.</summary>
+        public void ExecuteAuthoritativeBuy(TrashItem item, PlayerInteractor interactor)
+        {
+            ExecuteAuthoritativeBuy(item, interactor, out _, out _, out _, creditLocalInventory: true, emitLocalFeedback: true);
+        }
+
+        public SyncedStateRecord CaptureSyncState() => new SyncedStateRecord
+        {
+            i0 = itemsBought,
+            i1 = coinsPaid,
+        };
+
+        public void ApplySyncState(in SyncedStateRecord state)
+        {
+            itemsBought = Mathf.Max(0, state.i0);
+            coinsPaid = Mathf.Max(0, state.i1);
         }
 
         static TrashItem Held(PlayerInteractor interactor) =>

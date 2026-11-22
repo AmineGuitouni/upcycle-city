@@ -105,9 +105,16 @@ namespace UpcycleCity.Player
             stateMachine.Start(stateMachine.Idle);
         }
 
+        /// <summary>
+        /// Set true on remote co-op player representations so they never overwrite the local
+        /// player's <see cref="PlayerContext.Active"/> singleton.
+        /// </summary>
+        public bool SuppressContextRegistration { get; set; }
+
         void OnEnable()
         {
-            PlayerContext.Register(this);
+            if (!SuppressContextRegistration)
+                PlayerContext.Register(this);
 
             if (motor != null)
             {

@@ -347,6 +347,7 @@ namespace UpcycleCity.Shops
 
         void Hide()
         {
+            purchaseInFlight = false;
             IsOpen = false;
             if (root != null)
                 root.style.display = DisplayStyle.None;
@@ -367,9 +368,11 @@ namespace UpcycleCity.Shops
             inventory = null;
         }
 
+        bool purchaseInFlight;
+
         void Buy(ShopCatalog.Offer offer)
         {
-            if (inventory == null || offer?.item == null)
+            if (purchaseInFlight || inventory == null || offer?.item == null)
                 return;
 
             ItemDefinition item = offer.item;
@@ -378,27 +381,57 @@ namespace UpcycleCity.Shops
                 SetStatus($"You already have the {item.DisplayName}.", false);
                 return;
             }
-            if (!inventory.TrySpendCoins(offer.price))
+            if (!inventory.CanAddItem(item, offer.quantity))
+            {
+                Vector3 pos = counter != null ? counter.transform.position : transform.position;
+                SetStatus("Your hotbar is full — free a slot first.", false);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.InventoryFull, pos, 1f, "Hotbar full", Color.red);
+                return;
+            }
+            if (inventory.Coins < offer.price)
             {
                 SetStatus($"Not enough coins — the {item.DisplayName} costs {offer.price}.", false);
                 return;
             }
-            int before = inventory.CountOf(item);
-            inventory.TryAddItem(item, offer.quantity);
-            int added = inventory.CountOf(item) - before;
-            if (added <= 0)
-            {
-                inventory.AddCoins(offer.price);
-                SetStatus("Your hotbar is full — free a slot first.", false);
-                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.InventoryFull, counter.transform.position, 1f, "Hotbar full", Color.red);
-                return;
-            }
 
-            string message = $"Bought {item.DisplayName}{(added > 1 ? $" ×{added}" : string.Empty)} · −{offer.price} Coins";
-            SetStatus(message, true);
-            interactor?.NotifyFeedback(message, item.AccentColor);
-            PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupItem, counter.transform.position, 1f, message, item.AccentColor);
-            Refresh();
+            Vector3 shopPos = counter != null ? counter.transform.position : transform.position;
+            string shopKey = counter != null ? counter.ShopKey : string.Empty;
+            ShopCatalog catalog = counter != null ? counter.Catalog : null;
+            var request = new Core.ShopPurchaseRequest(shopKey, item.ItemId, offer.quantity, shopPos, inventory, catalog);
+            purchaseInFlight = true;
+            Core.GameAuthority.Current.RequestShopPurchase(request, result =>
+            {
+                purchaseInFlight = false;
+                if (inventory == null)
+                    return;
+
+                if (!result.Approved)
+                {
+                    string reason = string.IsNullOrEmpty(result.RejectionReason)
+                        ? $"Not enough coins — the {item.DisplayName} costs {offer.price}."
+                        : result.RejectionReason;
+                    SetStatus(reason, false);
+                    Refresh();
+                    return;
+                }
+
+                int before = inventory.CountOf(item);
+                inventory.TryAddItem(item, offer.quantity);
+                int added = inventory.CountOf(item) - before;
+                if (added <= 0)
+                {
+                    SetStatus("Your hotbar is full — free a slot first.", false);
+                    PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.InventoryFull, shopPos, 1f, "Hotbar full", Color.red);
+                    Refresh();
+                    return;
+                }
+
+                string message = $"Bought {item.DisplayName}{(added > 1 ? $" ×{added}" : string.Empty)} · −{result.Price} Coins";
+                SetStatus(message, true);
+                interactor?.NotifyFeedback(message, item.AccentColor);
+                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.PickupItem, shopPos, 1f, message, item.AccentColor);
+                Refresh();
+            });
         }
 
         bool IsOwnedTool(ItemDefinition item) => item.MaxStack <= 1 && inventory != null && inventory.HasItem(item);

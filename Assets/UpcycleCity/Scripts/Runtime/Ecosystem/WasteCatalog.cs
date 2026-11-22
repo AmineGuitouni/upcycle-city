@@ -67,6 +67,38 @@ namespace UpcycleCity.Ecosystem
             }
         }
 
+        /// <summary>Returns the index of <paramref name="entry"/> in this catalog, or -1 if not found.</summary>
+        public int FindEntryIndex(Entry entry)
+        {
+            if (entry == null)
+                return -1;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (ReferenceEquals(entries[i], entry))
+                    return i;
+            }
+            return -1;
+        }
+
+        /// <summary>Finds a catalog entry matching <paramref name="displayName"/> and <paramref name="stream"/>, or -1.</summary>
+        public int FindEntryIndex(string displayName, WasteStream stream)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                Entry e = entries[i];
+                if (e != null && e.stream == stream
+                    && string.Equals(e.displayName, displayName, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+            for (int i = 0; i < entries.Count; i++)
+            {
+                Entry e = entries[i];
+                if (e != null && e.stream == stream)
+                    return i;
+            }
+            return -1;
+        }
+
         /// <summary>Picks a matching archetype for <paramref name="sourceKind"/> and spawns a live physical TrashItem.</summary>
         public TrashItem SpawnTrash(
             WasteSourceKind sourceKind,
@@ -75,7 +107,7 @@ namespace UpcycleCity.Ecosystem
             Transform parent = null)
         {
             Entry entry = PickEntry(sourceKind);
-            return SpawnEntry(entry, sourceKind, worldPosition, initialVelocity, parent);
+            return GameAuthority.Current.SpawnTrash(this, entry, sourceKind, worldPosition, initialVelocity, parent);
         }
 
         public Entry PickEntry(WasteSourceKind sourceKind)
@@ -98,7 +130,20 @@ namespace UpcycleCity.Ecosystem
             return null;
         }
 
+        /// <summary>Spawns a TrashItem through the active <see cref="GameAuthority"/> (local in solo, networked on host).</summary>
         public static TrashItem SpawnEntry(
+            Entry entry,
+            WasteSourceKind sourceKind,
+            Vector3 worldPosition,
+            Vector3 initialVelocity,
+            Transform parent = null)
+        {
+            WasteCatalog catalog = CityEcosystemManager.Active != null ? CityEcosystemManager.Active.DefaultCatalog : null;
+            return GameAuthority.Current.SpawnTrash(catalog, entry, sourceKind, worldPosition, initialVelocity, parent);
+        }
+
+        /// <summary>Creates a local physical TrashItem GameObject (used directly in solo play and tests).</summary>
+        public static TrashItem SpawnEntryLocal(
             Entry entry,
             WasteSourceKind sourceKind,
             Vector3 worldPosition,

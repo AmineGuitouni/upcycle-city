@@ -58,6 +58,7 @@ namespace UpcycleCity.Character
         Label headerTitle;
         Button backButton, nextButton;
         Slider turntableSlider;
+        bool panelHidden;
 
         void Awake()
         {
@@ -153,6 +154,7 @@ namespace UpcycleCity.Character
             root.Add(turntableSlider);
 
             root.RegisterCallback<GeometryChangedEvent>(_ => UpdateOrientationClass());
+            root.style.display = panelHidden ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         static Label MakeLabel(string text, string cls)
@@ -300,11 +302,46 @@ namespace UpcycleCity.Character
             RebuildContent();
         }
 
+        /// <summary>
+        /// Optional interceptor invoked when the player clicks Start after saving their look.
+        /// Return true if another screen (such as the Co-op Mode/Lobby menu) handles loading gameplay.
+        /// </summary>
+        public static event Func<CharacterCreatorController, bool> StartRequested;
+
+        /// <summary>Default gameplay scene configured on this creator.</summary>
+        public string GameplayScene => gameplayScene;
+
+        /// <summary>True while the Character Creator panel is visible.</summary>
+        public bool IsCreatorPanelVisible => !panelHidden && root != null && root.style.display != DisplayStyle.None;
+
+        /// <summary>Shows or hides the Character Creator panel while keeping the 3D avatar turntable visible.</summary>
+        public void SetCreatorPanelVisible(bool visible)
+        {
+            panelHidden = !visible;
+            if (root == null)
+                return;
+            root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
         void StartGame()
         {
             CharacterAppearanceStore.Save(appearance);
+            if (StartRequested != null)
+            {
+                foreach (Delegate d in StartRequested.GetInvocationList())
+                {
+                    if (d is Func<CharacterCreatorController, bool> handler && handler(this))
+                        return;
+                }
+            }
             if (!string.IsNullOrEmpty(gameplayScene))
                 SceneManager.LoadScene(gameplayScene);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            StartRequested = null;
         }
 
         // ---------------------------------------------------------------- turntable

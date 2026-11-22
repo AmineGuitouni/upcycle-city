@@ -16,7 +16,7 @@ namespace UpcycleCity.Ecosystem
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Upcycle City/Ecosystem/Factory Smokestack Source")]
-    public sealed class FactorySmokestackSource : PollutionSourceBase, IToolTarget, IInteractable
+    public sealed class FactorySmokestackSource : PollutionSourceBase, IToolTarget, IInteractable, ISyncedStateProvider
     {
         [Header("Emissions")]
         [Tooltip("Air pollution load while the smokestack scrubber is broken/unfiltered.")]
@@ -50,11 +50,13 @@ namespace UpcycleCity.Ecosystem
         float filterRemaining;
         float scrapTimer;
         float baseSmokeRate = 18f;
+        string syncKey;
 
         public override WasteSourceKind SourceKind => WasteSourceKind.FactoryScrap;
         public bool IsScrubberActive => scrubberActive;
         public override bool IsMitigated => scrubberActive;
         public override float AirPollutionLoad => scrubberActive ? FilteredAirLoad : UnfilteredAirLoad;
+        public string SyncKey => syncKey ??= SyncedStateRegistry.BuildSpatialKey("factory", SourceId, transform.position);
 
         // Live values: the city's EcosystemBalance when one is active, else this factory's own settings
         static EcosystemBalance Balance => EcosystemBalance.Active;
@@ -112,8 +114,27 @@ namespace UpcycleCity.Ecosystem
             RefreshVisuals();
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            SyncedStateRegistry.Register(this);
+        }
+
+        protected override void OnDisable()
+        {
+            SyncedStateRegistry.Unregister(this);
+            base.OnDisable();
+        }
+
         void Update()
         {
+            if (!GameAuthority.IsAuthoritative)
+            {
+                if (!scrubberActive)
+                    RefreshBeaconPulse();
+                return;
+            }
+
             if (scrubberActive)
             {
                 if (degradeOverTime)
@@ -176,11 +197,13 @@ namespace UpcycleCity.Ecosystem
             if (!CanUseTool(interactor, equippedItem))
                 return false;
 
-            ActivateScrubber(interactor);
+            GameAuthority.Current.RequestRepairFactory(this, interactor);
             return true;
         }
 
         public bool CanInteract(PlayerInteractor interactor) => !scrubberActive;
+
+        public string RequiredToolId => requiredToolId;
 
         public void Interact(PlayerInteractor interactor)
         {
@@ -190,8 +213,9 @@ namespace UpcycleCity.Ecosystem
             IInventoryItem equipped = interactor?.Inventory?.EquippedItem;
             if (IsMatchingTool(equipped))
             {
-                ActivateScrubber(interactor);
-                PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ToolUse, transform.position, 1f, DisplayName, new Color(0.18f, 0.72f, 0.42f));
+                GameAuthority.Current.RequestRepairFactory(this, interactor);
+                if (!GameAuthority.IsMultiplayer)
+                    PlayerContext.ActiveFeedback?.Emit(PlayerFeedbackEvent.ToolUse, transform.position, 1f, DisplayName, new Color(0.18f, 0.72f, 0.42f));
             }
             else
             {
@@ -206,17 +230,58 @@ namespace UpcycleCity.Ecosystem
             return item != null && string.Equals(item.ItemId, requiredToolId, System.StringComparison.OrdinalIgnoreCase);
         }
 
-        void ActivateScrubber(PlayerInteractor interactor)
+        /// <summary>Executes authoritative scrubber repair (invoked directly in solo or on the host in co-op).</summary>
+        public bool ExecuteAuthoritativeRepair(
+            PlayerInteractor interactor,
+            out int payout,
+            out string message,
+            out Color color,
+            bool creditLocalInventory = true,
+            bool emitLocalFeedback = true)
         {
+            payout = 0;
+            message = string.Empty;
+            color = new Color(0.18f, 0.78f, 0.45f);
+
+            if (scrubberActive)
+                return false;
+
             scrubberActive = true;
             filterRemaining = filterDurationSeconds;
             RefreshVisuals();
 
-            interactor?.Inventory?.AddCoins(RepairCoinReward);
+            payout = RepairCoinReward;
+            if (creditLocalInventory)
+                interactor?.Inventory?.AddCoins(payout);
             district?.AddSatisfactionBoost(0.18f);
 
-            string msg = $"Scrubber Repaired! {DisplayName} emissions slashed · +{RepairCoinReward} Coins";
-            interactor?.NotifyFeedback(msg, new Color(0.18f, 0.78f, 0.45f));
+            message = $"Scrubber Repaired! {DisplayName} emissions slashed · +{payout} Coins";
+            if (emitLocalFeedback)
+                interactor?.NotifyFeedback(message, color);
+            return true;
+        }
+
+        /// <summary>Convenience overload used by <see cref="LocalGameAuthority"/>.</summary>
+        public void ExecuteAuthoritativeRepair(PlayerInteractor interactor)
+        {
+            ExecuteAuthoritativeRepair(interactor, out _, out _, out _, creditLocalInventory: true, emitLocalFeedback: true);
+        }
+
+        public SyncedStateRecord CaptureSyncState() => new SyncedStateRecord
+        {
+            v0 = filterRemaining,
+            flags = scrubberActive ? (byte)1 : (byte)0,
+        };
+
+        public void ApplySyncState(in SyncedStateRecord state)
+        {
+            bool nextActive = (state.flags & 1) != 0;
+            filterRemaining = Mathf.Max(0f, state.v0);
+            if (scrubberActive != nextActive)
+            {
+                scrubberActive = nextActive;
+                RefreshVisuals();
+            }
         }
 
         void RefreshVisuals()
